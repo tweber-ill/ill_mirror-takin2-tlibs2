@@ -1,0 +1,73 @@
+# Prerequisites
+*.d
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+*.moc
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+!libs/tl2jl.dylib
+!tools/test/jl/tl2jl.dylib
+!tools/test/jl/tl2jl.so
+
+# Fortran module files
+*.mod
+*.smod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+
+# External libraries
+ext/**
+plugins/**
+!ext/.dir
+!plugins/.dir
+!plugins/qtas.py
+
+# Temporary files
+tmp/**
+!tmp/.dir
+build/**
+tools/structfact/build/**
+tools/cif2xml/build/**
+tools/magstructfact/build/**
+tools/magsgbrowser/build/**
+tools/pol/build/**
+*.pyc
+.DS_Store
+*.csv
+
+# Temporary lexer/parser files
+cliparser_impl.*
+clilexer_impl.*
+stack.hh
+
+# Temporary tex files
+*.log
+*.aux
+*.pdf
+*.synctex.*
+*.toc
+*.bbl
+*.blg
+*.fls
+*.fdb_latexmk
+
