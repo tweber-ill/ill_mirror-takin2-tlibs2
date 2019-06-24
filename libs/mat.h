@@ -5099,6 +5099,26 @@ public:
 	const t_vec& GetX0() const { return m_vecX0; }
 	const t_vec& GetDir() const { return m_vecDir; }
 
+
+	/**
+	 * distance to a point
+	 */
+	T GetDist(const t_vec& vecPt) const
+	{
+		const t_vec& vecX0 = GetX0();
+		t_vec vecDir = GetDir() / veclen(GetDir());
+
+		// shift everything so that line goes through the origin
+		t_vec vecPtShift = vecPt - vecX0;
+
+		// project point on direction vector
+		t_vec vecClosestPt = inner(vecPtShift, vecDir) * vecDir;
+
+		// distance between point and projected point
+		return veclen(vecClosestPt - vecPtShift);
+	}
+
+
 	/**
 	 * distance to line l1
 	 */
@@ -5107,38 +5127,20 @@ public:
 		const Line<T>& l0 = *this;
 
 		// vector normal to both directions defining the distance line
-		t_vec vecNorm = cross_3(l0.GetDir(), l1.GetDir());
+		t_vec vecNorm = cross_3<t_vec>(l0.GetDir(), l1.GetDir());
 		T tlenNorm = veclen(vecNorm);
 
 		t_vec vec01 = l1.GetX0() - l0.GetX0();
 
-		// if the lines are parallel, any point (e.g. the X0s) can be used
+		// if the lines are parallel, any point (e.g. the x0s) can be used
 		if(float_equal(tlenNorm, T(0)))
-			return veclen(vec01);
+			return GetDist(l1.GetX0());
 
 		// project x0_1 - x0_0 onto vecNorm
 		T tdot = std::abs(inner(vec01, vecNorm));
 		return tdot / tlenNorm;
 	}
 
-	/**
-	 * distance to a point
-	 */
-	T GetDist(const t_vec& vecPt) const
-	{
-		const t_vec& vecX0 = GetX0();
-		const t_vec& vecDir = GetDir();
-
-		T tlenDir = veclen(vecDir);
-
-		// area of parallelogram spanned by vecDir and vecPt-vecX0
-		// 	== ||vecDir||*||vecPt-vecX0||*sin(th)
-		T tArea = veclen(cross_3(vecDir, vecPt-vecX0));
-
-		// length of perpendicular line from vecPt, also by sine theorem
-		// 	== ||vecPt-vecX0||*sin(th)
-		return tArea / tlenDir;
-	}
 
 	bool IsParallel(const Line<T>& line, T eps = get_epsilon<T>()) const
 	{
@@ -5254,19 +5256,27 @@ public:
 	 *
 	 * pos0 + t0*dir0 = pos1 + t1*dir1
 	 * pos0 - pos1 = t1*dir1 - t0*dir0
-	 * exact: b = Mx  ->  M^(-1)*b = x
-	 * approx: M^t b = M^t M x  ->  (M^t M)^(-1) * M^t b = x
+	 * pos0 - pos1 = (-dir0 dir1) * (t0 t1)^t
+	 * exact solution for the t params: (-dir0 dir1)^(-1) * (pos0 - pos1) = (t0 t1)^t
+	 *
+	 * generally:
+	 * exact: b = M t  ->  M^(-1)*b = t
+	 * approx.: M^t b = M^t M t  ->  (M^t M)^(-1) * M^t b = t
 	 */
-	bool intersect(const Line<T>& line, T& t, T eps = get_epsilon<T>()) const
+	bool intersect(const Line<T>& line1, T& t0, T eps = tl::get_epsilon<T>(), T *pt1=nullptr) const
 	{
-		if(IsParallel(line, eps))
+		if(IsParallel(line1, eps))
+		{
+			t0 = 0;
+			if(pt1) *pt1 = 0;
 			return false;
+		}
 
 		const t_vec& pos0 =  this->GetX0();
-		const t_vec& pos1 =  line.GetX0();
+		const t_vec& pos1 =  line1.GetX0();
 
 		const t_vec& dir0 =  this->GetDir();
-		const t_vec& dir1 =  line.GetDir();
+		const t_vec& dir1 =  line1.GetDir();
 
 		const t_vec pos = pos0-pos1;
 		t_mat M = column_matrix({-dir0, dir1});
@@ -5274,14 +5284,22 @@ public:
 		t_mat MtM = prod_mm(Mt, M);
 
 		t_mat MtMinv;
-		if(!inverse(MtM, MtMinv))
+		if(!tl::inverse(MtM, MtMinv))
 			return false;
 
 		t_vec Mtb = prod_mv(Mt, pos);
 		t_vec params = prod_mv(MtMinv, Mtb);
-		t = params[0];
 
-		return true;
+		// get parameters
+		t0 = params[0];
+		T t1 = params[1];
+		if(pt1) *pt1 = t1;
+
+		// get closest points between the two lines
+		t_vec vecInters0 = (*this)(t0);
+		t_vec vecInters1 = line1(t1);
+
+		return veclen(vecInters1-vecInters0) <= eps;
 	}
 
 
