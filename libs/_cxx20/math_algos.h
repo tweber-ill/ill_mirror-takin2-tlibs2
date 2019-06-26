@@ -7,8 +7,8 @@
  * @desc The present version was forked on 8-Nov-2018 from the privately developed "magtools" project (https://github.com/t-weber/magtools).
  */
 
-#ifndef __TOBIS_MATH_ALGOS_H__
-#define __TOBIS_MATH_ALGOS_H__
+#ifndef __CXX20_MATH_ALGOS_H__
+#define __CXX20_MATH_ALGOS_H__
 
 #include <cstddef>
 #include <cmath>
