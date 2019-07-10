@@ -5263,7 +5263,7 @@ public:
 	 * exact: b = M t  ->  M^(-1)*b = t
 	 * approx.: M^t b = M^t M t  ->  (M^t M)^(-1) * M^t b = t
 	 */
-	bool intersect(const Line<T>& line1, T& t0, T eps = tl::get_epsilon<T>(), T *pt1=nullptr) const
+	bool intersect(const Line<T>& line1, T& t0, T eps = get_epsilon<T>(), T *pt1=nullptr) const
 	{
 		if(IsParallel(line1, eps))
 		{
@@ -5284,7 +5284,7 @@ public:
 		t_mat MtM = prod_mm(Mt, M);
 
 		t_mat MtMinv;
-		if(!tl::inverse(MtM, MtMinv))
+		if(!inverse(MtM, MtMinv))
 			return false;
 
 		t_vec Mtb = prod_mv(Mt, pos);
