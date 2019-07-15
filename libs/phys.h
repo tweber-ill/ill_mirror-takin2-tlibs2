@@ -317,7 +317,7 @@ t_wavenumber<Sys,Y> kinematic_plane(bool bFixedKi,
 	if(bFixedKi)
 		dE = -dE;
 
-	auto c = Y(2.)*get_m_n<Y>() / (get_hbar<Y>()*get_hbar<Y>());
+	auto c = Y(2.)*m_n<Y> / (hbar<Y>*hbar<Y>);
 	t_wavenumber<Sys,Y> Q =
 		units::sqrt(c *
 		(Y(2.)*EiEf + dE - Y(2.)*units::cos(twotheta) *
@@ -341,7 +341,7 @@ t_energy<Sys,Y> kinematic_plane(bool bFixedKi, bool bBranch,
 	const t_energy<Sys,Y>& EiEf, const t_wavenumber<Sys,Y>& Q,
 	const t_angle<Sys,Y>& twotheta)
 {
-	auto c = Y(2.)*get_m_n<Y>() / (get_hbar<Y>()*get_hbar<Y>());
+	auto c = Y(2.)*m_n<Y> / (hbar<Y>*hbar<Y>);
 	auto c2 = c*c;
 
 	auto EiEf2 = EiEf*EiEf;
@@ -382,7 +382,7 @@ t_angle<Sys,Y> get_angle_ki_Q(const t_wavenumber<Sys,Y>& ki,
 	t_angle<Sys,Y> angle;
 
 	if(Q*angstrom<Y> == Y(0.))
-		angle = pi<Y>/Y(2) * units::si::radians;
+		angle = pi<Y>/Y(2) * radians<Y>;
 	else
 	{
 		auto c = (ki*ki - kf*kf + Q*Q) / (Y(2.)*ki*Q);
@@ -392,7 +392,7 @@ t_angle<Sys,Y> get_angle_ki_Q(const t_wavenumber<Sys,Y>& ki,
 		angle = units::acos(c);
 	}
 
-	if(bAngleOutsideTriag) angle = pi<Y>*units::si::radians - angle;
+	if(bAngleOutsideTriag) angle = pi<Y>*radians<Y> - angle;
 	if(!bPosSense) angle = -angle;
 
 	return angle;
@@ -413,7 +413,7 @@ t_angle<Sys,Y> get_angle_kf_Q(const t_wavenumber<Sys,Y>& ki,
 	t_angle<Sys,Y> angle;
 
 	if(Q*angstrom<Y> == Y(0.))
-		angle = pi<Y>/Y(2) * units::si::radians;
+		angle = pi<Y>/Y(2) * radians<Y>;
 	else
 	{
 		auto c = (ki*ki - kf*kf - Q*Q) / (Y(2.)*kf*Q);
@@ -423,7 +423,7 @@ t_angle<Sys,Y> get_angle_kf_Q(const t_wavenumber<Sys,Y>& ki,
 		angle = units::acos(c);
 	}
 
-	if(!bAngleOutsideTriag) angle = pi<Y>*units::si::radians - angle;
+	if(!bAngleOutsideTriag) angle = pi<Y>*radians<Y> - angle;
 	if(!bPosSense) angle = -angle;
 
 	return angle;
@@ -848,7 +848,7 @@ t_flux<Sys,Y> larmor_field(const t_length<Sys,Y>& lam,
 	const t_angle<Sys,Y>& phi)
 {
 	t_velocity<Sys,Y> v = lam2p(lam) / co::m_n;
-	t_freq<Sys,Y> om = -Y(phi/radians)*v/len;
+	t_freq<Sys,Y> om = -Y(phi/radians<Y>)*v/len;
 	return om/co::gamma_n;
 }
 
