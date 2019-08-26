@@ -3910,7 +3910,7 @@ requires is_vec<t_vec>
 	// ------------------------------------------------------------------------
 	// intensity
 	// nuclear
-	t_cplx I = N*NConj;
+	t_cplx I = NConj*N;
 
 	// nuclear-magnetic
 	I += NConj*inner<t_vec>(P_i, Mperp);
@@ -3920,7 +3920,7 @@ requires is_vec<t_vec>
 	I += inner<t_vec>(Mperp, Mperp);
 
 	// magnetic, chiral
-	I += -imag * inner<t_vec>(P_i, cross<t_vec>({ Mperp, MperpConj }));
+	I += imag * inner<t_vec>(P_i, cross<t_vec>({ MperpConj, Mperp }));
 	// ------------------------------------------------------------------------
 
 	// ------------------------------------------------------------------------
