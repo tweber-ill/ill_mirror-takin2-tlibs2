@@ -3952,8 +3952,8 @@ requires is_vec<t_vec>
  * calculate indirectly with density matrix
  *
  * V   = N*1 + <Mperp|sigma>
- * I   = 0.5 * tr( V^H V rho )
- * P_f = 0.5 * tr( V^H sigma V rho ) / I
+ * I   = tr( <V|V> rho )
+ * P_f = tr( <V|sigma|V> rho ) / I
  *
  * returns scattering intensity and final polarisation vector
  */
@@ -3977,15 +3977,15 @@ requires is_mat<t_mat> && is_vec<t_vec>
 	const auto VConj = herm(V);
 
 	// scattering intensity
-	t_cplx I = c * trace(VConj*V * density/c);
+	t_cplx I = trace(VConj*V * density);
 
 	// ------------------------------------------------------------------------
 	// scattered polarisation vector
-	const auto m0 = (VConj * sigma[0]) * V * density/c;
-	const auto m1 = (VConj * sigma[1]) * V * density/c;
-	const auto m2 = (VConj * sigma[2]) * V * density/c;
+	const auto m0 = (VConj * sigma[0]) * V * density;
+	const auto m1 = (VConj * sigma[1]) * V * density;
+	const auto m2 = (VConj * sigma[2]) * V * density;
 
-	t_vec P_f = create<t_vec>({ c*trace(m0), c*trace(m1), c*trace(m2) });
+	t_vec P_f = create<t_vec>({ trace(m0), trace(m1), trace(m2) });
 	// ------------------------------------------------------------------------
 
 	return std::make_tuple(I, P_f/I);
