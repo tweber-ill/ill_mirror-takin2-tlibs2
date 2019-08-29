@@ -10,6 +10,7 @@
 #ifndef __TLIBS2_FILE_H__
 #define __TLIBS2_FILE_H__
 
+//#include <filesystem>
 #include <boost/filesystem/path.hpp>
 #include <boost/filesystem/operations.hpp>
 
@@ -33,6 +34,7 @@
 #include "traits.h"
 
 
+//namespace fs = std::filesystem;
 namespace fs = boost::filesystem;
 namespace prop = ::boost::property_tree;
 
