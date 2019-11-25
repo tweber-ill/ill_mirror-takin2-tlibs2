@@ -952,35 +952,59 @@ class ExprGrammar : public qi::grammar<
 	public:
 		ExprGrammar() : ExprGrammar::base_type(m_expr, "expr")
 		{
+			//
 			// + or -
+			// m_expr -> m_pm_opt m_term  |  ((m_p | m_m) m_term)*
+			//
 			m_expr = ((m_pm_opt > m_term) [ qi::_val = qi::_1*qi::_2  ]
 				> *((m_p|m_m) > m_term) [ qi::_val += qi::_1*qi::_2 ]);
 
+			//
+			// m_pm_opt -> m_p | m_m
+			// m_p -> '+'
+			// m_m -> '-'
+			//
 			m_pm_opt = (m_p | m_m) [ qi::_val = qi::_1 ]
 				| qi::eps [ qi::_val = t_val(1) ];
 			m_p = qi::char_(t_ch('+')) [ qi::_val = t_val(1) ];
 			m_m = qi::char_(t_ch('-')) [ qi::_val = t_val(-1) ];
 
+			//
 			// * or /
+			// m_term -> m_val (('*' m_val)) | ('/' m_val))*  |  m_val
+			//
 			m_term = (m_val [ qi::_val = qi::_1 ]
 				> *((t_ch('*') > m_val) [ qi::_val *= qi::_1 ]
 					| (t_ch('/') > m_val) [ qi::_val /= qi::_1 ]))
 				| m_val [ qi::_val = qi::_1 ];
 
+			//
 			// pow
+			// m_val -> m_baseval ('^' m_baseval)*
+			//
 			m_val = m_baseval [ qi::_val = qi::_1 ]
 				> *((t_ch('^') > m_baseval)
 				[ qi::_val = ph::bind([](t_val val1, t_val val2) -> t_val
 				{ return std::pow(val1, val2); }, qi::_val, qi::_1)]);
 
+			//
+			// m_baseval -> '(' m_expr ')'  |  m_func1  |  m_func2  |  m_const  |  t_valparser()
+			//
 			m_baseval = t_valparser() | m_func2 | m_func1 | m_const
 				| (t_ch('(') > m_expr > t_ch(')'));
 
+			//
 			// lazy evaluation of constants via phoenix bind
+			// m_const -> m_ident
+			//
 			m_const = m_ident [ qi::_val = ph::bind([](const t_str& strName) -> t_val
 				{ return get_const<t_str, t_val>(strName); }, qi::_1) ];
 
+			//
 			// lazy evaluation of functions via phoenix bind
+			// m_func1 -> m_ident '(' m_expr ')'
+			// m_func2 -> m_ident '(' m_expr ',' m_expr ')'
+			//
 			m_func2 = (m_ident >> t_ch('(') >> m_expr >> t_ch(',') >> m_expr >> t_ch(')'))
 				[ qi::_val = ph::bind([](const t_str& strName, t_val val1, t_val val2) -> t_val
 				{ return call_func2<t_str, t_val>(strName, val1, val2); },
@@ -990,6 +1014,9 @@ class ExprGrammar : public qi::grammar<
 				{ return call_func1<t_str, t_val>(strName, val); },
 				qi::_1, qi::_2) ];
 
+			//
+			// m_ident -> [A-Za-z_][A-Za-z_0-9]*
+			//
 			m_ident = qi::lexeme[qi::char_("A-Za-z_") > *qi::char_("0-9A-Za-z_")];
 
 			SetErrorHandling();
