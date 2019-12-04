@@ -385,7 +385,7 @@ std::size_t GlPlot_impl::AddLinkedObject(std::size_t linkTo,
 std::size_t GlPlot_impl::AddSphere(t_real_gl rad, t_real_gl x, t_real_gl y, t_real_gl z,
 	t_real_gl r, t_real_gl g, t_real_gl b, t_real_gl a)
 {
-	constexpr int numsubdivs = 1;
+	constexpr int numsubdivs = 2;
 
 	auto solid = m::create_icosahedron<t_vec3_gl>(1);
 	auto [triagverts, norms, uvs] = m::spherify<t_vec3_gl>(
@@ -396,6 +396,7 @@ std::size_t GlPlot_impl::AddSphere(t_real_gl rad, t_real_gl x, t_real_gl y, t_re
 
 	auto obj = CreateTriangleObject(std::get<0>(solid), triagverts, norms, m::create<t_vec_gl>({r,g,b,a}), true);
 	obj.m_mat = m::hom_translation<t_mat_gl>(x, y, z);
+	obj.m_boundingSphereRad = rad;
 	m_objs.emplace_back(std::move(obj));
 
 	return m_objs.size()-1;		// object handle
@@ -884,9 +885,15 @@ void GlPlot_impl::UpdateLights()
 }
 
 
+void GlPlot_impl::EnablePicker(bool b)
+{
+	m_bPickerEnabled = b;
+}
+
+
 void GlPlot_impl::UpdatePicker()
 {
-	if(!m_bInitialised || !m_bPlatformSupported) return;
+	if(!m_bInitialised || !m_bPlatformSupported || !m_bPickerEnabled) return;
 
 	// picker ray
 	auto [org, dir] = m::hom_line_from_screen_coords<t_mat_gl, t_vec_gl>(
@@ -954,6 +961,16 @@ void GlPlot_impl::UpdatePicker()
 		if(linkedObj->m_type != GlPlotObjType::TRIANGLES || !obj.m_visible || !obj.m_valid)
 			continue;
 
+
+		// intersection with bounding sphere?
+		auto boundingInters =
+			m::intersect_line_sphere<t_vec3_gl, std::vector>(org3, dir3,
+				((*coordTrafo) * obj.m_mat * coordTrafoInv) * linkedObj->m_boundingSpherePos, linkedObj->m_boundingSphereRad);
+		if(boundingInters.size() == 0)
+			continue;
+
+
+		// test actual polygons for intersection
 		for(std::size_t startidx=0; startidx+2<linkedObj->m_triangles.size(); startidx+=3)
 		{
 			std::vector<t_vec3_gl> poly{ {
@@ -964,7 +981,7 @@ void GlPlot_impl::UpdatePicker()
 
 			// coordTrafoInv only keeps 3d objects from locally distorting
 			auto [vecInters, bInters, lamInters] =
-			m::intersect_line_poly<t_vec3_gl, t_mat_gl>(org3, dir3, poly, (*coordTrafo) * obj.m_mat * coordTrafoInv);
+				m::intersect_line_poly<t_vec3_gl, t_mat_gl>(org3, dir3, poly, (*coordTrafo) * obj.m_mat * coordTrafoInv);
 
 			if(bInters)
 			{

@@ -110,6 +110,9 @@ struct GlPlotObj
 	t_vec3_gl m_labelPos = m::create<t_vec3_gl>({0., 0., 0.});
 	std::string m_label;
 	std::string m_datastr;
+
+	t_vec3_gl m_boundingSpherePos = m::create<t_vec3_gl>({ 0., 0., 0. });
+	t_real_gl m_boundingSphereRad = 0.;
 };
 // ----------------------------------------------------------------------------
 
@@ -124,6 +127,7 @@ class GlPlot_impl : public QObject
 { Q_OBJECT
 private:
 	QMutex m_mutexObj{QMutex::Recursive};
+
 
 protected:
 	GlPlot *m_pPlot = nullptr;
@@ -164,6 +168,7 @@ protected:
 	std::atomic<bool> m_bPlatformSupported = true;
 	std::atomic<bool> m_bInitialised = false;
 	std::atomic<bool> m_bWantsResize = false;
+	std::atomic<bool> m_bPickerEnabled = true;
 	std::atomic<bool> m_bPickerNeedsUpdate = false;
 	std::atomic<bool> m_bLightsNeedUpdate = false;
 	std::atomic<bool> m_bBTrafoNeedsUpdate = false;
@@ -180,6 +185,7 @@ protected:
 
 	QTimer m_timer;
 
+
 protected:
 	qgl_funcs* GetGlFunctions(QOpenGLWidget *pWidget = nullptr);
 
@@ -193,6 +199,7 @@ protected:
 	void DoPaintNonGL(QPainter &painter);
 
 	void tick(const std::chrono::milliseconds& ms);
+
 
 public:
 	GlPlot_impl(GlPlot *pPlot = nullptr);
@@ -253,6 +260,7 @@ public:
 	void SetBTrafo(const t_mat_gl& matB, const t_mat_gl* matA = nullptr);
 	void SetCoordSys(int iSys);
 
+
 public /*slots*/:
 	void paintGL();
 
@@ -268,6 +276,9 @@ public /*slots*/:
 
 	void BeginRotation();
 	void EndRotation();
+
+	void EnablePicker(bool b);
+
 
 protected slots:
 	void tick();
