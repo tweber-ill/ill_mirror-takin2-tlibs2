@@ -3299,6 +3299,99 @@ requires is_vec<t_vec>
 	return std::make_tuple(vertices, faces, normals, uvs);
 }
 
+
+/**
+ * calculates the mean vector of a collection of vertices
+ */
+template<class t_vec, template<class...> class t_cont = std::vector>
+t_vec mean(const t_cont<t_vec>& verts)
+requires is_vec<t_vec>
+{
+	using namespace m_ops;
+	using t_real = typename t_vec::value_type;
+
+	if(!verts.size())
+		return t_vec{};
+
+	t_vec zerovec = zero<t_vec>(verts.begin()->size());
+	t_vec meanvec = std::accumulate(verts.begin(), verts.end(), zerovec);
+	meanvec /= t_real{verts.size()};
+
+	return meanvec;
+}
+
+
+/**
+ * calculates minumum and maximum components of a collection of vectors
+ */
+template<class t_vec, template<class...> class t_cont = std::vector>
+std::tuple<t_vec, t_vec> minmax(const t_cont<t_vec>& verts)
+requires is_vec<t_vec>
+{
+	using namespace m_ops;
+	using t_real = typename t_vec::value_type;
+
+	if(!verts.size())
+		return std::make_tuple(t_vec{}, t_vec{});
+
+	// set to limit values
+	t_vec vecmin = zero<t_vec>(verts.begin()->size());
+	t_vec vecmax = zero<t_vec>(verts.begin()->size());
+	for(std::size_t i=0; i<vecmin.size(); ++i)
+	{
+		vecmin[i] = std::numeric_limits<t_real>::max();
+		vecmax[i] = -std::numeric_limits<t_real>::max();
+	}
+
+	// iterate components
+	for(std::size_t i=0; i<vecmin.size(); ++i)
+	{
+		// iterate vectors
+		for(const t_vec& vec : verts)
+		{
+			vecmin[i] = std::min(vecmin[i], vec[i]);
+			vecmax[i] = std::max(vecmax[i], vec[i]);
+		}
+	}
+
+	return std::make_tuple(vecmin, vecmax);
+}
+
+
+/**
+ * calculates the bounding sphere of a collection of vertices
+ */
+template<class t_vec, template<class...> class t_cont = std::vector>
+std::tuple<t_vec, typename t_vec::value_type> bounding_sphere(const t_cont<t_vec>& verts)
+requires is_vec<t_vec>
+{
+	using t_real = typename t_vec::value_type;
+
+	t_real rad{};
+	t_vec center = mean<t_vec, t_cont>(verts);
+
+	//auto [minvec, maxvec] = minmax<t_vec, t_cont>(verts);
+	//minvec -= center;
+	//maxvec -= center;
+
+	for(const t_vec& vec : verts)
+	{
+		t_vec vecCur = vec-center;
+
+		t_real dot = inner<t_vec>(vecCur, vecCur);
+		rad = std::max(rad, dot);
+	}
+
+	rad = std::sqrt(rad);
+
+/*	std::cout << "rad = " << rad << std::endl;
+	std::cout << "center = ";
+	for(std::size_t i=0; i<center.size(); ++i)
+		std::cout << center[i] << ", ";
+	std::cout << std::endl;*/
+	return std::make_tuple(center, rad);
+}
+
 // ----------------------------------------------------------------------------
 
 

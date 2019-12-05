@@ -391,12 +391,15 @@ std::size_t GlPlot_impl::AddSphere(t_real_gl rad, t_real_gl x, t_real_gl y, t_re
 	auto [triagverts, norms, uvs] = m::spherify<t_vec3_gl>(
 		m::subdivide_triangles<t_vec3_gl>(
 			m::create_triangles<t_vec3_gl>(solid), numsubdivs), rad);
+	auto [boundingSpherePos, boundingSphereRad] = m::bounding_sphere<t_vec3_gl>(triagverts);
 
 	QMutexLocker _locker{&m_mutexObj};
 
 	auto obj = CreateTriangleObject(std::get<0>(solid), triagverts, norms, m::create<t_vec_gl>({r,g,b,a}), true);
 	obj.m_mat = m::hom_translation<t_mat_gl>(x, y, z);
-	obj.m_boundingSphereRad = rad;
+	obj.m_boundingSpherePos = std::move(boundingSpherePos);
+	obj.m_boundingSphereRad = boundingSphereRad;
+	//obj.m_boundingSphereRad = rad;
 	m_objs.emplace_back(std::move(obj));
 
 	return m_objs.size()-1;		// object handle
@@ -409,11 +412,14 @@ std::size_t GlPlot_impl::AddCylinder(t_real_gl rad, t_real_gl h,
 {
 	auto solid = m::create_cylinder<t_vec3_gl>(rad, h, true);
 	auto [triagverts, norms, uvs] = m::create_triangles<t_vec3_gl>(solid);
+	auto [boundingSpherePos, boundingSphereRad] = m::bounding_sphere<t_vec3_gl>(triagverts);
 
 	QMutexLocker _locker{&m_mutexObj};
 
 	auto obj = CreateTriangleObject(std::get<0>(solid), triagverts, norms, m::create<t_vec_gl>({r,g,b,a}), false);
 	obj.m_mat = m::hom_translation<t_mat_gl>(x, y, z);
+	obj.m_boundingSpherePos = std::move(boundingSpherePos);
+	obj.m_boundingSphereRad = boundingSphereRad;
 	m_objs.emplace_back(std::move(obj));
 
 	return m_objs.size()-1;		// object handle
@@ -426,11 +432,14 @@ std::size_t GlPlot_impl::AddCone(t_real_gl rad, t_real_gl h,
 {
 	auto solid = m::create_cone<t_vec3_gl>(rad, h);
 	auto [triagverts, norms, uvs] = m::create_triangles<t_vec3_gl>(solid);
+	auto [boundingSpherePos, boundingSphereRad] = m::bounding_sphere<t_vec3_gl>(triagverts);
 
 	QMutexLocker _locker{&m_mutexObj};
 
 	auto obj = CreateTriangleObject(std::get<0>(solid), triagverts, norms, m::create<t_vec_gl>({r,g,b,a}), false);
 	obj.m_mat = m::hom_translation<t_mat_gl>(x, y, z);
+	obj.m_boundingSpherePos = std::move(boundingSpherePos);
+	obj.m_boundingSphereRad = boundingSphereRad;
 	m_objs.emplace_back(std::move(obj));
 
 	return m_objs.size()-1;		// object handle
@@ -443,11 +452,14 @@ std::size_t GlPlot_impl::AddArrow(t_real_gl rad, t_real_gl h,
 {
 	auto solid = m::create_cylinder<t_vec3_gl>(rad, h, 2, 32, rad, rad*1.5);
 	auto [triagverts, norms, uvs] = m::create_triangles<t_vec3_gl>(solid);
+	auto [boundingSpherePos, boundingSphereRad] = m::bounding_sphere<t_vec3_gl>(triagverts);
 
 	QMutexLocker _locker{&m_mutexObj};
 
 	auto obj = CreateTriangleObject(std::get<0>(solid), triagverts, norms, m::create<t_vec_gl>({r,g,b,a}), false);
 	obj.m_mat = GetArrowMatrix(m::create<t_vec_gl>({1,0,0}), 1., m::create<t_vec_gl>({x,y,z}), m::create<t_vec_gl>({0,0,1}));
+	obj.m_boundingSpherePos = std::move(boundingSpherePos);
+	obj.m_boundingSphereRad = boundingSphereRad;
 	obj.m_labelPos = m::create<t_vec3_gl>({0., 0., 0.75});
 	m_objs.emplace_back(std::move(obj));
 
@@ -962,10 +974,13 @@ void GlPlot_impl::UpdatePicker()
 			continue;
 
 
+		// scaling factor, TODO: maximum factor for non-uniform scaling
+		auto scale =std::sqrt(m::det(obj.m_mat));
+
 		// intersection with bounding sphere?
 		auto boundingInters =
 			m::intersect_line_sphere<t_vec3_gl, std::vector>(org3, dir3,
-				((*coordTrafo) * obj.m_mat * coordTrafoInv) * linkedObj->m_boundingSpherePos, linkedObj->m_boundingSphereRad);
+				((*coordTrafo) * obj.m_mat * coordTrafoInv) * linkedObj->m_boundingSpherePos, scale*linkedObj->m_boundingSphereRad);
 		if(boundingInters.size() == 0)
 			continue;
 
