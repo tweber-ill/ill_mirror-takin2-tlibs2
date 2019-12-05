@@ -974,13 +974,15 @@ void GlPlot_impl::UpdatePicker()
 			continue;
 
 
+		t_mat_gl matTrafo = (*coordTrafo) * obj.m_mat * coordTrafoInv;
+
 		// scaling factor, TODO: maximum factor for non-uniform scaling
-		auto scale =std::sqrt(m::det(obj.m_mat));
+		auto scale = std::cbrt(std::abs(m::det(matTrafo)));
 
 		// intersection with bounding sphere?
 		auto boundingInters =
 			m::intersect_line_sphere<t_vec3_gl, std::vector>(org3, dir3,
-				((*coordTrafo) * obj.m_mat * coordTrafoInv) * linkedObj->m_boundingSpherePos, scale*linkedObj->m_boundingSphereRad);
+				matTrafo * linkedObj->m_boundingSpherePos, scale*linkedObj->m_boundingSphereRad);
 		if(boundingInters.size() == 0)
 			continue;
 
@@ -996,7 +998,7 @@ void GlPlot_impl::UpdatePicker()
 
 			// coordTrafoInv only keeps 3d objects from locally distorting
 			auto [vecInters, bInters, lamInters] =
-				m::intersect_line_poly<t_vec3_gl, t_mat_gl>(org3, dir3, poly, (*coordTrafo) * obj.m_mat * coordTrafoInv);
+				m::intersect_line_poly<t_vec3_gl, t_mat_gl>(org3, dir3, poly, matTrafo);
 
 			if(bInters)
 			{
