@@ -358,6 +358,13 @@ void GlPlot_impl::SetObjectVisible(std::size_t idx, bool visible)
 }
 
 
+void GlPlot_impl::ToggleObjectHighlight(std::size_t idx)
+{
+	if(idx >= m_objs.size()) return;
+	m_objs[idx].m_highlighted = !m_objs[idx].m_highlighted;
+}
+
+
 void GlPlot_impl::RemoveObject(std::size_t idx)
 {
 	m_objs[idx].m_valid = false;
@@ -1131,6 +1138,9 @@ void GlPlot_impl::DoPaintGL(qgl_funcs *pGl)
 	m_pShaders->setUniformValue(m_uniMatrixCamInv, m_matCam_inv);
 
 
+	auto colOverride = m::create<t_vec_gl>({1,1,1,1});
+	auto colHighlight = m::create<t_vec_gl>({1,1,1,1});
+
 	// render triangle geometry
 	for(const auto& obj : m_objs)
 	{
@@ -1141,12 +1151,15 @@ void GlPlot_impl::DoPaintGL(qgl_funcs *pGl)
 			linkedObj = &m_objs[*obj.linkedObj];
 
 			// override constant color for linked object
-			m_pShaders->setUniformValue(m_uniConstCol, obj.m_color);
+			if(obj.m_highlighted)
+				m_pShaders->setUniformValue(m_uniConstCol, colHighlight);
+			else
+				m_pShaders->setUniformValue(m_uniConstCol, obj.m_color);
 		}
 		else
 		{
 			// set override color to white for non-linked objects
-			m_pShaders->setUniformValue(m_uniConstCol, m::create<t_vec_gl>({1,1,1,1}));
+			m_pShaders->setUniformValue(m_uniConstCol, colOverride);
 		}
 
 		if(!obj.m_visible || !obj.m_valid) continue;

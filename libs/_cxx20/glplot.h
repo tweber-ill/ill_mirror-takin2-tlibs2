@@ -105,6 +105,7 @@ struct GlPlotObj
 
 	bool m_invariant = false;	// invariant to A, B matrices
 	bool m_visible = true;		// object shown?
+	bool m_highlighted = false;	// object highlighted?
 	bool m_valid = true;		// object deleted?
 
 	t_vec3_gl m_labelPos = m::create<t_vec3_gl>({0., 0., 0.});
@@ -250,6 +251,7 @@ public:
 	void SetObjectLabel(std::size_t idx, const std::string& label);
 	void SetObjectDataString(std::size_t idx, const std::string& data);
 	void SetObjectVisible(std::size_t idx, bool visible);
+	void ToggleObjectHighlight(std::size_t idx);
 	const std::string& GetObjectDataString(std::size_t idx) const;
 
 	void SetScreenDims(int w, int h);
