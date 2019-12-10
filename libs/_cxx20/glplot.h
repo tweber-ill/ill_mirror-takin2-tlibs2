@@ -324,6 +324,8 @@ private:
 	mutable QMutex m_mutex{QMutex::Recursive};
 	std::unique_ptr<GlPlot_impl> m_impl;
 	std::unique_ptr<QThread> m_thread_impl;
+	bool m_mouseMovedBetweenDownAndUp = 0;
+	bool m_mouseDown[3] = {0,0,0};
 
 public:
 	QMutex* GetMutex() { return &m_mutex; }
@@ -335,6 +337,7 @@ signals:
 	void AfterGLInitialisation();
 	void MouseDown(bool left, bool mid, bool right);
 	void MouseUp(bool left, bool mid, bool right);
+	void MouseClick(bool left, bool mid, bool right);
 };
 // ----------------------------------------------------------------------------
 

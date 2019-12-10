@@ -1424,41 +1424,52 @@ void GlPlot::paintGL()
 void GlPlot::mouseMoveEvent(QMouseEvent *pEvt)
 {
 	m_impl->mouseMoveEvent(pEvt->localPos());
+	m_mouseMovedBetweenDownAndUp = 1;
 	pEvt->accept();
 }
 
 
 void GlPlot::mousePressEvent(QMouseEvent *pEvt)
 {
-	bool bLeftDown = 0, bRightDown = 0, bMidDown = 0;
+	m_mouseMovedBetweenDownAndUp = 0;
 
-	if(pEvt->buttons() & Qt::LeftButton) bLeftDown = 1;
-	if(pEvt->buttons() & Qt::RightButton) bRightDown = 1;
-	if(pEvt->buttons() & Qt::MiddleButton) bMidDown = 1;
+	if(pEvt->buttons() & Qt::LeftButton) m_mouseDown[0] = 1;
+	if(pEvt->buttons() & Qt::MiddleButton) m_mouseDown[1] = 1;
+	if(pEvt->buttons() & Qt::RightButton) m_mouseDown[2] = 1;
 
-	if(bMidDown)
+	if(m_mouseDown[1])
 		m_impl->ResetZoom();
-	if(bRightDown)
+	if(m_mouseDown[2])
 		m_impl->BeginRotation();
 
 	pEvt->accept();
-	emit MouseDown(bLeftDown, bMidDown, bRightDown);
+	emit MouseDown(m_mouseDown[0], m_mouseDown[1], m_mouseDown[2]);
 }
 
 
 void GlPlot::mouseReleaseEvent(QMouseEvent *pEvt)
 {
-	bool bLeftUp = 0, bRightUp = 0, bMidUp = 0;
+	bool mouseDownOld[] = { m_mouseDown[0], m_mouseDown[1], m_mouseDown[2] };
 
-	if((pEvt->buttons() & Qt::LeftButton) == 0) bLeftUp = 1;
-	if((pEvt->buttons() & Qt::RightButton) == 0) bRightUp = 1;
-	if((pEvt->buttons() & Qt::MiddleButton) == 0) bMidUp = 1;
+	if((pEvt->buttons() & Qt::LeftButton) == 0) m_mouseDown[0] = 0;
+	if((pEvt->buttons() & Qt::MiddleButton) == 0) m_mouseDown[1] = 0;
+	if((pEvt->buttons() & Qt::RightButton) == 0) m_mouseDown[2] = 0;
 
-	if(bRightUp)
+	if(!m_mouseDown[2])
 		m_impl->EndRotation();
 
 	pEvt->accept();
-	emit MouseUp(bLeftUp, bMidUp, bRightUp);
+	emit MouseUp(!m_mouseDown[0], !m_mouseDown[1], !m_mouseDown[2]);
+
+	// only emit click if moving the mouse (i.e. rotationg the scene) was not the primary intent
+	if(!m_mouseMovedBetweenDownAndUp)
+	{
+		bool mouseClicked[] = { !m_mouseDown[0] && mouseDownOld[0],
+			!m_mouseDown[1] && mouseDownOld[1],
+			!m_mouseDown[2] && mouseDownOld[2] };
+		if(mouseClicked[0] || mouseClicked[1] || mouseClicked[2])
+			emit MouseClick(mouseClicked[0], mouseClicked[1], mouseClicked[2]);
+	}
 }
 
 
