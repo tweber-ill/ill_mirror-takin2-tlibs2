@@ -251,8 +251,10 @@ public:
 	void SetObjectLabel(std::size_t idx, const std::string& label);
 	void SetObjectDataString(std::size_t idx, const std::string& data);
 	void SetObjectVisible(std::size_t idx, bool visible);
-	void ToggleObjectHighlight(std::size_t idx);
+	void SetObjectHighlight(std::size_t idx, bool highlight);
+
 	const std::string& GetObjectDataString(std::size_t idx) const;
+	bool GetObjectHighlight(std::size_t idx) const;
 
 	void SetScreenDims(int w, int h);
 	void SetCoordMax(t_real_gl d) { m_CoordMax = d; }

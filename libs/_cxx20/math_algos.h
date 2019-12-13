@@ -3796,6 +3796,65 @@ requires is_mat<t_mat>
 }
 
 
+
+/**
+ * get correct distance in unit cell, considering wrapping-around
+ */
+template<class t_mat, class t_vec, class t_real = typename t_mat::value_type>
+t_real get_dist_uc(const t_mat& matA, const t_vec& vec1, const t_vec& vec2)
+requires is_mat<t_mat> && is_vec<t_vec>
+{
+	t_vec vec1A = matA * vec1;
+
+	// all supercell position to try
+	std::vector<t_vec> vecSCs
+	{{
+		create<t_vec>({+1,  0,  0}),
+		create<t_vec>({-1,  0,  0}),
+		create<t_vec>({ 0, +1,  0}),
+		create<t_vec>({ 0, -1,  0}),
+		create<t_vec>({ 0,  0, +1}),
+		create<t_vec>({ 0,  0, -1}),
+
+		create<t_vec>({ 0,  +1, +1}),
+		create<t_vec>({ 0,  +1, -1}),
+		create<t_vec>({ 0,  -1, +1}),
+		create<t_vec>({ 0,  -1, -1}),
+		create<t_vec>({+1,  0, +1}),
+		create<t_vec>({+1,  0, -1}),
+		create<t_vec>({-1,  0, +1}),
+		create<t_vec>({-1,  0, -1}),
+		create<t_vec>({+1, +1,  0}),
+		create<t_vec>({+1, -1,  0}),
+		create<t_vec>({-1, +1,  0}),
+		create<t_vec>({-1, -1,  0}),
+
+		create<t_vec>({+1, +1, +1}),
+		create<t_vec>({+1, +1, -1}),
+		create<t_vec>({+1, -1, +1}),
+		create<t_vec>({+1, -1, -1}),
+		create<t_vec>({-1, +1, +1}),
+		create<t_vec>({-1, +1, -1}),
+		create<t_vec>({-1, -1, +1}),
+		create<t_vec>({-1, -1, -1}),
+	}};
+
+
+	t_real thedist = std::numeric_limits<t_real>::max();
+
+	for(const t_vec& vecSC : vecSCs)
+	{
+		t_vec vec2A = matA * (vec2 + vecSC);
+		t_real dist = norm(vec1A - vec2A);
+
+		thedist = std::min(thedist, dist);
+	}
+
+	return thedist;
+}
+
+
+
 /**
  * general structure factor calculation
  * e.g. type T as vector (complex number) for magnetic (nuclear) structure factor

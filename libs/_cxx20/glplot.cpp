@@ -358,10 +358,17 @@ void GlPlot_impl::SetObjectVisible(std::size_t idx, bool visible)
 }
 
 
-void GlPlot_impl::ToggleObjectHighlight(std::size_t idx)
+void GlPlot_impl::SetObjectHighlight(std::size_t idx, bool highlight)
 {
 	if(idx >= m_objs.size()) return;
-	m_objs[idx].m_highlighted = !m_objs[idx].m_highlighted;
+	m_objs[idx].m_highlighted = highlight;
+}
+
+
+bool GlPlot_impl::GetObjectHighlight(std::size_t idx) const
+{
+	if(idx >= m_objs.size()) return 0;
+	return m_objs[idx].m_highlighted;
 }
 
 
@@ -1194,7 +1201,7 @@ void GlPlot_impl::DoPaintGL(qgl_funcs *pGl)
 		else if(linkedObj->m_type == GlPlotObjType::LINES)
 			pGl->glDrawArrays(GL_LINES, 0, linkedObj->m_vertices.size());
 		else
-			std::cerr << "Unknown plot object." << std::endl;
+			std::cerr << "Unknown plot object type." << std::endl;
 
 		LOGGLERR(pGl);
 	}
