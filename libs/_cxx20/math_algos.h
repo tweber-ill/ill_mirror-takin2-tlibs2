@@ -3753,6 +3753,7 @@ requires is_mat<t_mat> && is_complex<typename t_mat::value_type>
 }
 
 
+
 /**
  * real crystallographic A matrix
  * after: https://en.wikipedia.org/wiki/Fractional_coordinates
@@ -3796,7 +3797,6 @@ requires is_mat<t_mat>
 }
 
 
-
 /**
  * get correct distance in unit cell, considering wrapping-around
  */
@@ -3809,45 +3809,29 @@ requires is_mat<t_mat> && is_vec<t_vec>
 	// all supercell position to try
 	std::vector<t_vec> vecSCs
 	{{
-		create<t_vec>({+1,  0,  0}),
-		create<t_vec>({-1,  0,  0}),
-		create<t_vec>({ 0, +1,  0}),
-		create<t_vec>({ 0, -1,  0}),
-		create<t_vec>({ 0,  0, +1}),
-		create<t_vec>({ 0,  0, -1}),
+		create<t_vec>({0,  0,  0}),
 
-		create<t_vec>({ 0,  +1, +1}),
-		create<t_vec>({ 0,  +1, -1}),
-		create<t_vec>({ 0,  -1, +1}),
-		create<t_vec>({ 0,  -1, -1}),
-		create<t_vec>({+1,  0, +1}),
-		create<t_vec>({+1,  0, -1}),
-		create<t_vec>({-1,  0, +1}),
-		create<t_vec>({-1,  0, -1}),
-		create<t_vec>({+1, +1,  0}),
-		create<t_vec>({+1, -1,  0}),
-		create<t_vec>({-1, +1,  0}),
-		create<t_vec>({-1, -1,  0}),
+		create<t_vec>({+1,  0,  0}), create<t_vec>({ 0, +1,  0}), create<t_vec>({ 0,  0, +1}),
 
-		create<t_vec>({+1, +1, +1}),
-		create<t_vec>({+1, +1, -1}),
-		create<t_vec>({+1, -1, +1}),
-		create<t_vec>({+1, -1, -1}),
-		create<t_vec>({-1, +1, +1}),
-		create<t_vec>({-1, +1, -1}),
-		create<t_vec>({-1, -1, +1}),
-		create<t_vec>({-1, -1, -1}),
+		create<t_vec>({ 0, +1, +1}), create<t_vec>({ 0, +1, -1}),
+		create<t_vec>({+1,  0, +1}), create<t_vec>({+1,  0, -1}),
+		create<t_vec>({+1, +1,  0}), create<t_vec>({+1, -1,  0}),
+
+		create<t_vec>({+1, +1, +1}), create<t_vec>({+1, +1, -1}),
+		create<t_vec>({+1, -1, +1}), create<t_vec>({+1, -1, -1}),
 	}};
-
 
 	t_real thedist = std::numeric_limits<t_real>::max();
 
-	for(const t_vec& vecSC : vecSCs)
+	for(const t_vec& _vecSC : vecSCs)
 	{
-		t_vec vec2A = matA * (vec2 + vecSC);
-		t_real dist = norm(vec1A - vec2A);
+		for(const t_vec& vecSC : { _vecSC, -_vecSC, t_real{2}*_vecSC, t_real{-2}*_vecSC })
+		{
+			t_vec vec2A = matA * (vec2 + vecSC);
+			t_real dist = norm(vec1A - vec2A);
 
-		thedist = std::min(thedist, dist);
+			thedist = std::min(thedist, dist);
+		}
 	}
 
 	return thedist;
