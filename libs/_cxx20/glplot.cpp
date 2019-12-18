@@ -117,7 +117,8 @@ qgl_funcs* GlPlot_impl::GetGlFunctions(QOpenGLWidget *pWidget)
 QPointF GlPlot_impl::GlToScreenCoords(const t_vec_gl& vec4, bool *pVisible)
 {
 	auto [ vecPersp, vec ] =
-	m::hom_to_screen_coords<t_mat_gl, t_vec_gl>(vec4, m_matCam, m_matPerspective, m_matViewport, true);
+		m::hom_to_screen_coords<t_mat_gl, t_vec_gl>
+			(vec4, m_matCam, m_matPerspective, m_matViewport, true);
 
 	// position not visible -> return a point outside the viewport
 	if(vecPersp[2] > 1.)
