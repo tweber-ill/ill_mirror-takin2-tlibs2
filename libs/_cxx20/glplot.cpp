@@ -85,7 +85,7 @@ GlPlot_impl::~GlPlot_impl()
 		obj.m_pvertexbuf.reset();
 		obj.m_pnormalsbuf.reset();
 		obj.m_pcolorbuf.reset();
-		pGl->glDeleteVertexArrays(1, &obj.m_vertexarr);
+		if(pGl) pGl->glDeleteVertexArrays(1, &obj.m_vertexarr);
 	}
 
 	m_objs.clear();
@@ -131,7 +131,7 @@ QPointF GlPlot_impl::GlToScreenCoords(const t_vec_gl& vec4, bool *pVisible)
 }
 
 
-t_mat_gl GlPlot_impl::GetArrowMatrix(const t_vec_gl& vecTo, t_real_gl postscale, const t_vec_gl& vecPostTrans, 
+t_mat_gl GlPlot_impl::GetArrowMatrix(const t_vec_gl& vecTo, t_real_gl postscale, const t_vec_gl& vecPostTrans,
 	const t_vec_gl& vecFrom, t_real_gl prescale, const t_vec_gl& vecPreTrans)
 {
 	t_mat_gl mat = m::unit<t_mat_gl>(4);
@@ -158,6 +158,7 @@ GlPlotObj GlPlot_impl::CreateTriangleObject(const std::vector<t_vec3_gl>& verts,
 
 
 	qgl_funcs* pGl = GetGlFunctions();
+
 	GLint attrVertex = m_attrVertex;
 	GLint attrVertexNormal = m_attrVertexNorm;
 	GLint attrVertexColor = m_attrVertexCol;
@@ -168,7 +169,7 @@ GlPlotObj GlPlot_impl::CreateTriangleObject(const std::vector<t_vec3_gl>& verts,
 
 	// flatten vertex array into raw float array
 	auto to_float_array = [](const std::vector<t_vec3_gl>& verts, int iRepeat=1, int iElems=3, bool bNorm=false)
-	-> std::vector<t_real_gl>
+		-> std::vector<t_real_gl>
 	{
 		std::vector<t_real_gl> vecRet;
 		vecRet.reserve(iRepeat*verts.size()*iElems);
@@ -773,7 +774,11 @@ void GlPlot_impl::resizeGL()
 	const int w = m_iScreenDims[0];
 	const int h = m_iScreenDims[1];
 
-	if(auto *pContext = ((QOpenGLWidget*)m_pPlot)->context(); !pContext) return;
+	if(auto *pContext = ((QOpenGLWidget*)m_pPlot)->context(); !pContext)
+		return;
+	auto *pGl = GetGlFunctions();
+	if(!pGl)
+		return;
 
 	m_matViewport = m::hom_viewport<t_mat_gl>(w, h, 0., 1.);
 	std::tie(m_matViewport_inv, std::ignore) = m::inv<t_mat_gl>(m_matViewport);
@@ -782,7 +787,6 @@ void GlPlot_impl::resizeGL()
 	//m_matPerspective = m::hom_ortho<t_mat_gl>(0.01, 100., -t_real_gl(w)*0.0025, t_real_gl(w)*0.0025, -t_real_gl(h)*0.0025, t_real_gl(h)*0.0025);
 	std::tie(m_matPerspective_inv, std::ignore) = m::inv<t_mat_gl>(m_matPerspective);
 
-	auto *pGl = GetGlFunctions();
 	pGl->glViewport(0, 0, w, h);
 	pGl->glDepthRange(0, 1);
 
@@ -1005,9 +1009,9 @@ void GlPlot_impl::UpdatePicker()
 		for(std::size_t startidx=0; startidx+2<linkedObj->m_triangles.size(); startidx+=3)
 		{
 			std::vector<t_vec3_gl> poly{ {
-				linkedObj->m_triangles[startidx+0], 
-				linkedObj->m_triangles[startidx+1], 
-				linkedObj->m_triangles[startidx+2] 
+				linkedObj->m_triangles[startidx+0],
+				linkedObj->m_triangles[startidx+1],
+				linkedObj->m_triangles[startidx+2]
 			} };
 
 			// coordTrafoInv only keeps 3d objects from locally distorting
@@ -1126,6 +1130,9 @@ void GlPlot_impl::tick(const std::chrono::milliseconds& ms)
  */
 void GlPlot_impl::DoPaintGL(qgl_funcs *pGl)
 {
+	if(!pGl)
+		return;
+
 	// clear
 	pGl->glClearColor(1., 1., 1., 1.);
 	pGl->glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -1173,10 +1180,10 @@ void GlPlot_impl::DoPaintGL(qgl_funcs *pGl)
 
 
 		m_pShaders->setUniformValue(m_uniMatrixObj, obj.m_mat);
-	
+
 		// set to untransformed coordinate system if the object is invariant
 		m_pShaders->setUniformValue(m_uniCoordSys, linkedObj->m_invariant ? 0 : m_iCoordSys.load());
-	
+
 
 		// main vertex array object
 		pGl->glBindVertexArray(linkedObj->m_vertexarr);
@@ -1300,7 +1307,6 @@ void GlPlot_impl::paintGL()
 
 			auto *pGl = GetGlFunctions();
 			painter.beginNativePainting();
-
 			DoPaintGL(pGl);
 		}
 
