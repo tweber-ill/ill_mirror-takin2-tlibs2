@@ -39,15 +39,19 @@
 	#define _GL_MIN_VER 3
 #endif
 
+#if !defined(_GL_SUFFIX)
+	#define _GL_SUFFIX _Core
+#endif
+
 // GL functions include
-#define _GL_INC_IMPL(MAJ, MIN) <QtGui/QOpenGLFunctions_ ## MAJ ## _ ## MIN ## _Core>
-#define _GL_INC(MAJ, MIN) _GL_INC_IMPL(MAJ, MIN)
-#include _GL_INC(_GL_MAJ_VER, _GL_MIN_VER)
+#define _GL_INC_IMPL(MAJ, MIN, SUFF) <QtGui/QOpenGLFunctions_ ## MAJ ## _ ## MIN ## SUFF>
+#define _GL_INC(MAJ, MIN, SUFF) _GL_INC_IMPL(MAJ, MIN, SUFF)
+#include _GL_INC(_GL_MAJ_VER, _GL_MIN_VER, _GL_SUFFIX)
 
 // GL functions typedef
-#define _GL_FUNC_IMPL(MAJ, MIN) QOpenGLFunctions_ ## MAJ ## _ ## MIN ## _Core
-#define _GL_FUNC(MAJ, MIN) _GL_FUNC_IMPL(MAJ, MIN)
-using qgl_funcs = _GL_FUNC(_GL_MAJ_VER, _GL_MIN_VER);
+#define _GL_FUNC_IMPL(MAJ, MIN, SUFF) QOpenGLFunctions_ ## MAJ ## _ ## MIN ## SUFF
+#define _GL_FUNC(MAJ, MIN, SUFF) _GL_FUNC_IMPL(MAJ, MIN, SUFF)
+using qgl_funcs = _GL_FUNC(_GL_MAJ_VER, _GL_MIN_VER, _GL_SUFFIX);
 
 // GL surface format
 extern void set_gl_format(bool bCore=true, int iMajorVer=3, int iMinorVer=3, int iSamples=8);
