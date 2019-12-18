@@ -264,6 +264,8 @@ public:
 	void SetBTrafo(const t_mat_gl& matB, const t_mat_gl* matA = nullptr);
 	void SetCoordSys(int iSys);
 
+	bool IsInitialised() const { return m_bInitialised; }
+
 
 public /*slots*/:
 	void paintGL();

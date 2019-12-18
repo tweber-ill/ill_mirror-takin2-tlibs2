@@ -769,7 +769,7 @@ void GlPlot_impl::SetScreenDims(int w, int h)
 
 void GlPlot_impl::resizeGL()
 {
-	if(!m_bPlatformSupported) return;
+	if(!m_bPlatformSupported || !m_bInitialised) return;
 
 	const int w = m_iScreenDims[0];
 	const int h = m_iScreenDims[1];
@@ -1410,7 +1410,8 @@ void GlPlot::initializeGL()
 	if constexpr(!m_isthreaded)
 	{
 		m_impl->initialiseGL();
-		emit AfterGLInitialisation();
+		if(m_impl->IsInitialised())
+			emit AfterGLInitialisation();
 	}
 }
 
