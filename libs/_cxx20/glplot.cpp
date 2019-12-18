@@ -16,9 +16,12 @@
 
 #include <iostream>
 #include <boost/scope_exit.hpp>
+#include <boost/preprocessor/stringize.hpp>
 #include <boost/algorithm/string/replace.hpp>
 namespace algo = boost::algorithm;
 
+
+#pragma message("Compiling for GL version " BOOST_PP_STRINGIZE(_GL_MAJ_VER) "." BOOST_PP_STRINGIZE(_GL_MIN_VER) " and GLSL version " BOOST_PP_STRINGIZE(_GLSL_MAJ_VER) BOOST_PP_STRINGIZE(_GLSL_MIN_VER) "0.")
 
 
 // ----------------------------------------------------------------------------
@@ -666,7 +669,7 @@ void main()
 
 
 	// set glsl version and constants
-	const std::string strGlsl = std::to_string(_GL_MAJ_VER*100 + _GL_MIN_VER*10);
+	const std::string strGlsl = std::to_string(_GLSL_MAJ_VER*100 + _GLSL_MIN_VER*10);
 	const std::string strPi = std::to_string(m::pi<t_real_gl>);
 	for(std::string* strSrc : { &strFragShader, &strVertexShader })
 	{

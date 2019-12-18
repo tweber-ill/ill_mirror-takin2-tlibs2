@@ -39,8 +39,36 @@
 	#define _GL_MIN_VER 3
 #endif
 
-#if !defined(_GL_SUFFIX)
-	#define _GL_SUFFIX _Core
+#if _GL_MAJ_VER<=3 && _GL_MIN_VER<2
+	#if !defined(_GL_SUFFIX)
+		#define _GL_SUFFIX
+	#endif
+
+	#if _GL_MAJ_VER==3 && _GL_MIN_VER==1
+		#define _GLSL_MAJ_VER 1
+		#define _GLSL_MIN_VER 4
+	#elif _GL_MAJ_VER==3 && _GL_MIN_VER==0
+		#define _GLSL_MAJ_VER 1
+		#define _GLSL_MIN_VER 3
+	#elif _GL_MAJ_VER==2 && _GL_MIN_VER==1
+		#define _GLSL_MAJ_VER 1
+		#define _GLSL_MIN_VER 2
+	#elif _GL_MAJ_VER==2 && _GL_MIN_VER==0
+		#define _GLSL_MAJ_VER 1
+		#define _GLSL_MIN_VER 1
+	#endif
+#else
+	#if !defined(_GL_SUFFIX)
+		#define _GL_SUFFIX _Core
+	#endif
+
+	#if _GL_MAJ_VER==3 && _GL_MIN_VER==2
+		#define _GLSL_MAJ_VER 1
+		#define _GLSL_MIN_VER 5
+	#else
+		#define _GLSL_MAJ_VER _GL_MAJ_VER
+		#define _GLSL_MIN_VER _GL_MIN_VER
+	#endif
 #endif
 
 // GL functions include
