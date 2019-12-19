@@ -1416,6 +1416,8 @@ void GlPlot::initializeGL()
 		m_impl->initialiseGL();
 		if(m_impl->IsInitialised())
 			emit AfterGLInitialisation();
+		else
+			emit GLInitialisationFailed();
 	}
 }
 

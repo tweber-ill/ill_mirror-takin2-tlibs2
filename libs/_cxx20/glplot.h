@@ -371,6 +371,8 @@ public:
 
 signals:
 	void AfterGLInitialisation();
+	void GLInitialisationFailed();
+
 	void MouseDown(bool left, bool mid, bool right);
 	void MouseUp(bool left, bool mid, bool right);
 	void MouseClick(bool left, bool mid, bool right);
