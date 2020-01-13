@@ -366,7 +366,8 @@ requires is_complex<T>
  */
 template<class t_vec>
 bool equals(const t_vec& vec1, const t_vec& vec2,
-	typename t_vec::value_type eps = std::numeric_limits<typename t_vec::value_type>::epsilon())
+	typename t_vec::value_type eps = std::numeric_limits<typename t_vec::value_type>::epsilon(),
+	int _maxSize = -1)
 requires is_basic_vec<t_vec>
 {
 	using T = typename t_vec::value_type;
@@ -375,8 +376,12 @@ requires is_basic_vec<t_vec>
 	if(vec1.size() != vec2.size())
 		return false;
 
+	std::size_t maxSize = vec1.size();
+	if(_maxSize >= 0)
+		maxSize = std::min(std::size_t(_maxSize), maxSize);
+
 	// check each element
-	for(std::size_t i=0; i<vec1.size(); ++i)
+	for(std::size_t i=0; i<maxSize; ++i)
 	{
 		if constexpr(is_complex<decltype(eps)>)
 		{
@@ -398,7 +403,8 @@ requires is_basic_vec<t_vec>
  */
 template<class t_mat>
 bool equals(const t_mat& mat1, const t_mat& mat2,
-	typename t_mat::value_type eps = std::numeric_limits<typename t_mat::value_type>::epsilon())
+	typename t_mat::value_type eps = std::numeric_limits<typename t_mat::value_type>::epsilon(),
+	int _maxSize = -1)
 requires is_mat<t_mat>
 {
 	using T = typename t_mat::value_type;
@@ -406,9 +412,17 @@ requires is_mat<t_mat>
 	if(mat1.size1() != mat2.size1() || mat1.size2() != mat2.size2())
 		return false;
 
-	for(std::size_t i=0; i<mat1.size1(); ++i)
+	std::size_t maxSize1 = mat1.size1();
+	std::size_t maxSize2 = mat1.size2();
+	if(_maxSize >= 0)
 	{
-		for(std::size_t j=0; j<mat1.size2(); ++j)
+		maxSize1 = std::min(std::size_t(_maxSize), maxSize1);
+		maxSize2 = std::min(std::size_t(_maxSize), maxSize2);
+	}
+
+	for(std::size_t i=0; i<maxSize1; ++i)
+	{
+		for(std::size_t j=0; j<maxSize2; ++j)
 		{
 			if(!equals<T>(mat1(i,j), mat2(i,j), eps))
 				return false;
@@ -424,7 +438,8 @@ requires is_mat<t_mat>
  */
 template<class t_obj, template<class...> class t_vec=std::vector>
 bool equals_all(const t_vec<t_obj>& vec1, const t_vec<t_obj>& _vec2,
-	typename t_obj::value_type eps = std::numeric_limits<typename t_obj::value_type>::epsilon())
+	typename t_obj::value_type eps = std::numeric_limits<typename t_obj::value_type>::epsilon(),
+	int maxSize=-1)
 {
 	auto vec2 = _vec2;
 	if(vec1.size() != vec2.size())
@@ -433,9 +448,10 @@ bool equals_all(const t_vec<t_obj>& vec1, const t_vec<t_obj>& _vec2,
 	for(const auto& obj1 : vec1)
 	{
 		// find obj1 in vec2
-		auto iter = std::find_if(vec2.crbegin(), vec2.crend(), [&obj1, eps](const t_obj& obj2) -> bool
+		auto iter = std::find_if(vec2.crbegin(), vec2.crend(), 
+		[&obj1, eps, maxSize](const t_obj& obj2) -> bool
 		{
-			return m::equals<t_obj>(obj1, obj2, eps);
+			return m::equals<t_obj>(obj1, obj2, eps, maxSize);
 		});
 
 		// not found
@@ -449,6 +465,32 @@ bool equals_all(const t_vec<t_obj>& vec1, const t_vec<t_obj>& _vec2,
 	return true;
 }
 
+
+/**
+ * remove duplicate vectors or matrices in the container
+ */
+template<class t_obj, template<class...> class t_cont = std::vector>
+t_cont<t_obj> remove_duplicates(const t_cont<t_obj>& objs,
+	typename t_obj::value_type eps = std::numeric_limits<typename t_obj::value_type>::epsilon())
+{
+	t_cont<t_obj> newobjs = objs;
+
+	for(const auto& elem : objs)
+	{
+		// find obj in container
+		auto iter = std::find_if(newobjs.cbegin(), newobjs.cend(), 
+		[&elem, eps](const t_obj& elem2) -> bool
+		{
+			return m::equals<t_obj>(elem, elem2, eps);
+		});
+
+		// not found
+		if(iter == newobjs.cend())
+			newobjs.push_back(elem);
+	}
+
+	return newobjs;
+}
 
 
 /**
@@ -3912,10 +3954,52 @@ requires is_basic_vec<t_vec>
 
 
 /**
+ * wrap atom positions back to unit cell
+ */
+template<class t_vec, class t_real = typename t_vec::value_type>
+t_vec keep_atom_in_uc(const t_vec& _atom)
+requires is_vec<t_vec>
+{
+	auto newatom = _atom;
+
+	for(std::size_t i=0; i<newatom.size(); ++i)
+	{
+		newatom[i] = std::fmod(newatom[i], t_real{1});
+		if(newatom[i] < t_real{-0.5})
+			newatom[i] += std::abs(std::floor(newatom[i]));
+		if(newatom[i] >= t_real{0.5})
+			newatom[i] -= std::abs(std::ceil(newatom[i]));
+	}
+
+	return newatom;
+}
+
+
+
+/**
+ * wrap collection of atom positions back to unit cell
+ */
+template<class t_vec, class t_real = typename t_vec::value_type,
+	template<class...> class t_cont = std::vector>
+t_cont<t_vec> keep_atoms_in_uc(const t_cont<t_vec>& _atoms)
+requires is_vec<t_vec>
+{
+	t_cont<t_vec> newatoms;
+
+	for(const auto& _atom : _atoms)
+		newatoms.emplace_back(keep_atom_in_uc<t_vec, t_real>(_atom));
+
+	return newatoms;
+}
+
+
+
+/**
  * create positions using the given symmetry operations
  */
-template<class t_vec, class t_mat, class t_real = typename t_vec::value_type>
-std::vector<t_vec> apply_ops_hom(const t_vec& _atom, const std::vector<t_mat>& ops,
+template<class t_vec, class t_mat, class t_real = typename t_vec::value_type,
+	template<class...> class t_cont = std::vector>
+t_cont<t_vec> apply_ops_hom(const t_vec& _atom, const t_cont<t_mat>& ops,
 	t_real eps=std::numeric_limits<t_real>::epsilon(), bool bKeepInUnitCell=true)
 requires is_vec<t_vec> && is_mat<t_mat>
 {
@@ -3924,7 +4008,7 @@ requires is_vec<t_vec> && is_mat<t_mat>
 	if(atom.size() == 3)
 		atom = create<t_vec>({atom[0], atom[1], atom[2], 1});
 
-	std::vector<t_vec> newatoms;
+	t_cont<t_vec> newatoms;
 
 	for(const auto& op : ops)
 	{
@@ -3932,16 +4016,7 @@ requires is_vec<t_vec> && is_mat<t_mat>
 		newatom.resize(3);
 
 		if(bKeepInUnitCell)
-		{
-			for(std::size_t i=0; i<newatom.size(); ++i)
-			{
-				newatom[i] = std::fmod(newatom[i], t_real{1});
-				if(newatom[i] < t_real{-0.5})
-					newatom[i] += std::abs(std::floor(newatom[i]));
-				if(newatom[i] >= t_real{0.5})
-					newatom[i] -= std::abs(std::ceil(newatom[i]));
-			}
-		}
+			newatom = keep_atom_in_uc<t_vec>(newatom);
 
 		// position already occupied?
 		if(std::find_if(newatoms.begin(), newatoms.end(), [&newatom, eps](const t_vec& vec)->bool
@@ -3955,8 +4030,6 @@ requires is_vec<t_vec> && is_mat<t_mat>
 
 	return newatoms;
 }
-
-
 // ----------------------------------------------------------------------------
 
 
