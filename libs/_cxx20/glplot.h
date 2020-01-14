@@ -299,7 +299,7 @@ public:
 	bool IsInitialised() const { return m_bInitialised; }
 
 
-public /*slots*/:
+public slots:
 	void paintGL();
 
 	void startedThread();
@@ -350,12 +350,6 @@ protected:
 	virtual void mouseReleaseEvent(QMouseEvent *Evt) override;
 	virtual void wheelEvent(QWheelEvent *pEvt) override;
 
-protected slots:
-	void beforeComposing();
-	void afterComposing();
-	void beforeResizing();
-	void afterResizing();
-
 private:
 	mutable QMutex m_mutex{QMutex::Recursive};
 	std::unique_ptr<GlPlot_impl> m_impl;
@@ -368,6 +362,12 @@ public:
 
 	void MoveContextToThread();
 	bool IsContextInThread() const;
+
+protected slots:
+	void beforeComposing();
+	void afterComposing();
+	void beforeResizing();
+	void afterResizing();
 
 signals:
 	void AfterGLInitialisation();

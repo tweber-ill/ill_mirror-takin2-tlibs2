@@ -13,6 +13,7 @@
 #include <QtGui/QSurfaceFormat>
 #include <QtGui/QPainter>
 #include <QtGui/QGuiApplication>
+#include <QtCore/QtGlobal>
 
 #include <iostream>
 #include <boost/scope_exit.hpp>
@@ -670,7 +671,9 @@ void main()
 
 	// set glsl version and constants
 	const std::string strGlsl = std::to_string(_GLSL_MAJ_VER*100 + _GLSL_MIN_VER*10);
-	const std::string strPi = std::to_string(m::pi<t_real_gl>);
+	std::string strPi = std::to_string(m::pi<t_real_gl>);	// locale-dependent !
+	algo::replace_all(strPi, std::string(","), std::string("."));	// ensure decimal point
+
 	for(std::string* strSrc : { &strFragShader, &strVertexShader })
 	{
 		algo::replace_all(*strSrc, std::string("${GLSL_VERSION}"), strGlsl);
@@ -882,9 +885,15 @@ void GlPlot_impl::UpdateCam()
  */
 void GlPlot_impl::RequestPlotUpdate()
 {
+#if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)
 	QMetaObject::invokeMethod((QOpenGLWidget*)m_pPlot,
 		static_cast<void (QOpenGLWidget::*)()>(&QOpenGLWidget::update),
 		Qt::ConnectionType::QueuedConnection);
+#else
+	QMetaObject::invokeMethod((QOpenGLWidget*)m_pPlot,
+		"update",
+		Qt::ConnectionType::QueuedConnection);
+#endif
 }
 
 
@@ -1325,7 +1334,11 @@ void GlPlot_impl::paintGL()
 
 		if(auto *pContext = m_pPlot->context(); !pContext) return;
 
+#if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)
 		QMetaObject::invokeMethod(m_pPlot, &GlPlot::MoveContextToThread, Qt::ConnectionType::BlockingQueuedConnection);
+#else
+		QMetaObject::invokeMethod(m_pPlot, "MoveContextToThread", Qt::ConnectionType::BlockingQueuedConnection);
+#endif
 		if(!m_pPlot->IsContextInThread())
 		{
 			std::cerr << __func__ << ": Context is not in thread!" << std::endl;
@@ -1560,7 +1573,11 @@ void GlPlot::afterComposing()
 	if constexpr(m_isthreaded)
 	{
 		m_mutex.unlock();
+#if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)
 		QMetaObject::invokeMethod(m_impl.get(), &GlPlot_impl::paintGL, Qt::ConnectionType::QueuedConnection);
+#else
+		QMetaObject::invokeMethod(m_impl.get(), "paintGL", Qt::ConnectionType::QueuedConnection);
+#endif
 	}
 }
 
