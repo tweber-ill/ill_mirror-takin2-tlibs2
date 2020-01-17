@@ -285,6 +285,7 @@ public:
 	void SetObjectVisible(std::size_t idx, bool visible);
 	void SetObjectHighlight(std::size_t idx, bool highlight);
 
+	const std::string& GetObjectLabel(std::size_t idx) const;
 	const std::string& GetObjectDataString(std::size_t idx) const;
 	bool GetObjectHighlight(std::size_t idx) const;
 

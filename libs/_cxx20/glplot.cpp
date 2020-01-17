@@ -335,10 +335,19 @@ void GlPlot_impl::SetObjectCol(std::size_t idx, t_real_gl r, t_real_gl g, t_real
 	m_objs[idx].m_color = m::create<t_vec_gl>({r,g,b,a});
 }
 
+
 void GlPlot_impl::SetObjectLabel(std::size_t idx, const std::string& label)
 {
 	if(idx >= m_objs.size()) return;
 	m_objs[idx].m_label = label;
+}
+
+const std::string& GlPlot_impl::GetObjectLabel(std::size_t idx) const
+{
+	static const std::string empty{};
+	if(idx >= m_objs.size()) return empty;
+
+	return m_objs[idx].m_label;
 }
 
 
