@@ -83,14 +83,14 @@ t_scalar stoval(const t_str& str)
  * requirements for having a value_type
  */
 template<class T>
-concept bool has_value_type = requires { typename T::value_type; };
+concept has_value_type = requires { typename T::value_type; };
 
 
 /**
  * requirements for a scalar type
  */
 template<class T>
-concept bool is_scalar =
+concept is_scalar =
 	std::is_floating_point_v<T> || std::is_integral_v<T> /*|| std::is_arithmetic_v<T>*/;
 
 
@@ -98,7 +98,7 @@ concept bool is_scalar =
  * requirements for a basic vector container like std::vector
  */
 template<class T>
-concept bool is_basic_vec = requires(const T& a)
+concept is_basic_vec = requires(const T& a)
 {
 	a.size();					// must have a size() member function
 	a.operator[](1);			// must have an operator[]
@@ -108,7 +108,7 @@ concept bool is_basic_vec = requires(const T& a)
  * requirements of a vector type with a dynamic size
  */
 template<class T>
-concept bool is_dyn_vec = requires(const T& a)
+concept is_dyn_vec = requires(const T& a)
 {
 	T(3);						// constructor
 };
@@ -117,7 +117,7 @@ concept bool is_dyn_vec = requires(const T& a)
  * requirements for a vector container
  */
 template<class T>
-concept bool is_vec = requires(const T& a)
+concept is_vec = requires(const T& a)
 {
 	a+a;						// operator+
 	a-a;						// operator-
@@ -131,7 +131,7 @@ concept bool is_vec = requires(const T& a)
  * requirements for a basic matrix container
  */
 template<class T>
-concept bool is_basic_mat = requires(const T& a)
+concept is_basic_mat = requires(const T& a)
 {
 	a.size1();					// must have a size1() member function
 	a.size2();					// must have a size2() member function
@@ -142,7 +142,7 @@ concept bool is_basic_mat = requires(const T& a)
  * requirements of a matrix type with a dynamic size
  */
 template<class T>
-concept bool is_dyn_mat = requires(const T& a)
+concept is_dyn_mat = requires(const T& a)
 {
 	T(3,3);						// constructor
 };
@@ -151,7 +151,7 @@ concept bool is_dyn_mat = requires(const T& a)
  * requirements for a matrix container
  */
 template<class T>
-concept bool is_mat = requires(const T& a)
+concept is_mat = requires(const T& a)
 {
 	a+a;						// operator+
 	a-a;						// operator-
@@ -167,7 +167,7 @@ concept bool is_mat = requires(const T& a)
  * requirements for a complex number
  */
 template<class T>
-concept bool is_complex = requires(const T& a)
+concept is_complex = requires(const T& a)
 {
 	std::conj(a);
 	a.real();			// must have a real() member function
