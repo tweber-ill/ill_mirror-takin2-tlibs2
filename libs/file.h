@@ -77,6 +77,36 @@ inline std::size_t get_file_size(const std::basic_string<typename fs::path::valu
 	return fs::file_size(fs::path(strFile));
 }
 
+
+/**
+ * reads a part of the file in a buffer
+ * @param istr: input stream
+ * @param offs: file offset in bytes
+ * @param len: length in size of T
+ */
+template <class T, class t_char = char>
+std::pair<bool, std::shared_ptr<T[]>> get_file_mem(std::basic_istream<t_char>& istr, std::size_t offs, std::size_t len=1)
+{
+	bool ok = true;
+
+	std::shared_ptr<T[]> ptr(new T[len]);
+	if(!ptr)
+		return std::make_pair(false, ptr);
+
+	std::streampos posOrig = istr.tellg();
+
+	istr.seekg(offs, std::ios_base::beg);
+	istr.read((char*)ptr.get(), len*sizeof(T));
+	if(istr.gcount() != len*sizeof(T))
+		ok = false;
+
+	// move back to original position
+	istr.seekg(posOrig, std::ios_base::beg);
+
+	return std::make_pair(ok, ptr);
+}
+
+
 // ----------------------------------------------------------------------------
 
 template<typename t_char=char>
