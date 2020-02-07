@@ -82,17 +82,17 @@ namespace ublas = boost::numeric::ublas;
 
 
 #ifdef USE_LAPACK
-	extern "C"
-	{
-		#define lapack_complex_float std::complex<float>
-		#define lapack_complex_float_real(c) (c.real())
-		#define lapack_complex_float_imag(c) (c.imag())
-		#define lapack_complex_double std::complex<double>
-		#define lapack_complex_double_real(c) (c.real())
-		#define lapack_complex_double_imag(c) (c.imag())
+extern "C"
+{
+	#define lapack_complex_float std::complex<float>
+	#define lapack_complex_float_real(c) (c.real())
+	#define lapack_complex_float_imag(c) (c.imag())
+	#define lapack_complex_double std::complex<double>
+	#define lapack_complex_double_real(c) (c.real())
+	#define lapack_complex_double_imag(c) (c.imag())
 
-		#include <lapacke.h>
-	}
+	#include <lapacke.h>
+}
 #endif
 
 
@@ -6581,8 +6581,8 @@ template<class T>
 bool qr(const ublas::matrix<T>& M,
 	ublas::matrix<T>& Q, ublas::matrix<T>& R)
 {
-	select_func<float, double, decltype(LAPACKE_sgeqrf), decltype(LAPACKE_dgeqrf)>
-		sfunc(LAPACKE_sgeqrf, LAPACKE_dgeqrf);
+	select_func<float, double, decltype(::LAPACKE_sgeqrf), decltype(::LAPACKE_dgeqrf)>
+		sfunc(::LAPACKE_sgeqrf, ::LAPACKE_dgeqrf);
 	auto pfunc = sfunc.get_func<T>();
 
 	const typename ublas::matrix<T>::size_type m = M.size1();
@@ -6807,8 +6807,8 @@ bool eigenvec(const ublas::matrix<T>& mat,
 	bool bNorm = false)
 {
 	bool bOk = true;
-	select_func<float, double, decltype(LAPACKE_sgeev), decltype(LAPACKE_dgeev)>
-		sfunc(LAPACKE_sgeev, LAPACKE_dgeev);
+	select_func<float, double, decltype(::LAPACKE_sgeev), decltype(::LAPACKE_dgeev)>
+		sfunc(::LAPACKE_sgeev, ::LAPACKE_dgeev);
 	auto pfunc = sfunc.get_func<T>();
 
 	if(mat.size1() != mat.size2())
@@ -6901,8 +6901,8 @@ template<class T>
 bool eigenval(const ublas::matrix<T>& mat, std::vector<T>& evals_real, std::vector<T>& evals_imag)
 {
 	bool bOk = true;
-	select_func<float, double, decltype(LAPACKE_sgeev), decltype(LAPACKE_dgeev)>
-		sfunc(LAPACKE_sgeev, LAPACKE_dgeev);
+	select_func<float, double, decltype(::LAPACKE_sgeev), decltype(::LAPACKE_dgeev)>
+		sfunc(::LAPACKE_sgeev, ::LAPACKE_dgeev);
 	auto pfunc = sfunc.get_func<T>();
 
 	if(mat.size1() != mat.size2())
@@ -6947,8 +6947,8 @@ bool eigenvec_cplx(const ublas::matrix<std::complex<T>>& mat,
 {
 	using t_cplx = std::complex<T>;
 	bool bOk = true;
-	select_func<float, double, decltype(LAPACKE_cgeev), decltype(LAPACKE_zgeev)>
-		sfunc(LAPACKE_cgeev, LAPACKE_zgeev);
+	select_func<float, double, decltype(::LAPACKE_cgeev), decltype(::LAPACKE_zgeev)>
+		sfunc(::LAPACKE_cgeev, ::LAPACKE_zgeev);
 	auto pfunc = sfunc.get_func<T>();
 
 	if(mat.size1() != mat.size2())
@@ -7007,8 +7007,8 @@ bool eigenval_cplx(const ublas::matrix<std::complex<T>>& mat, std::vector<std::c
 {
 	using t_cplx = std::complex<T>;
 	bool bOk = true;
-	select_func<float, double, decltype(LAPACKE_cgeev), decltype(LAPACKE_zgeev)>
-		sfunc(LAPACKE_cgeev, LAPACKE_zgeev);
+	select_func<float, double, decltype(::LAPACKE_cgeev), decltype(::LAPACKE_zgeev)>
+		sfunc(::LAPACKE_cgeev, ::LAPACKE_zgeev);
 	auto pfunc = sfunc.get_func<T>();
 
 	if(mat.size1() != mat.size2())
@@ -7062,8 +7062,8 @@ bool eigenvec_sym(const ublas::matrix<T>& mat,
 	bool bNorm = false)
 {
 	bool bOk = true;
-	select_func<float, double, decltype(LAPACKE_ssyev), decltype(LAPACKE_dsyev)>
-		sfunc(LAPACKE_ssyev, LAPACKE_dsyev);
+	select_func<float, double, decltype(::LAPACKE_ssyev), decltype(::LAPACKE_dsyev)>
+		sfunc(::LAPACKE_ssyev, ::LAPACKE_dsyev);
 	auto pfunc = sfunc.get_func<T>();
 
 	if(mat.size1() != mat.size2())
@@ -7118,8 +7118,8 @@ template<class T>
 bool eigenval_sym(const ublas::matrix<T>& mat, std::vector<T>& evals)
 {
 	bool bOk = true;
-	select_func<float, double, decltype(LAPACKE_ssyev), decltype(LAPACKE_dsyev)>
-		sfunc(LAPACKE_ssyev, LAPACKE_dsyev);
+	select_func<float, double, decltype(::LAPACKE_ssyev), decltype(::LAPACKE_dsyev)>
+		sfunc(::LAPACKE_ssyev, ::LAPACKE_dsyev);
 	auto pfunc = sfunc.get_func<T>();
 
 	if(mat.size1() != mat.size2())
@@ -7166,8 +7166,8 @@ bool eigenvec_herm(const ublas::matrix<std::complex<T>>& mat,
 	using t_cplx = std::complex<T>;
 	bool bOk = true;
 
-	select_func<float, double, decltype(LAPACKE_cheev), decltype(LAPACKE_zheev)>
-		sfunc(LAPACKE_cheev, LAPACKE_zheev);
+	select_func<float, double, decltype(::LAPACKE_cheev), decltype(::LAPACKE_zheev)>
+		sfunc(::LAPACKE_cheev, ::LAPACKE_zheev);
 	auto pfunc = sfunc.get_func<T>();
 
 	if(mat.size1() != mat.size2())
@@ -7220,8 +7220,8 @@ bool eigenval_herm(const ublas::matrix<std::complex<T>>& mat, std::vector<T>& ev
 	using t_cplx = std::complex<T>;
 	bool bOk = true;
 
-	select_func<float, double, decltype(LAPACKE_cheev), decltype(LAPACKE_zheev)>
-		sfunc(LAPACKE_cheev, LAPACKE_zheev);
+	select_func<float, double, decltype(::LAPACKE_cheev), decltype(::LAPACKE_zheev)>
+		sfunc(::LAPACKE_cheev, ::LAPACKE_zheev);
 	auto pfunc = sfunc.get_func<T>();
 
 	if(mat.size1() != mat.size2())
@@ -7265,12 +7265,12 @@ bool eigenvecsel_herm(const ublas::matrix<std::complex<T>>& mat,
 	bool bNorm=0, T minval=-1, T maxval=-2, T eps=T(-1))
 {
 	// select needed functions
-	select_func<float, double, decltype(LAPACKE_cheevr), decltype(LAPACKE_zheevr)>
-	sfunc(LAPACKE_cheevr, LAPACKE_zheevr);
+	select_func<float, double, decltype(::LAPACKE_cheevr), decltype(::LAPACKE_zheevr)>
+	sfunc(::LAPACKE_cheevr, ::LAPACKE_zheevr);
 	auto pfunc = sfunc.get_func<T>();
 
-	select_func<float, double, decltype(LAPACKE_slamch), decltype(LAPACKE_dlamch)>
-	_lamch(LAPACKE_slamch, LAPACKE_dlamch);
+	select_func<float, double, decltype(::LAPACKE_slamch), decltype(::LAPACKE_dlamch)>
+	_lamch(::LAPACKE_slamch, ::LAPACKE_dlamch);
 	auto lamch = _lamch.get_func<T>();
 
 
@@ -7347,8 +7347,8 @@ template<typename T>
 bool singvec(const ublas::matrix<T>& mat,
 	ublas::matrix<T>& matU, ublas::matrix<T>& matV, std::vector<T>& vecsvals)
 {
-	select_func<float, double, decltype(LAPACKE_sgesvd), decltype(LAPACKE_dgesvd)>
-		sfunc(LAPACKE_sgesvd, LAPACKE_dgesvd);
+	select_func<float, double, decltype(::LAPACKE_sgesvd), decltype(::LAPACKE_dgesvd)>
+		sfunc(::LAPACKE_sgesvd, ::LAPACKE_dgesvd);
 	auto pfunc = sfunc.get_func<T>();
 
 	const std::size_t iM = mat.size1();
@@ -7402,8 +7402,8 @@ bool singvec_cplx(const ublas::matrix<std::complex<T>>& mat,
 {
 	using t_cplx = std::complex<T>;
 
-	select_func<float, double, decltype(LAPACKE_cgesvd), decltype(LAPACKE_zgesvd)>
-		sfunc(LAPACKE_cgesvd, LAPACKE_zgesvd);
+	select_func<float, double, decltype(::LAPACKE_cgesvd), decltype(::LAPACKE_zgesvd)>
+		sfunc(::LAPACKE_cgesvd, ::LAPACKE_zgesvd);
 	auto pfunc = sfunc.get_func<T>();
 
 	const std::size_t iM = mat.size1();
