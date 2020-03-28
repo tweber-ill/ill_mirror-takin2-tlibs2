@@ -5,7 +5,7 @@
  * @date 2017 -- 2018
  * @license GPLv3, see 'LICENSE' file
  * @desc Forked on 7-Nov-2018 from the privately and TUM-PhD-developed "tlibs" project (https://github.com/t-weber/tlibs).
- * 
+ *
  * g++-8 -std=c++17 -shared -fPIC -O2 -march=native -I. -I/usr/local/include/julia -I/usr/include/julia -o tl2jl.so log.cpp jl.cpp -lboost_system -lboost_iostreams -lMinuit2 -lgomp -ljulia
  */
 
