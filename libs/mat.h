@@ -96,6 +96,13 @@ extern "C"
 #endif
 
 
+#ifdef USE_QHULL
+	#include <Qhull.h>
+	#include <QhullFacetList.h>
+	#include <QhullVertexSet.h>
+#endif
+
+
 namespace tl2 {
 
 
@@ -5676,6 +5683,79 @@ t_cont<t_cont<t_vec>> verts_to_polyhedron(
 
 	return vecPolys;
 }
+
+
+
+#ifdef USE_QHULL
+
+/**
+ * calculates the convex hull
+ * https://github.com/t-weber/misc/blob/master/geo/qhulltst.cpp
+ */
+template<class t_vec = ublas::vector<double>,
+template<class...> class t_cont = std::vector,
+class T = typename t_vec::value_type>
+t_cont<t_cont<t_vec>> get_convexhull(const t_cont<t_vec>& vecVerts)
+{
+	using t_real_qh = double;
+
+	t_cont<t_cont<t_vec>> vecPolys;
+	const t_vec vecCentre = mean_value(vecVerts);
+
+	// copy vertices
+	int dim = vecVerts[0].size();
+	std::size_t len = vecVerts.size()*dim;
+	std::unique_ptr<t_real_qh[]> mem{new t_real_qh[len]};
+
+	std::size_t i=0;
+	for(const t_vec& vert : vecVerts)
+	{
+		for(int d=0; d<dim; ++d)
+		{
+			mem[i] = t_real_qh(vert[d]);
+			++i;
+		}
+	}
+
+
+	orgQhull::Qhull qhull{"tlibs2", dim, int(vecVerts.size()), mem.get(), ""};
+
+	orgQhull::QhullFacetList facets = qhull.facetList();
+	//std::cout << "Convex hull has " << facets.size() << " facets.";
+
+	for(orgQhull::QhullLinkedList<orgQhull::QhullFacet>::iterator iter=facets.begin();
+		iter!=facets.end(); ++iter)
+		{
+			// triangulable?
+			if(iter->isUpperDelaunay())
+				continue;
+
+			t_cont<t_vec> vecPoly;
+			orgQhull::QhullVertexSet vertices = iter->vertices();
+			for(orgQhull::QhullSet<orgQhull::QhullVertex>::iterator iterVertex=vertices.begin();
+				iterVertex!=vertices.end(); ++iterVertex)
+				{
+					orgQhull::QhullPoint point = (*iterVertex).point();
+					t_vec vecPoint(dim);
+					for(int i=0; i<dim; ++i)
+						vecPoint[i] = T(point[i]);
+
+					vecPoly.emplace_back(std::move(vecPoint));
+				}
+
+				sort_poly_verts<t_vec, t_cont, T>(vecPoly, vecCentre);
+				vecPolys.emplace_back(std::move(vecPoly));
+		}
+
+		// too few polygons => remove polyhedron
+		if(vecPolys.size() < 3)
+			vecPolys = decltype(vecPolys){};
+
+		return vecPolys;
+}
+
+#endif
+
 
 
 //------------------------------------------------------------------------------
