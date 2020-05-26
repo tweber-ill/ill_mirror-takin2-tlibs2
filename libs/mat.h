@@ -5819,8 +5819,8 @@ public:
 
 
 		return std::make_tuple(rank, rankext,
-							   pos_evals, neg_evals, zero_evals,
-						 pos_evalsext, neg_evalsext, zero_evalsext);
+			pos_evals, neg_evals, zero_evals,
+			pos_evalsext, neg_evalsext, zero_evalsext);
 	}
 
 
