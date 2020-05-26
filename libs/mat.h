@@ -5736,6 +5736,94 @@ public:
 		return dQ + dR + m_s;
 	}
 
+
+	/**
+	 * get the classification of the quadric
+	 * @see: https://mathworld.wolfram.com/QuadraticSurface.html
+	 * @returns: [rank, rank_ext, signature, signature_ext]
+	 */
+	std::tuple<int,int, int,int,int, int,int,int> ClassifyQuadric(T eps = tl::get_epsilon<T>()) const
+	{
+		// extended matrix
+		t_mat Qext = m_Q;
+		Qext.resize(m_Q.size1()+1, m_Q.size2()+1, true);
+		Qext(Qext.size1()-1, Qext.size2()-1) = m_s;
+		for(std::size_t i=0; i<m_r.size(); ++i)
+			Qext(i, Qext.size2()-1) = Qext(Qext.size1()-1, i) = m_r[i];
+
+
+		// ------------------------------------------------------------
+		// get eigenvalues
+		std::vector<t_vec> evecs;
+		std::vector<T> evals;
+		bool bEV = 0;
+		if(m_bQSymm)
+			bEV = eigenvec_sym(m_Q, evecs, evals);
+		else
+			bEV = eigenvec_approxsym(m_Q, evecs, evals);
+
+		if(!bEV)
+			return std::make_tuple(-1,-1, -1,-1,-1, -1,-1,-1);
+
+		std::vector<t_vec> evecsext;
+		std::vector<T> evalsext;
+		if(m_bQSymm)
+			bEV = eigenvec_sym(Qext, evecsext, evalsext);
+		else
+			bEV = eigenvec_approxsym(Qext, evecsext, evalsext);
+
+		if(!bEV)
+			return std::make_tuple(-1,-1, -1,-1,-1, -1,-1,-1);
+		// ------------------------------------------------------------
+
+
+		// ------------------------------------------------------------
+		// get ranks
+
+		auto get_rank = [eps](const std::vector<T>& evals) -> std::tuple<int, int,int,int>
+		{
+			int pos_evals = 0;
+			int neg_evals = 0;
+			int zero_evals = 0;
+			int rank = 0;
+
+			for(T eval : evals)
+			{
+				if(float_equal<T>(eval, T(0), eps))
+				{
+					++zero_evals;
+				}
+				else if(eval > T(0))
+				{
+					++pos_evals;
+					++rank;
+				}
+				else if(eval < T(0))
+				{
+					++neg_evals;
+					++rank;
+				}
+			}
+
+			return std::make_tuple(rank, pos_evals, neg_evals, zero_evals);
+		};
+
+		int pos_evals = 0, pos_evalsext = 0;
+		int neg_evals = 0, neg_evalsext = 0;
+		int zero_evals = 0, zero_evalsext = 0;
+		int rank = 0, rankext = 0;
+
+		std::tie(rank, pos_evals, neg_evals, zero_evals) = get_rank(evals);
+		std::tie(rankext, pos_evalsext, neg_evalsext, zero_evalsext) = get_rank(evalsext);
+		// ------------------------------------------------------------
+
+
+		return std::make_tuple(rank, rankext,
+							   pos_evals, neg_evals, zero_evals,
+						 pos_evalsext, neg_evalsext, zero_evalsext);
+	}
+
+
 	/**
 	 * remove column and row iIdx
 	 */
