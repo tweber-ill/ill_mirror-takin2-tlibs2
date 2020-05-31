@@ -852,7 +852,9 @@ t_flux<Sys,Y> larmor_field(const t_length<Sys,Y>& lam,
 	return om/co::gamma_n;
 }
 
+
 //------------------------------------------------------------------------------
+
 
 
 }

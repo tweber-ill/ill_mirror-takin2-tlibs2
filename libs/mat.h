@@ -654,6 +654,22 @@ t_mat make_mat(t_lst<t_lst<typename t_mat::value_type>>&& lst)
 
 
 /**
+ * splits a complex vector into its real and imaginary components
+ */
+template<class t_vec_cplx, class t_vec_real>
+std::tuple<t_vec_real, t_vec_real> split_cplx_vec(const t_vec_cplx& vecCplx)
+{
+	t_vec_real vecReal{vecCplx.size()}, vecImag{vecCplx.size()};
+	for(std::size_t comp=0; comp<vecCplx.size(); ++comp)
+	{
+		vecReal[comp] = vecCplx[comp].real();
+		vecImag[comp] = vecCplx[comp].imag();
+	}
+	return std::make_tuple(std::move(vecReal), std::move(vecImag));
+}
+
+
+/**
  * unit matrix -- general version
  */
 template<class t_mat = ublas::matrix<double>,
@@ -5742,7 +5758,7 @@ public:
 	 * @see: https://mathworld.wolfram.com/QuadraticSurface.html
 	 * @returns: [rank, rank_ext, signature, signature_ext]
 	 */
-	std::tuple<int,int, int,int,int, int,int,int> ClassifyQuadric(T eps = tl::get_epsilon<T>()) const
+	std::tuple<int,int, int,int,int, int,int,int> ClassifyQuadric(T eps = get_epsilon<T>()) const
 	{
 		// extended matrix
 		t_mat Qext = m_Q;
