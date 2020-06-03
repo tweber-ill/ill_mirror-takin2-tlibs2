@@ -23,7 +23,7 @@
 #include "str.h"
 #include "log.h"
 #include "file.h"
-#include "mat.h"
+#include "math20.h"
 #include "phys.h"
 
 
@@ -809,7 +809,7 @@ bool FileInstrBase<t_real>::MatchColumn(const std::string& strRegex,
 			const typename FileInstrBase<t_real>::t_vecVals& vecVals = GetCol(strCurColName);
 			/*if(std::find_if(vecVals.begin(), vecVals.end(),
 				[](const typename FileInstrBase<t_real>::t_vecVals::value_type& val) ->bool
-				{ return !float_equal<t_real>(val, 0.); }) != vecVals.end())
+				{ return !equals<t_real>(val, 0.); }) != vecVals.end())
 			{
 				strColName = strCurColName;
 				return true;
@@ -817,7 +817,7 @@ bool FileInstrBase<t_real>::MatchColumn(const std::string& strRegex,
 
 			t_real dSum = std::accumulate(vecVals.begin(), vecVals.end(), 0.,
 				[](t_real t1, t_real t2) -> t_real { return t1+t2; });
-			if(!bFilterEmpty || !float_equal<t_real>(dSum, 0.))
+			if(!bFilterEmpty || !equals<t_real>(dSum, 0.))
 				vecMatchedCols.push_back(t_pairCol{strCurColName, dSum});
 		}
 	}
@@ -1137,12 +1137,13 @@ void FilePsi<t_real>::ParsePolData()
 	}
 
 
-	// cleanup
+	// cleanup, TODO: port old set_eps_0 function
+	/*
 	for(std::size_t iPol=0; iPol<m_vecPolStates.size(); ++iPol)
 	{
 		for(unsigned iComp=0; iComp<6; ++iComp)
 			set_eps_0(m_vecPolStates[iPol][iComp]);
-	}
+	}*/
 }
 
 
@@ -1466,7 +1467,7 @@ std::vector<std::string> FilePsi<t_real>::GetScannedVars() const
 	for(const typename t_mapIParams::value_type& pair : m_mapScanSteps)
 	{
 		//std::cout << pair.first << ", " << pair.second << std::endl;
-		if(!float_equal<t_real>(pair.second, 0.) && pair.first.length())
+		if(!equals<t_real>(pair.second, 0.) && pair.first.length())
 		{
 			if(std::tolower(pair.first[0]) == 'd')
 				vecVars.push_back(pair.first.substr(1));
@@ -1499,10 +1500,10 @@ std::vector<std::string> FilePsi<t_real>::GetScannedVars() const
 				t_real dl = str_to_var<t_real>(*(++iterTok));
 				t_real dE = str_to_var<t_real>(*(++iterTok));
 
-				if(!float_equal<t_real>(dh, 0.)) vecVars.push_back("QH");
-				if(!float_equal<t_real>(dk, 0.)) vecVars.push_back("QK");
-				if(!float_equal<t_real>(dl, 0.)) vecVars.push_back("QL");
-				if(!float_equal<t_real>(dE, 0.)) vecVars.push_back("EN");
+				if(!equals<t_real>(dh, 0.)) vecVars.push_back("QH");
+				if(!equals<t_real>(dk, 0.)) vecVars.push_back("QK");
+				if(!equals<t_real>(dl, 0.)) vecVars.push_back("QL");
+				if(!equals<t_real>(dE, 0.)) vecVars.push_back("EN");
 			}
 
 
@@ -1987,13 +1988,13 @@ std::vector<std::string> FileFrm<t_real>::GetScannedVars() const
 			const std::string& strSteps = m[3];
 			std::vector<t_real> vecSteps = get_py_array<std::string, std::vector<t_real>>(strSteps);
 
-			if(vecSteps.size()>0 && !float_equal<t_real>(vecSteps[0], 0.))
+			if(vecSteps.size()>0 && !equals<t_real>(vecSteps[0], 0.))
 				vecVars.push_back("h");
-			if(vecSteps.size()>1 && !float_equal<t_real>(vecSteps[1], 0.))
+			if(vecSteps.size()>1 && !equals<t_real>(vecSteps[1], 0.))
 				vecVars.push_back("k");
-			if(vecSteps.size()>2 && !float_equal<t_real>(vecSteps[2], 0.))
+			if(vecSteps.size()>2 && !equals<t_real>(vecSteps[2], 0.))
 				vecVars.push_back("l");
-			if(vecSteps.size()>3 && !float_equal<t_real>(vecSteps[3], 0.))
+			if(vecSteps.size()>3 && !equals<t_real>(vecSteps[3], 0.))
 				vecVars.push_back("E");
 		}
 

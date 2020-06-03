@@ -2,27 +2,59 @@
  * future math library, developed from scratch to eventually replace tlibs(2)
  * container-agnostic math algorithms
  * @author Tobias Weber <tweber@ill.fr>
- * @date dec-2017 -- 2019
+ * @date dec-2017 -- 2020
  * @license GPLv3, see 'LICENSE' file
  * @desc The present version was forked on 8-Nov-2018 from the privately developed "magtools" project (https://github.com/t-weber/magtools).
+ * @desc Additional functions forked on 7-Nov-2018 from the privately and TUM-PhD-developed "tlibs" project (https://github.com/t-weber/tlibs).
  */
 
-#ifndef __CXX20_MATH_ALGOS_H__
-#define __CXX20_MATH_ALGOS_H__
+#ifndef __TLIBS2_CXX20_MATH_ALGOS_H__
+#define __TLIBS2_CXX20_MATH_ALGOS_H__
+
+//#define USE_LINALG_OPS
+//#define USE_FADDEEVA
+//#define USE_LAPACK
 
 #include <cstddef>
-#include <cmath>
+#include <cstdint>
 #include <cassert>
+#include <cmath>
 #include <complex>
 #include <tuple>
+#include <unordered_map>
 #include <vector>
+#include <initializer_list>
 #include <limits>
 #include <algorithm>
+#include <functional>
 #include <iterator>
 #include <numeric>
+#include <utility>
+#include <memory>
 #include <iostream>
+#include <sstream>
 #include <iomanip>
+
 #include <boost/algorithm/string.hpp>
+//#include <boost/math/quaternion.hpp>
+#include <boost/math/special_functions/factorials.hpp>
+#include <boost/math/special_functions/spherical_harmonic.hpp>
+#include <boost/math/constants/constants.hpp>
+#include <boost/algorithm/minmax_element.hpp>
+
+#include "log.h"
+#include "str.h"
+
+
+
+namespace math = boost::math;
+namespace ublas = boost::numeric::ublas;
+
+
+#ifdef USE_FADDEEVA
+	#include <Faddeeva.hh>
+	using t_real_fadd = double;
+#endif
 
 
 // separator tokens
@@ -30,15 +62,279 @@
 #define ROWSEP '|'
 
 
-namespace m {
+namespace tl2 {
 
 // ----------------------------------------------------------------------------
 // helpers
 // ----------------------------------------------------------------------------
 
 // constants
-template<typename T> constexpr T pi = T(M_PI);
+template<typename T=double> constexpr T pi = math::constants::pi<T>();
 template<typename T> T golden = T(0.5) + std::sqrt(T(5))/T(2);
+
+
+template<typename INT=int> bool is_even(INT i) { return (i%2 == 0); }
+template<typename INT=int> bool is_odd(INT i) { return !is_even<INT>(i); }
+
+template<class T=double> constexpr T r2d(T rad) { return rad/pi<T>*T(180); }	// rad -> deg
+template<class T=double> constexpr T d2r(T deg) { return deg/T(180)*pi<T>; }	// deg -> rad
+template<class T=double> constexpr T r2m(T rad) { return rad/pi<T>*T(180*60); }	// rad -> min
+template<class T=double> constexpr T m2r(T min) { return min/T(180*60)*pi<T>; }	// min -> rad
+
+template<class T=double> static constexpr T SIGMA2FWHM = T(2)*std::sqrt(T(2)*std::log(T(2)));
+template<class T=double> static constexpr T SIGMA2HWHM = std::sqrt(T(2)*std::log(T(2)));
+template<class T=double> static constexpr T FWHM2SIGMA = T(1)/SIGMA2FWHM<T>;
+template<class T=double> static constexpr T HWHM2SIGMA = T(1)/SIGMA2HWHM<T>;
+
+
+template<typename T> T sign(T t)
+{
+	if(t<0.) return -T(1);
+	return T(1);
+}
+
+
+template<typename T> T cot(T t)
+{
+	return std::tan(T(0.5)*pi<T> - t);
+}
+
+
+template<typename T> T coth(T t)
+{
+	return T(1) / std::tanh(t);
+}
+
+
+template<typename T=double>
+T log(T tbase, T tval)
+{
+	return T(std::log(tval)/std::log(tbase));
+}
+
+
+template<typename T=double>
+T nextpow(T tbase, T tval)
+{
+	return T(std::pow(tbase, std::ceil(log(tbase, tval))));
+}
+
+
+template<class T, typename REAL=double>
+T lerp(const T& a, const T& b, REAL val)
+{
+	return a + T((b-a)*val);
+}
+
+
+template<class T>
+typename T::value_type vec_angle_unsigned(const T& q1, const T& q2)
+{
+	// TODO: check argument type
+
+	// for vectors
+	typedef typename T::value_type REAL;
+
+	if(q1.size() != q2.size())
+		return REAL();
+
+	REAL dot = REAL();
+	REAL len1 = REAL();
+	REAL len2 = REAL();
+	for(std::size_t i=0; i<q1.size(); ++i)
+	{
+		dot += q1[i]*q2[i];
+
+		len1 += q1[i]*q1[i];
+		len2 += q2[i]*q2[i];
+	}
+
+	len1 = std::sqrt(len1);
+	len2 = std::sqrt(len2);
+
+	dot /= len1;
+	dot /= len2;
+
+	return std::acos(dot);
+}
+
+
+/**
+ * - see: K. Shoemake, "Animating rotation with quaternion curves":
+ *        http://dx.doi.org/10.1145/325334.325242
+ * - see: (Bronstein 2008), formula 4.207
+ */
+template<class T>
+T slerp(const T& q1, const T& q2, typename T::value_type t)
+{
+	typedef typename T::value_type REAL;
+
+	REAL angle = vec_angle_unsigned<T>(q1, q2);
+
+	T q = std::sin((REAL(1)-t)*angle)/std::sin(angle) * q1 +
+	std::sin(t*angle)/std::sin(angle) * q2;
+
+	return q;
+}
+
+
+
+// x=0..1
+template<typename T=double>
+T linear_interp(T x0, T x1, T x)
+{
+	return lerp<T,T>(x0, x1, x);
+}
+
+
+// x=0..1, y=0..1
+template<typename T=double>
+T bilinear_interp(T x0y0, T x1y0, T x0y1, T x1y1, T x, T y)
+{
+	T top = linear_interp<T>(x0y1, x1y1, x);
+	T bottom = linear_interp<T>(x0y0, x1y0, x);
+
+	return linear_interp<T>(bottom, top, y);
+}
+
+
+template<typename T=double, typename REAL=double,
+template<class...> class t_vec=std::vector>
+t_vec<T> linspace(const T& tmin, const T& tmax, std::size_t iNum)
+{
+	t_vec<T> vec;
+	vec.reserve(iNum);
+
+	for(std::size_t i=0; i<iNum; ++i)
+		vec.push_back(lerp<T,REAL>(tmin, tmax, REAL(i)/REAL(iNum-1)));
+	return vec;
+}
+
+
+template<typename T=double, typename REAL=double,
+template<class...> class t_vec=std::vector>
+t_vec<T> logspace(const T& tmin, const T& tmax, std::size_t iNum, T tBase=T(10))
+{
+	t_vec<T> vec = linspace<T, REAL>(tmin, tmax, iNum);
+
+	for(T& t : vec)
+		t = std::pow(tBase, t);
+	return vec;
+}
+
+
+template<typename T>
+T clamp(T t, T min, T max)
+{
+	if(t < min) t = min;
+	if(t > max) t = max;
+
+	return t;
+}
+
+
+template<class T>
+bool is_in_range(T val, T centre, T pm)
+{
+	pm = std::abs(pm);
+
+	if(val < centre-pm) return false;
+	if(val > centre+pm) return false;
+	return true;
+}
+
+
+/**
+ * point contained in linear range?
+ */
+template<class T = double>
+bool is_in_linear_range(T dStart, T dStop, T dPoint)
+{
+	if(dStop < dStart)
+		std::swap(dStart, dStop);
+
+	return (dPoint >= dStart) && (dPoint <= dStop);
+}
+
+/**
+ * angle contained in angular range?
+ */
+template<class T = double>
+bool is_in_angular_range(T dStart, T dRange, T dAngle)
+{
+	if(dStart < T(0)) dStart += T(2)*pi<T>;
+	if(dAngle < T(0)) dAngle += T(2)*pi<T>;
+
+	dStart = std::fmod(dStart, T(2)*pi<T>);
+	dAngle = std::fmod(dAngle, T(2)*pi<T>);
+
+	T dStop = dStart + dRange;
+
+
+	// if the end point is contained in the circular range
+	if(dStop < T(2)*pi<T>)
+	{
+		return is_in_linear_range<T>(dStart, dStop, dAngle);
+	}
+	else // else end point wraps around
+	{
+		return is_in_linear_range<T>(dStart, T(2)*pi<T>, dAngle) ||
+		is_in_linear_range<T>(T(0), dRange-(T(2)*pi<T>-dStart), dAngle);
+	}
+}
+
+
+/**
+ * CG coefficients
+ * formula: see (Arfken 2013), p. 790
+ *
+ * e.g. two e- spins: s1 = s2 = 0.5, ms[1,2] = 0.5 (up) or -0.5 (down), S = 0 (sing.) or 1 (trip.)
+ */
+template<class T = double>
+T CG_coeff(T S, T s1, T s2, T ms1, T ms2)
+{
+	T (*fak)(T) = [](T t) -> T { return boost::math::factorial<T>(t); };
+
+	T tCG = fak(S + s1 - s2)*fak(S - s1 + s2)*fak(-S + s1 + s2);
+	tCG *= (T(2)*S + T(1));
+	tCG *= fak(S + ms1 + ms2) * fak(S - (ms1 + ms2));
+	tCG *= fak(s1 + ms1) * fak(s1 - ms1);
+	tCG *= fak(s2 + ms2) * fak(s2 - ms2);
+	tCG /= fak(S + s1 + s2 + T(1));
+	tCG = std::sqrt(tCG);
+
+	auto k_fkt = [&](T k) -> T
+	{
+		T t = std::pow(T(-1), k);
+		t /= fak(k);
+		t /= fak(-S + s1 + s2 - k)*fak(S - s1 - ms2 + k)*fak(S - s2 + ms1 + k);
+		t /= fak(s2 + ms2 - k)*fak(s1 - ms1 - k);
+		return t;
+	};
+
+	auto k_minmax = [&]() -> std::pair<T,T>
+	{
+		T kmax = s1 - ms1;
+		kmax = std::min(kmax, s2 + ms2);
+		kmax = std::min(kmax, -S + s1 + s2);
+
+		T kmin = -(S - s1 - ms2);
+		kmin = std::max(kmin, -(S - s2 + ms1));
+		kmin = std::max(kmin, T(0));
+
+		return std::make_pair(kmin, kmax);
+	};
+
+	T kmin, kmax;
+	std::tie(kmin, kmax) = k_minmax();
+	T kfact = T(0);
+	for(T k=kmin; k<=kmax; k+=T(1))
+		kfact += k_fkt(k);
+	tCG *= kfact;
+
+	return tCG;
+}
+
 
 
 /**
@@ -73,6 +369,263 @@ t_scalar stoval(const t_str& str)
 	}
 }
 // ----------------------------------------------------------------------------
+
+
+
+// -----------------------------------------------------------------------------
+template<class T=double>
+T gauss_model(T x, T x0, T sigma, T amp, T offs)
+{
+	T norm = T(1)/(std::sqrt(T(2)*pi<T>) * sigma);
+	return amp * norm * std::exp(-0.5 * ((x-x0)/sigma)*((x-x0)/sigma)) + offs;
+}
+
+template<class T=double>
+T gauss_model_amp(T x, T x0, T sigma, T amp, T offs)
+{
+	return amp * std::exp(-0.5 * ((x-x0)/sigma)*((x-x0)/sigma)) + offs;
+}
+
+template<class T=double>
+T lorentz_model_amp(T x, T x0, T hwhm, T amp, T offs)
+{
+	return amp*hwhm*hwhm / ((x-x0)*(x-x0) + hwhm*hwhm) + offs;
+}
+
+template<class T=double>
+T gauss_model_amp_slope(T x, T x0, T sigma, T amp, T offs, T slope)
+{
+	return amp * std::exp(-0.5 * ((x-x0)/sigma)*((x-x0)/sigma)) + (x-x0)*slope + offs;
+}
+
+template<class T=double>
+T lorentz_model_amp_slope(T x, T x0, T hwhm, T amp, T offs, T slope)
+{
+	return amp*hwhm*hwhm / ((x-x0)*(x-x0) + hwhm*hwhm) + (x-x0)*slope + offs;
+}
+
+
+template<class T=double>
+T parabola_model(T x, T x0, T amp, T offs)
+{
+	return amp*(x-x0)*(x-x0) + offs;
+}
+
+template<class T=double>
+T parabola_model_slope(T x, T x0, T amp, T offs, T slope)
+{
+	return amp*(x-x0)*(x-x0) + (x-x0)*slope + offs;
+}
+
+
+// -----------------------------------------------------------------------------
+template<class t_real_to, class t_real_from,
+bool bIsEqu = std::is_same<t_real_from, t_real_to>::value>
+struct complex_cast
+{
+	const std::complex<t_real_to>& operator()(const std::complex<t_real_from>& c) const
+	{ return c; }
+};
+
+template<class t_real_to, class t_real_from>
+struct complex_cast<t_real_to, t_real_from, 0>
+{
+	std::complex<t_real_to> operator()(const std::complex<t_real_from>& c) const
+	{ return std::complex<t_real_to>(t_real_to(c.real()), t_real_to(c.imag())); }
+};
+// -----------------------------------------------------------------------------
+
+
+
+// -----------------------------------------------------------------------------
+#ifdef USE_FADDEEVA
+
+/**
+ * Complex error function
+ */
+template<class T=double>
+std::complex<T> erf(const std::complex<T>& z)
+{
+	complex_cast<t_real_fadd, T> cst;
+	complex_cast<T, t_real_fadd> inv_cst;
+	return inv_cst(::Faddeeva::erf(cst(z)));
+}
+
+/**
+ * Complex complementary error function
+ */
+template<class T=double>
+std::complex<T> erfc(const std::complex<T>& z)
+{
+	complex_cast<t_real_fadd, T> cst;
+	complex_cast<T, t_real_fadd> inv_cst;
+	return inv_cst(::Faddeeva::erfc(cst(z)));
+}
+
+/**
+ * Faddeeva function
+ */
+template<class T=double>
+std::complex<T> faddeeva(const std::complex<T>& z)
+{
+	std::complex<T> i(0, 1.);
+	return std::exp(-z*z) * erfc(-i*z);
+}
+
+/**
+ * Voigt profile
+ * see e.g.: https://en.wikipedia.org/wiki/Voigt_profile
+ */
+template<class T=double>
+T voigt_model(T x, T x0, T sigma, T gamma, T amp, T offs)
+{
+	T norm = T(1)/(std::sqrt(T(2)*pi<T>) * sigma);
+	std::complex<T> z = std::complex<T>(x-x0, gamma) / (sigma * std::sqrt(T(2)));
+
+	return amp*norm * faddeeva<T>(z).real() + offs;
+}
+
+template<class T=double>
+T voigt_model_amp(T x, T x0, T sigma, T gamma, T amp, T offs)
+{
+	std::complex<T> z = std::complex<T>(x-x0, gamma) / (sigma * std::sqrt(T(2)));
+	return amp * faddeeva<T>(z).real() + offs;
+}
+
+template<class T=double>
+T voigt_model_amp_slope(T x, T x0, T sigma, T gamma, T amp, T offs, T slope)
+{
+	std::complex<T> z = std::complex<T>(x-x0, gamma) / (sigma * std::sqrt(T(2)));
+	return amp * faddeeva<T>(z).real() + (x-x0)*slope + offs;
+}
+
+#endif
+// -----------------------------------------------------------------------------
+
+
+
+// -----------------------------------------------------------------------------
+
+// wrapper for boost's Y function
+template<class T=double>
+std::complex<T> Ylm(int l /*0..i*/, int m /*-l..l*/, T th /*0..pi*/, T ph /*0..2pi*/)
+{
+	return boost::math::spherical_harmonic<T,T>(l,m, th, ph);
+}
+
+
+// -----------------------------------------------------------------------------
+// coordinate trafos
+
+template<class T = double>
+std::tuple<T,T,T> cart_to_sph(T x, T y, T z)
+{
+	T rho = std::sqrt(x*x + y*y + z*z);
+	T phi = std::atan2(y, x);
+	T theta = std::acos(z/rho);
+
+	return std::make_tuple(rho, phi, theta);
+}
+
+template<class T = double>
+std::tuple<T,T,T> sph_to_cart(T rho, T phi, T theta)
+{
+	T x = rho * std::cos(phi)*std::sin(theta);
+	T y = rho * std::sin(phi)*std::sin(theta);
+	T z = rho * std::cos(theta);
+
+	return std::make_tuple(x, y, z);
+}
+
+template<class T = double>
+std::tuple<T,T,T> cyl_to_sph(T rho_cyl, T phi_cyl, T z_cyl)
+{
+	T rho = std::sqrt(rho_cyl*rho_cyl + z_cyl*z_cyl);
+	T theta = std::acos(z_cyl/rho);
+
+	return std::make_tuple(rho, phi_cyl, theta);
+}
+
+template<class T = double>
+std::tuple<T,T,T> sph_to_cyl(T rho_sph, T phi_sph, T theta_sph)
+{
+	T rho = rho_sph * std::sin(theta_sph);
+	T z = rho_sph * std::cos(theta_sph);
+
+	return std::make_tuple(rho, phi_sph, z);
+}
+
+template<class T = double>
+std::tuple<T,T,T> cyl_to_cart(T rho, T phi, T z)
+{
+	T x = rho * std::cos(phi);
+	T y = rho * std::sin(phi);
+
+	return std::make_tuple(x, y, z);
+}
+
+template<class T = double>
+std::tuple<T,T,T> cart_to_cyl(T x, T y, T z)
+{
+	T rho = std::sqrt(x*x + y*y);
+	T phi = std::atan2(y, x);
+
+	return std::make_tuple(rho, phi, z);
+}
+
+
+
+template<class T = double>
+std::tuple<T,T> crys_to_sph(T twophi_crys, T twotheta_crys)
+{
+	// converts the out-of-plane scattering angle '2theta' to the spherical theta
+	T theta_sph = pi<T>/T(2) - twotheta_crys;
+	// converts in-plane scattering angle '2phi' to the spherical phi
+	T phi_sph = twophi_crys - pi<T>/T(2);
+
+	return std::make_tuple(phi_sph, theta_sph);
+}
+
+template<class T = double>
+std::tuple<T,T> sph_to_crys(T phi, T theta)
+{
+	return crys_to_sph<T>(phi, theta);
+}
+
+
+/**
+ * gnomonic projection (similar to perspective projection with fov=90°)
+ * @return [x,y]
+ * @desc: see http://mathworld.wolfram.com/GnomonicProjection.html
+ */
+template<class T = double>
+std::tuple<T,T> gnomonic_proj(T twophi_crys, T twotheta_crys)
+{
+	T x = -std::tan(twophi_crys);
+	T y = std::tan(twotheta_crys) / std::cos(twophi_crys);
+
+	return std::make_tuple(x, y);
+}
+
+/**
+ * stereographic projection
+ * @return [x,y]
+ * @desc: see http://mathworld.wolfram.com/StereographicProjection.html
+ */
+template<class T = double>
+std::tuple<T,T> stereographic_proj(T twophi_crys, T twotheta_crys, T rad)
+{
+	const T sth = std::sin(twotheta_crys);
+	const T cth = std::cos(twotheta_crys);
+	const T sph = std::sin(twophi_crys);
+	const T cph = std::cos(twophi_crys);
+
+	T x = -T(2) * rad * sph * cth / (T(1) + cth*cph);
+	T y = T(2) * rad * sth / (T(1) + cth*cph);
+
+	return std::make_tuple(x, y);
+}
+
 
 
 
@@ -448,10 +1001,10 @@ bool equals_all(const t_vec<t_obj>& vec1, const t_vec<t_obj>& _vec2,
 	for(const auto& obj1 : vec1)
 	{
 		// find obj1 in vec2
-		auto iter = std::find_if(vec2.crbegin(), vec2.crend(), 
+		auto iter = std::find_if(vec2.crbegin(), vec2.crend(),
 		[&obj1, eps, maxSize](const t_obj& obj2) -> bool
 		{
-			return m::equals<t_obj>(obj1, obj2, eps, maxSize);
+			return tl2::equals<t_obj>(obj1, obj2, eps, maxSize);
 		});
 
 		// not found
@@ -481,7 +1034,7 @@ t_cont<t_obj> remove_duplicates(const t_cont<t_obj>& objs,
 		auto iter = std::find_if(newobjs.cbegin(), newobjs.cend(), 
 		[&elem, eps](const t_obj& elem2) -> bool
 		{
-			return m::equals<t_obj>(elem, elem2, eps);
+			return tl2::equals<t_obj>(elem, elem2, eps);
 		});
 
 		// not found
@@ -611,7 +1164,7 @@ requires is_basic_mat<t_mat> && is_basic_vec<t_vec>
 	t_mat mat = zero<t_mat>(N);
 
 	// static matrix does not necessarily have the required size!
-	if constexpr(!m::is_dyn_mat<t_mat>)
+	if constexpr(!tl2::is_dyn_mat<t_mat>)
 		assert(mat.size1() == mat.size1() && mat.size1() == N);
 
 	for(std::size_t i=0; i<std::min(mat.size1(), N); ++i)
@@ -908,15 +1461,16 @@ requires is_basic_vec<t_vec1> && is_basic_vec<t_vec2>
 
 /**
  * matrix-matrix product
+ * c_ij = a_ik b_kj
  */
 template<class t_mat>
 t_mat prod(const t_mat& mat1, const t_mat& mat2, bool assert_sizes=true)
-requires m::is_basic_mat<t_mat> && m::is_dyn_mat<t_mat>
+requires tl2::is_basic_mat<t_mat> && tl2::is_dyn_mat<t_mat>
 {
 	// if not asserting sizes, the inner size will use the minimum of the two matrix sizes
 	if(assert_sizes)
 	{
-		if constexpr(m::is_dyn_mat<t_mat>)
+		if constexpr(tl2::is_dyn_mat<t_mat>)
 			assert((mat1.size2() == mat2.size1()));
 		else
 			static_assert(mat1.size2() == mat2.size1());
@@ -967,6 +1521,7 @@ requires is_basic_vec<t_vec> && is_mat<t_mat>
 		mat = t_mat(N1, N2);
 
 	for(std::size_t n1=0; n1<N1; ++n1)
+	{
 		for(std::size_t n2=0; n2<N2; ++n2)
 		{
 			if constexpr(is_complex<typename t_vec::value_type>)
@@ -974,13 +1529,14 @@ requires is_basic_vec<t_vec> && is_mat<t_mat>
 			else
 				mat(n1, n2) = vec1[n1]*vec2[n2];
 		}
+	}
 
 	return mat;
 }
 }
 
 
-namespace m_ops {
+namespace tl2_ops {
 // ----------------------------------------------------------------------------
 // vector operators
 // ----------------------------------------------------------------------------
@@ -990,7 +1546,7 @@ namespace m_ops {
  */
 template<class t_vec>
 const t_vec& operator+(const t_vec& vec1)
-requires m::is_basic_vec<t_vec> && m::is_dyn_vec<t_vec>
+requires tl2::is_basic_vec<t_vec> && tl2::is_dyn_vec<t_vec>
 {
 	return vec1;
 }
@@ -1001,7 +1557,7 @@ requires m::is_basic_vec<t_vec> && m::is_dyn_vec<t_vec>
  */
 template<class t_vec>
 t_vec operator-(const t_vec& vec1)
-requires m::is_basic_vec<t_vec> && m::is_dyn_vec<t_vec>
+requires tl2::is_basic_vec<t_vec> && tl2::is_dyn_vec<t_vec>
 {
 	t_vec vec(vec1.size());
 
@@ -1017,9 +1573,9 @@ requires m::is_basic_vec<t_vec> && m::is_dyn_vec<t_vec>
  */
 template<class t_vec>
 t_vec operator+(const t_vec& vec1, const t_vec& vec2)
-requires m::is_basic_vec<t_vec> && m::is_dyn_vec<t_vec>
+requires tl2::is_basic_vec<t_vec> && tl2::is_dyn_vec<t_vec>
 {
-	if constexpr(m::is_dyn_vec<t_vec>)
+	if constexpr(tl2::is_dyn_vec<t_vec>)
 		assert((vec1.size() == vec2.size()));
 	else
 		static_assert(vec1.size() == vec2.size());
@@ -1038,7 +1594,7 @@ requires m::is_basic_vec<t_vec> && m::is_dyn_vec<t_vec>
  */
 template<class t_vec>
 t_vec operator-(const t_vec& vec1, const t_vec& vec2)
-requires m::is_basic_vec<t_vec> && m::is_dyn_vec<t_vec>
+requires tl2::is_basic_vec<t_vec> && tl2::is_dyn_vec<t_vec>
 {
 	return vec1 + (-vec2);
 }
@@ -1049,7 +1605,7 @@ requires m::is_basic_vec<t_vec> && m::is_dyn_vec<t_vec>
  */
 template<class t_vec>
 t_vec operator*(const t_vec& vec1, typename t_vec::value_type d)
-requires m::is_basic_vec<t_vec> && m::is_dyn_vec<t_vec>
+requires tl2::is_basic_vec<t_vec> && tl2::is_dyn_vec<t_vec>
 {
 	t_vec vec(vec1.size());
 
@@ -1065,8 +1621,8 @@ requires m::is_basic_vec<t_vec> && m::is_dyn_vec<t_vec>
  */
 template<class t_vec>
 t_vec operator*(typename t_vec::value_type d, const t_vec& vec)
-requires m::is_basic_vec<t_vec> && m::is_dyn_vec<t_vec>
-	//&& !m::is_basic_mat<typename t_vec::value_type>	// hack!
+requires tl2::is_basic_vec<t_vec> && tl2::is_dyn_vec<t_vec>
+	//&& !tl2::is_basic_mat<typename t_vec::value_type>	// hack!
 {
 	return vec * d;
 }
@@ -1076,7 +1632,7 @@ requires m::is_basic_vec<t_vec> && m::is_dyn_vec<t_vec>
  */
 template<class t_vec>
 t_vec operator/(const t_vec& vec, typename t_vec::value_type d)
-requires m::is_basic_vec<t_vec> && m::is_dyn_vec<t_vec>
+requires tl2::is_basic_vec<t_vec> && tl2::is_dyn_vec<t_vec>
 {
 	using T = typename t_vec::value_type;
 	return vec * (T(1)/d);
@@ -1088,7 +1644,7 @@ requires m::is_basic_vec<t_vec> && m::is_dyn_vec<t_vec>
  */
 template<class t_vec>
 t_vec& operator+=(t_vec& vec1, const t_vec& vec2)
-requires m::is_basic_vec<t_vec> && m::is_dyn_vec<t_vec>
+requires tl2::is_basic_vec<t_vec> && tl2::is_dyn_vec<t_vec>
 {
 	vec1 = vec1 + vec2;
 	return vec1;
@@ -1099,7 +1655,7 @@ requires m::is_basic_vec<t_vec> && m::is_dyn_vec<t_vec>
  */
 template<class t_vec>
 t_vec& operator-=(t_vec& vec1, const t_vec& vec2)
-requires m::is_basic_vec<t_vec> && m::is_dyn_vec<t_vec>
+requires tl2::is_basic_vec<t_vec> && tl2::is_dyn_vec<t_vec>
 {
 	vec1 = vec1 - vec2;
 	return vec1;
@@ -1111,7 +1667,7 @@ requires m::is_basic_vec<t_vec> && m::is_dyn_vec<t_vec>
  */
 template<class t_vec>
 t_vec& operator*=(t_vec& vec1, typename t_vec::value_type d)
-requires m::is_basic_vec<t_vec> && m::is_dyn_vec<t_vec>
+requires tl2::is_basic_vec<t_vec> && tl2::is_dyn_vec<t_vec>
 {
 	vec1 = vec1 * d;
 	return vec1;
@@ -1122,7 +1678,7 @@ requires m::is_basic_vec<t_vec> && m::is_dyn_vec<t_vec>
  */
 template<class t_vec>
 t_vec& operator/=(t_vec& vec1, typename t_vec::value_type d)
-requires m::is_basic_vec<t_vec> && m::is_dyn_vec<t_vec>
+requires tl2::is_basic_vec<t_vec> && tl2::is_dyn_vec<t_vec>
 {
 	vec1 = vec1 / d;
 	return vec1;
@@ -1135,7 +1691,7 @@ requires m::is_basic_vec<t_vec> && m::is_dyn_vec<t_vec>
  */
 template<class t_vec>
 std::ostream& operator<<(std::ostream& ostr, const t_vec& vec)
-requires m::is_basic_vec<t_vec> && m::is_dyn_vec<t_vec>
+requires tl2::is_basic_vec<t_vec> && tl2::is_dyn_vec<t_vec>
 {
 	const std::size_t N = vec.size();
 
@@ -1155,7 +1711,7 @@ requires m::is_basic_vec<t_vec> && m::is_dyn_vec<t_vec>
  */
 template<class t_vec>
 std::istream& operator>>(std::istream& istr, t_vec& vec)
-requires m::is_basic_vec<t_vec> && m::is_dyn_vec<t_vec>
+requires tl2::is_basic_vec<t_vec> && tl2::is_dyn_vec<t_vec>
 {
 	vec.clear();
 
@@ -1168,7 +1724,7 @@ requires m::is_basic_vec<t_vec> && m::is_dyn_vec<t_vec>
 	for(auto& tok : vecstr)
 	{
 		boost::trim(tok);
-		typename t_vec::value_type c = m::stoval<typename t_vec::value_type>(tok);
+		typename t_vec::value_type c = tl2::stoval<typename t_vec::value_type>(tok);
 		vec.emplace_back(std::move(c));
 	}
 
@@ -1187,7 +1743,7 @@ requires m::is_basic_vec<t_vec> && m::is_dyn_vec<t_vec>
  */
 template<class t_mat>
 const t_mat& operator+(const t_mat& mat1)
-requires m::is_basic_mat<t_mat> && m::is_dyn_mat<t_mat>
+requires tl2::is_basic_mat<t_mat> && tl2::is_dyn_mat<t_mat>
 {
 	return mat1;
 }
@@ -1198,7 +1754,7 @@ requires m::is_basic_mat<t_mat> && m::is_dyn_mat<t_mat>
  */
 template<class t_mat>
 t_mat operator-(const t_mat& mat1)
-requires m::is_basic_mat<t_mat> && m::is_dyn_mat<t_mat>
+requires tl2::is_basic_mat<t_mat> && tl2::is_dyn_mat<t_mat>
 {
 	t_mat mat(mat1.size1(), mat1.size2());
 
@@ -1215,9 +1771,9 @@ requires m::is_basic_mat<t_mat> && m::is_dyn_mat<t_mat>
  */
 template<class t_mat>
 t_mat operator+(const t_mat& mat1, const t_mat& mat2)
-requires m::is_basic_mat<t_mat> && m::is_dyn_mat<t_mat>
+requires tl2::is_basic_mat<t_mat> && tl2::is_dyn_mat<t_mat>
 {
-	if constexpr(m::is_dyn_mat<t_mat>)
+	if constexpr(tl2::is_dyn_mat<t_mat>)
 		assert((mat1.size1() == mat2.size1() && mat1.size2() == mat2.size2()));
 	else
 		static_assert(mat1.size1() == mat2.size1() && mat1.size2() == mat2.size2());
@@ -1237,7 +1793,7 @@ requires m::is_basic_mat<t_mat> && m::is_dyn_mat<t_mat>
  */
 template<class t_mat>
 t_mat operator-(const t_mat& mat1, const t_mat& mat2)
-requires m::is_basic_mat<t_mat> && m::is_dyn_mat<t_mat>
+requires tl2::is_basic_mat<t_mat> && tl2::is_dyn_mat<t_mat>
 {
 	return mat1 + (-mat2);
 }
@@ -1248,7 +1804,7 @@ requires m::is_basic_mat<t_mat> && m::is_dyn_mat<t_mat>
  */
 template<class t_mat>
 t_mat operator*(const t_mat& mat1, typename t_mat::value_type d)
-requires m::is_basic_mat<t_mat> && m::is_dyn_mat<t_mat>
+requires tl2::is_basic_mat<t_mat> && tl2::is_dyn_mat<t_mat>
 {
 	t_mat mat(mat1.size1(), mat1.size2());
 
@@ -1264,7 +1820,7 @@ requires m::is_basic_mat<t_mat> && m::is_dyn_mat<t_mat>
  */
 template<class t_mat>
 t_mat operator*(typename t_mat::value_type d, const t_mat& mat)
-requires m::is_basic_mat<t_mat> && m::is_dyn_mat<t_mat>
+requires tl2::is_basic_mat<t_mat> && tl2::is_dyn_mat<t_mat>
 {
 	return mat * d;
 }
@@ -1274,7 +1830,7 @@ requires m::is_basic_mat<t_mat> && m::is_dyn_mat<t_mat>
  */
 template<class t_mat>
 t_mat operator/(const t_mat& mat, typename t_mat::value_type d)
-requires m::is_basic_mat<t_mat> && m::is_dyn_mat<t_mat>
+requires tl2::is_basic_mat<t_mat> && tl2::is_dyn_mat<t_mat>
 {
 	using T = typename t_mat::value_type;
 	return mat * (T(1)/d);
@@ -1286,9 +1842,9 @@ requires m::is_basic_mat<t_mat> && m::is_dyn_mat<t_mat>
  */
 template<class t_mat>
 t_mat operator*(const t_mat& mat1, const t_mat& mat2)
-requires m::is_basic_mat<t_mat> && m::is_dyn_mat<t_mat>
+requires tl2::is_basic_mat<t_mat> && tl2::is_dyn_mat<t_mat>
 {
-	return m::prod<t_mat>(mat1, mat2);
+	return tl2::prod<t_mat>(mat1, mat2);
 }
 
 
@@ -1297,7 +1853,7 @@ requires m::is_basic_mat<t_mat> && m::is_dyn_mat<t_mat>
  */
 template<class t_mat>
 t_mat& operator*=(t_mat& mat1, typename t_mat::value_type d)
-requires m::is_basic_mat<t_mat> && m::is_dyn_mat<t_mat>
+requires tl2::is_basic_mat<t_mat> && tl2::is_dyn_mat<t_mat>
 {
 	mat1 = mat1 * d;
 	return mat1;
@@ -1308,7 +1864,7 @@ requires m::is_basic_mat<t_mat> && m::is_dyn_mat<t_mat>
  */
 template<class t_mat>
 t_mat& operator/=(t_mat& mat1, typename t_mat::value_type d)
-requires m::is_basic_mat<t_mat> && m::is_dyn_mat<t_mat>
+requires tl2::is_basic_mat<t_mat> && tl2::is_dyn_mat<t_mat>
 {
 	mat1 = mat1 / d;
 	return mat1;
@@ -1320,7 +1876,7 @@ requires m::is_basic_mat<t_mat> && m::is_dyn_mat<t_mat>
  */
 template<class t_mat>
 std::ostream& operator<<(std::ostream& ostr, const t_mat& mat)
-requires m::is_basic_mat<t_mat> && m::is_dyn_mat<t_mat>
+requires tl2::is_basic_mat<t_mat> && tl2::is_dyn_mat<t_mat>
 {
 	const std::size_t ROWS = mat.size1();
 	const std::size_t COLS = mat.size2();
@@ -1347,7 +1903,7 @@ requires m::is_basic_mat<t_mat> && m::is_dyn_mat<t_mat>
  */
 template<class t_mat>
 std::ostream& niceprint(std::ostream& ostr, const t_mat& mat)
-requires m::is_basic_mat<t_mat> && m::is_dyn_mat<t_mat>
+requires tl2::is_basic_mat<t_mat> && tl2::is_dyn_mat<t_mat>
 {
 	const std::size_t ROWS = mat.size1();
 	const std::size_t COLS = mat.size2();
@@ -1375,13 +1931,14 @@ requires m::is_basic_mat<t_mat> && m::is_dyn_mat<t_mat>
 
 /**
  * matrix-vector product
+ *  c_i = a_ij b_j
  */
 template<class t_mat, class t_vec>
 t_vec operator*(const t_mat& mat, const t_vec& vec)
-requires m::is_basic_mat<t_mat> && m::is_dyn_mat<t_mat>
-	&& m::is_basic_vec<t_vec> && m::is_dyn_vec<t_vec>
+requires tl2::is_basic_mat<t_mat> && tl2::is_dyn_mat<t_mat>
+	&& tl2::is_basic_vec<t_vec> && tl2::is_dyn_vec<t_vec>
 {
-	if constexpr(m::is_dyn_mat<t_mat>)
+	if constexpr(tl2::is_dyn_mat<t_mat>)
 		assert((mat.size2() == vec.size()));
 	else
 		static_assert(mat.size2() == vec.size());
@@ -1406,7 +1963,7 @@ requires m::is_basic_mat<t_mat> && m::is_dyn_mat<t_mat>
 
 
 
-namespace m{
+namespace tl2 {
 // ----------------------------------------------------------------------------
 // with metric
 
@@ -1763,6 +2320,7 @@ requires is_basic_vec<t_vec>
 
 	return vec;
 }
+
 
 
 /**
@@ -2756,8 +3314,8 @@ create_plane(const t_vec& norm, typename t_vec::value_type l=1)
 requires is_vec<t_vec>
 {
 	using t_real = typename t_vec::value_type;
-	//using t_mat = m::mat<t_real, std::vector>;
-	//using namespace m_ops;
+	//using t_mat = tl2::mat<t_real, std::vector>;
+	//using namespace tl2_ops;
 
 	t_vec norm_old = create<t_vec>({ 0, 0, -1 });
 	t_mat rot = rotation<t_mat, t_vec>(norm_old, norm);
@@ -3349,7 +3907,7 @@ template<class t_vec, template<class...> class t_cont = std::vector>
 t_vec mean(const t_cont<t_vec>& verts)
 requires is_vec<t_vec>
 {
-	using namespace m_ops;
+	using namespace tl2_ops;
 	using t_real = typename t_vec::value_type;
 
 	if(!verts.size())
@@ -3370,7 +3928,7 @@ template<class t_vec, template<class...> class t_cont = std::vector>
 std::tuple<t_vec, t_vec> minmax(const t_cont<t_vec>& verts)
 requires is_vec<t_vec>
 {
-	using namespace m_ops;
+	using namespace tl2_ops;
 	using t_real = typename t_vec::value_type;
 
 	if(!verts.size())
@@ -4021,7 +4579,7 @@ requires is_vec<t_vec> && is_mat<t_mat>
 		// position already occupied?
 		if(std::find_if(newatoms.begin(), newatoms.end(), [&newatom, eps](const t_vec& vec)->bool
 		{
-			return m::equals<t_vec>(vec, newatom, eps);
+			return tl2::equals<t_vec>(vec, newatom, eps);
 		}) == newatoms.end())
 		{
 			newatoms.emplace_back(std::move(newatom));
@@ -4074,6 +4632,7 @@ requires is_basic_mat<t_mat>
 		mat2 = t_mat(mat.size2(), mat.size1());
 
 	for(std::size_t i=0; i<mat.size1(); ++i)
+	{
 		for(std::size_t j=0; j<mat.size2(); ++j)
 		{
 			if constexpr(is_complex<typename t_mat::value_type>)
@@ -4081,6 +4640,7 @@ requires is_basic_mat<t_mat>
 			else	// simply transpose non-complex matrix
 				mat2(j,i) = mat(i,j);
 		}
+	}
 
 	return mat2;
 }
@@ -4226,7 +4786,7 @@ extern "C"
 }
 
 
-namespace m_la {
+namespace tl2_la {
 
 
 /**
@@ -4236,11 +4796,11 @@ namespace m_la {
  */
 template<class t_mat, template<class...> class t_vec = std::vector>
 std::tuple<bool, t_vec<typename t_mat::value_type>, t_vec<lapack_int>> _lu_raw(const t_mat& mat)
-requires m::is_mat<t_mat>
+requires tl2::is_mat<t_mat>
 {
-	using namespace m_ops;
+	using namespace tl2_ops;
 	using t_scalar = typename t_mat::value_type;
-	using t_real = m::underlying_value_type<t_scalar>;
+	using t_real = tl2::underlying_value_type<t_scalar>;
 
 	const std::size_t rows = mat.size1();
 	const std::size_t cols = mat.size2();
@@ -4255,7 +4815,7 @@ requires m::is_mat<t_mat>
 			outmat[i*cols + j] = mat(i, j);
 
 	int err = -1;
-	if constexpr(m::is_complex<t_scalar>)
+	if constexpr(tl2::is_complex<t_scalar>)
 	{
 		if constexpr(std::is_same_v<t_real, float>)
 			err = LAPACKE_cgetrf(LAPACK_ROW_MAJOR, rows, cols, outmat.data(), cols, outpivots.data());
@@ -4281,11 +4841,11 @@ requires m::is_mat<t_mat>
  */
 template<class t_mat, template<class...> class t_vec = std::vector>
 std::tuple<bool, t_mat, t_mat, t_mat> lu(const t_mat& mat)
-requires m::is_mat<t_mat>
+requires tl2::is_mat<t_mat>
 {
-	using namespace m_ops;
+	using namespace tl2_ops;
 	using t_scalar = typename t_mat::value_type;
-	using t_real = m::underlying_value_type<t_scalar>;
+	using t_real = tl2::underlying_value_type<t_scalar>;
 
 	const std::size_t rows = mat.size1();
 	const std::size_t cols = mat.size2();
@@ -4293,9 +4853,9 @@ requires m::is_mat<t_mat>
 
 	auto [ ok, lumat, pivots ] = _lu_raw<t_mat, t_vec>(mat);
 
-	t_mat P = m::unit<t_mat>(rows, cols);
-	t_mat L = m::unit<t_mat>(rows, cols);
-	t_mat U = m::unit<t_mat>(rows, cols);
+	t_mat P = tl2::unit<t_mat>(rows, cols);
+	t_mat L = tl2::unit<t_mat>(rows, cols);
+	t_mat U = tl2::unit<t_mat>(rows, cols);
 
 	// L and U
 	for(std::size_t i=0; i<rows; ++i)
@@ -4311,7 +4871,7 @@ requires m::is_mat<t_mat>
 
 	// permutation matrix P
 	for(std::size_t i=0; i<pivots.size(); ++i)
-		P = m::prod<t_mat>(P, m::perm<t_mat>(rows, cols, i, pivots[i]-1));
+		P = tl2::prod<t_mat>(P, tl2::perm<t_mat>(rows, cols, i, pivots[i]-1));
 
 	return std::make_tuple(ok, P, L, U);
 }
@@ -4322,21 +4882,21 @@ requires m::is_mat<t_mat>
  */
 template<class t_mat>
 std::tuple<t_mat, bool> inv(const t_mat& mat)
-requires m::is_mat<t_mat>
+requires tl2::is_mat<t_mat>
 {
 	// fail if matrix is not square
-	if constexpr(m::is_dyn_mat<t_mat>)
+	if constexpr(tl2::is_dyn_mat<t_mat>)
 		assert((mat.size1() == mat.size2()));
 	else
 		static_assert(mat.size1() == mat.size2());
 
 	using t_scalar = typename t_mat::value_type;
-	using t_real = m::underlying_value_type<t_scalar>;
+	using t_real = tl2::underlying_value_type<t_scalar>;
 
 	const std::size_t rows = mat.size1();
 	const std::size_t cols = mat.size2();
 
-	t_mat I = m::unit<t_mat>(rows, cols);
+	t_mat I = tl2::unit<t_mat>(rows, cols);
 
 
 	// lu factorisation
@@ -4347,7 +4907,7 @@ requires m::is_mat<t_mat>
 
 	// inversion
 	int err = -1;
-	if constexpr(m::is_complex<t_scalar>)
+	if constexpr(tl2::is_complex<t_scalar>)
 	{
 		if constexpr(std::is_same_v<t_real, float>)
 			err = LAPACKE_cgetri(LAPACK_ROW_MAJOR, rows, lumat.data(), rows, pivots.data());
@@ -4378,17 +4938,17 @@ requires m::is_mat<t_mat>
  */
 template<class t_mat, class t_vec = std::vector<typename t_mat::value_type>>
 std::tuple<bool, t_mat, t_mat> qr(const t_mat& mat)
-requires m::is_mat<t_mat>
+requires tl2::is_mat<t_mat>
 {
-	using namespace m_ops;
+	using namespace tl2_ops;
 	using t_scalar = typename t_mat::value_type;
-	using t_real = m::underlying_value_type<t_scalar>;
+	using t_real = tl2::underlying_value_type<t_scalar>;
 
 	const std::size_t rows = mat.size1();
 	const std::size_t cols = mat.size2();
 	const std::size_t minor = std::min(rows, cols);
 
-	const t_mat I = m::unit<t_mat>(minor);
+	const t_mat I = tl2::unit<t_mat>(minor);
 	t_mat Q = I, R = mat;
 
 
@@ -4399,7 +4959,7 @@ requires m::is_mat<t_mat>
 			outmat[i*cols + j] = mat(i, j);
 
 	int err = -1;
-	if constexpr(m::is_complex<t_scalar>)
+	if constexpr(tl2::is_complex<t_scalar>)
 	{
 		if constexpr(std::is_same_v<t_real, float>)
 			err = LAPACKE_cgeqrf(LAPACK_ROW_MAJOR, rows, cols, outmat.data(), cols, outvec.data());
@@ -4419,7 +4979,7 @@ requires m::is_mat<t_mat>
 			R(i, j) = (j>=i ? outmat[i*cols + j] : t_real{0});
 
 
-	t_vec v = m::zero<t_vec>(minor);
+	t_vec v = tl2::zero<t_vec>(minor);
 
 	for(std::size_t k=1; k<=minor; ++k)
 	{
@@ -4430,7 +4990,7 @@ requires m::is_mat<t_mat>
 		for(std::size_t i=k+1; i<=minor; ++i)
 			v[i-1] = outmat[(i-1)*cols + (k-1)];
 
-		Q = Q * (I - outvec[k-1]*m::outer<t_mat, t_vec>(v, v));
+		Q = Q * (I - outvec[k-1]*tl2::outer<t_mat, t_vec>(v, v));
 	}
 
 	return std::make_tuple(err == 0, Q, R);
@@ -4444,7 +5004,7 @@ requires m::is_mat<t_mat>
 template<class t_mat_cplx, class t_vec_cplx, class t_cplx = typename t_mat_cplx::value_type>
 std::tuple<bool, std::vector<t_cplx>, std::vector<t_vec_cplx>>
 eigenvec(const t_mat_cplx& mat, bool only_evals=false, bool is_hermitian=false, bool normalise=false)
-	requires m::is_mat<t_mat_cplx> && m::is_vec<t_vec_cplx> && m::is_complex<t_cplx>
+	requires tl2::is_mat<t_mat_cplx> && tl2::is_vec<t_vec_cplx> && tl2::is_complex<t_cplx>
 {
 	using t_real = typename t_cplx::value_type;
 
@@ -4461,7 +5021,7 @@ eigenvec(const t_mat_cplx& mat, bool only_evals=false, bool is_hermitian=false, 
 	{
 		evecs.resize(N);
 		for(std::size_t i=0; i<N; ++i)
-			evecs[i] = m::zero<t_vec_cplx>(N);
+			evecs[i] = tl2::zero<t_vec_cplx>(N);
 	}
 
 	std::vector<t_cplx> inmat(N*N), outevals(N), outevecs(only_evals ? 0 : N*N);
@@ -4521,7 +5081,7 @@ eigenvec(const t_mat_cplx& mat, bool only_evals=false, bool is_hermitian=false, 
 				evecs[i][j] = is_hermitian ? inmat[j*N + i] : outevecs[j*N + i];
 
 			if(normalise && (err == 0))
-				evecs[i] /= m::norm(evecs[i]);
+				evecs[i] /= tl2::norm(evecs[i]);
 		}
 	}
 
@@ -4536,7 +5096,7 @@ eigenvec(const t_mat_cplx& mat, bool only_evals=false, bool is_hermitian=false, 
 template<class t_mat, class t_vec, class t_real = typename t_mat::value_type>
 std::tuple<bool, std::vector<t_real>, std::vector<t_real>, std::vector<t_vec>, std::vector<t_vec>>
 eigenvec(const t_mat& mat, bool only_evals=false, bool is_symmetric=false, bool normalise=false)
-	requires m::is_mat<t_mat> && m::is_vec<t_vec> && !m::is_complex<t_real>
+	requires tl2::is_mat<t_mat> && tl2::is_vec<t_vec> && !tl2::is_complex<t_real>
 {
 	std::vector<t_real> evals_re, evals_im;
 	std::vector<t_vec> evecs_re, evecs_im;
@@ -4554,8 +5114,8 @@ eigenvec(const t_mat& mat, bool only_evals=false, bool is_symmetric=false, bool 
 		evecs_im.resize(N);
 		for(std::size_t i=0; i<N; ++i)
 		{
-			evecs_re[i] = m::zero<t_vec>(N);
-			evecs_im[i] = m::zero<t_vec>(N);
+			evecs_re[i] = tl2::zero<t_vec>(N);
+			evecs_im[i] = tl2::zero<t_vec>(N);
 		}
 	}
 
@@ -4618,7 +5178,7 @@ eigenvec(const t_mat& mat, bool only_evals=false, bool is_symmetric=false, bool 
 			for(std::size_t j=0; j<N; ++j)
 				evecs_re[i][j] = is_symmetric ? inmat[j*N + i] : outevecs[j*N + i];
 
-			if(!is_symmetric && !m::equals<t_real>(evals_im[i], 0))
+			if(!is_symmetric && !tl2::equals<t_real>(evals_im[i], 0))
 			{
 				for(std::size_t j=0; j<N; ++j)
 				{
@@ -4653,10 +5213,10 @@ eigenvec(const t_mat& mat, bool only_evals=false, bool is_symmetric=false, bool 
  * singular values of a real or complex matrix mat = U * diag{vals} * V^h
  * returns [ ok, U, Vh, vals ]
  */
-template<class t_mat, class t_scalar = typename t_mat::value_type, class t_real = m::underlying_value_type<t_scalar>>
+template<class t_mat, class t_scalar = typename t_mat::value_type, class t_real = tl2::underlying_value_type<t_scalar>>
 std::tuple<bool, t_mat, t_mat, std::vector<t_real>>
 singval(const t_mat& mat)
-requires m::is_mat<t_mat>
+requires tl2::is_mat<t_mat>
 {
 	const std::size_t rows = mat.size1();
 	const std::size_t cols = mat.size2();
@@ -4671,7 +5231,7 @@ requires m::is_mat<t_mat>
 			inmat[i*cols + j] = mat(i,j);
 
 	int err = -1;
-	if constexpr(m::is_complex<t_scalar>)
+	if constexpr(tl2::is_complex<t_scalar>)
 	{
 		if constexpr(std::is_same_v<t_real, float>)
 			err = LAPACKE_cgesvd(LAPACK_ROW_MAJOR, 'A', 'A', rows, cols, inmat.data(), cols,
@@ -4691,8 +5251,8 @@ requires m::is_mat<t_mat>
 	}
 
 
-	t_mat U = m::unit<t_mat>(rows);
-	t_mat Vh = m::unit<t_mat>(cols);
+	t_mat U = tl2::unit<t_mat>(rows);
+	t_mat Vh = tl2::unit<t_mat>(cols);
 
 	for(std::size_t i=0; i<Nmax; ++i)
 	{
@@ -4709,24 +5269,24 @@ requires m::is_mat<t_mat>
 
 template<class t_mat>
 std::tuple<t_mat, bool> pseudoinv(const t_mat& mat)
-requires m::is_mat<t_mat>
+requires tl2::is_mat<t_mat>
 {
 	using t_scalar = typename t_mat::value_type;
-	using t_real = m::underlying_value_type<t_scalar>;
+	using t_real = tl2::underlying_value_type<t_scalar>;
 
 	auto [ ok, U, Vh, vals ] = singval<t_mat>(mat);
 
-	auto V = m::herm(Vh);
-	auto Uh = m::herm(U);
+	auto V = tl2::herm(Vh);
+	auto Uh = tl2::herm(U);
 
 	for(t_real& d : vals)
 	{
-		if(!m::equals<t_real>(d, t_real(0)))
+		if(!tl2::equals<t_real>(d, t_real(0)))
 			d = t_real(1)/d;
 	}
 
-	auto diag = m::diag<t_mat>(vals);
-	return std::make_tuple(m::prod<t_mat>(V, m::prod(diag, Uh)), ok);
+	auto diag = tl2::diag<t_mat>(vals);
+	return std::make_tuple(tl2::prod<t_mat>(V, tl2::prod(diag, Uh)), ok);
 }
 
 }
@@ -4734,7 +5294,7 @@ requires m::is_mat<t_mat>
 #endif	// USE_LAPACK
 
 
-namespace m {
+namespace tl2 {
 
 /**
  * QR decomposition of a matrix
@@ -4745,7 +5305,7 @@ std::tuple<bool, t_mat, t_mat> qr(const t_mat& mat)
 requires is_mat<t_mat> && is_vec<t_vec>
 {
 #ifdef USE_LAPACK
-	return m_la::qr<t_mat, t_vec>(mat);
+	return tl2_la::qr<t_mat, t_vec>(mat);
 #else
 	using T = typename t_mat::value_type;
 	const std::size_t rows = mat.size1();
@@ -4777,13 +5337,13 @@ std::tuple<t_mat, bool> inv(const t_mat& mat)
 requires is_mat<t_mat>
 {
 	// fail if matrix is not square, TODO: fix
-	//if constexpr(m::is_dyn_mat<t_mat>)
+	//if constexpr(tl2::is_dyn_mat<t_mat>)
 		assert((mat.size1() == mat.size2()));
 	//else
 	//	static_assert(mat.size1() == mat.size2());
 
 #ifdef USE_LAPACK
-	return m_la::inv<t_mat>(mat);
+	return tl2_la::inv<t_mat>(mat);
 #else
 	using T = typename t_mat::value_type;
 	using t_vec = std::vector<T>;
@@ -4840,13 +5400,13 @@ std::tuple<t_vec, bool> leastsq(const t_vec& x, const t_vec& y, std::size_t orde
 requires is_vec<t_vec> && is_dyn_mat<t_mat>
 {
 	// check array sizes, TODO: fix
-	//if constexpr(m::is_dyn_vec<t_vec>)
+	//if constexpr(tl2::is_dyn_vec<t_vec>)
 		assert((x.size() == y.size()));
 	//else
 	//	static_assert(x.size() == y.size());
 
 
-	using namespace m_ops;
+	using namespace tl2_ops;
 	using T = typename t_vec::value_type;
 
 	const std::size_t N = x.size();
@@ -4879,7 +5439,7 @@ requires is_vec<t_vec> && is_dyn_mat<t_mat>
 	if(use_pseudoinv)
 	{
 #ifdef USE_LAPACK
-		std::tie(Y, ok) = m_la::pseudoinv<t_mat>(XtX);
+		std::tie(Y, ok) = tl2_la::pseudoinv<t_mat>(XtX);
 #else
 		#pragma message("leastsq: Pseudo-inverse is not available, using standard inverse instead.")
 		std::tie(Y, ok) = inv<t_mat>(XtX);
@@ -4895,19 +5455,89 @@ requires is_vec<t_vec> && is_dyn_mat<t_mat>
 	return std::make_tuple(v, ok);
 }
 
-
-
 }
+
+
+
+#ifdef USE_QHULL
+
+#ifdef USE_QHULL
+	#include <Qhull.h>
+	#include <QhullFacetList.h>
+	#include <QhullVertexSet.h>
+#endif
+
+
+namespace tl2_la {
+
+/**
+ * calculates the convex hull
+ * https://github.com/t-weber/misc/blob/master/geo/qhulltst.cpp
+ */
+template<class t_vec = ublas::vector<double>,
+template<class...> class t_cont = std::vector,
+class T = typename t_vec::value_type>
+t_cont<t_cont<t_vec>> get_convexhull(const t_cont<t_vec>& vecVerts)
+{
+	using t_real_qh = double;
+
+	t_cont<t_cont<t_vec>> vecPolys;
+	const t_vec vecCentre = mean_value(vecVerts);
+
+	// copy vertices
+	int dim = vecVerts[0].size();
+	std::size_t len = vecVerts.size()*dim;
+	std::unique_ptr<t_real_qh[]> mem{new t_real_qh[len]};
+
+	std::size_t i=0;
+	for(const t_vec& vert : vecVerts)
+	{
+		for(int d=0; d<dim; ++d)
+		{
+			mem[i] = t_real_qh(vert[d]);
+			++i;
+		}
+	}
+
+
+	orgQhull::Qhull qhull{"tlibs2", dim, int(vecVerts.size()), mem.get(), ""};
+
+	orgQhull::QhullFacetList facets = qhull.facetList();
+	//std::cout << "Convex hull has " << facets.size() << " facets.";
+
+	for(orgQhull::QhullLinkedList<orgQhull::QhullFacet>::iterator iter=facets.begin();
+		iter!=facets.end(); ++iter)
+		{
+			// triangulable?
+			if(iter->isUpperDelaunay())
+				continue;
+
+			t_cont<t_vec> vecPoly;
+			orgQhull::QhullVertexSet vertices = iter->vertices();
+			for(orgQhull::QhullSet<orgQhull::QhullVertex>::iterator iterVertex=vertices.begin();
+				iterVertex!=vertices.end(); ++iterVertex)
+				{
+					orgQhull::QhullPoint point = (*iterVertex).point();
+					t_vec vecPoint(dim);
+					for(int i=0; i<dim; ++i)
+						vecPoint[i] = T(point[i]);
+
+					vecPoly.emplace_back(std::move(vecPoint));
+				}
+
+				sort_poly_verts<t_vec, t_cont, T>(vecPoly, vecCentre);
+				vecPolys.emplace_back(std::move(vecPoly));
+		}
+
+		// too few polygons => remove polyhedron
+		if(vecPolys.size() < 3)
+			vecPolys = decltype(vecPolys){};
+
+		return vecPolys;
+}
+}
+
+#endif
 // ----------------------------------------------------------------------------
 
 #endif
-
-/**
- * EOF
- * future math library, developed from scratch to eventually replace tlibs(2)
- * container-agnostic math algorithms
- * @author Tobias Weber <tweber@ill.fr>
- * @date dec-2017 -- 2018
- * @license GPLv3, see 'LICENSE' file
- * @desc Forked on 8-Nov-2018 from the privately developed "magtools" project (https://github.com/t-weber/magtools).
- */

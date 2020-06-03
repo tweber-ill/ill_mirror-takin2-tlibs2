@@ -15,7 +15,7 @@ namespace testtools = boost::test_tools;
 
 #include "../../libs/expr.h"
 #include "../../libs/str.h"
-#include "../../libs/mat.h"
+#include "../../libs/math20.h"
 
 
 using t_types_real = std::tuple<double, float>;
@@ -28,16 +28,16 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(test_expr_real, t_real, t_types_real)
 	tl2::ExprParser<t_real> parser;
 
 	t_real result = parser.parse("1 + 2*3");
-	BOOST_TEST(tl2::float_equal<t_real>(result, 7, eps));
+	BOOST_TEST(tl2::equals<t_real>(result, 7, eps));
 
 	result = parser.parse("4 + 5*6");
-	BOOST_TEST(tl2::float_equal<t_real>(result, 34, eps));
+	BOOST_TEST(tl2::equals<t_real>(result, 34, eps));
 
 	result = parser.parse("-(sqrt(4)-5)^3 - 5/2");
-	BOOST_TEST(tl2::float_equal<t_real>(result, 24.5, eps));
+	BOOST_TEST(tl2::equals<t_real>(result, 24.5, eps));
 
 	result = parser.parse("-cos(sin(1.23))^(-1.2 + 3.2)");
-	BOOST_TEST(tl2::float_equal<t_real>(result, -0.345, 1e-3));
+	BOOST_TEST(tl2::equals<t_real>(result, -0.345, 1e-3));
 }
 
 
@@ -49,7 +49,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(test_expr_func, t_real, t_types_real)
 
 	BOOST_TEST(
 		std::get<0>(tupres),
-		tl2::float_equal<t_real>(std::get<1>(tupres), 14., eps));
+		tl2::equals<t_real>(std::get<1>(tupres), 14., eps));
 }
 
 

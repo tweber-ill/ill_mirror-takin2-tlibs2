@@ -11,7 +11,7 @@
 #define __TLIBS2_PHYS__
 
 #include "units.h"
-#include "mat.h"
+#include "math20.h"
 #include "log.h"
 
 #include <boost/units/pow.hpp>

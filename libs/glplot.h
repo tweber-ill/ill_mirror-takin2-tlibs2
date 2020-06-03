@@ -28,7 +28,7 @@
 #include <chrono>
 #include <atomic>
 
-#include "math_algos.h"
+#include "math20.h"
 
 
 
@@ -98,9 +98,9 @@ extern void set_gl_format(bool bCore=true, int iMajorVer=3, int iMinorVer=3, int
 // types
 using t_real_gl = GLfloat;
 //using t_real_gl = GLdouble;
-using t_vec3_gl = m::qvecN_adapter<int, 3, t_real_gl, QVector3D>;
-using t_vec_gl = m::qvecN_adapter<int, 4, t_real_gl, QVector4D>;
-using t_mat_gl = m::qmatNN_adapter<int, 4, 4, t_real_gl, QMatrix4x4>;
+using t_vec3_gl = tl2::qvecN_adapter<int, 3, t_real_gl, QVector3D>;
+using t_vec_gl = tl2::qvecN_adapter<int, 4, t_real_gl, QVector4D>;
+using t_mat_gl = tl2::qmatNN_adapter<int, 4, 4, t_real_gl, QMatrix4x4>;
 
 // forward declarations
 class GlPlot_impl;
@@ -131,20 +131,20 @@ struct GlPlotObj
 	std::shared_ptr<QOpenGLBuffer> m_pcolorbuf;
 
 	std::vector<t_vec3_gl> m_vertices, m_triangles;
-	t_vec_gl m_color = m::create<t_vec_gl>({ 0., 0., 1., 1. });	// rgba
+	t_vec_gl m_color = tl2::create<t_vec_gl>({ 0., 0., 1., 1. });	// rgba
 
-	t_mat_gl m_mat = m::unit<t_mat_gl>();
+	t_mat_gl m_mat = tl2::unit<t_mat_gl>();
 
 	bool m_invariant = false;	// invariant to A, B matrices
 	bool m_visible = true;		// object shown?
 	bool m_highlighted = false;	// object highlighted?
 	bool m_valid = true;		// object deleted?
 
-	t_vec3_gl m_labelPos = m::create<t_vec3_gl>({0., 0., 0.});
+	t_vec3_gl m_labelPos = tl2::create<t_vec3_gl>({0., 0., 0.});
 	std::string m_label;
 	std::string m_datastr;
 
-	t_vec3_gl m_boundingSpherePos = m::create<t_vec3_gl>({ 0., 0., 0. });
+	t_vec3_gl m_boundingSpherePos = tl2::create<t_vec3_gl>({ 0., 0., 0. });
 	t_real_gl m_boundingSphereRad = 0.;
 };
 // ----------------------------------------------------------------------------
@@ -182,18 +182,18 @@ protected:
 	GLint m_uniMatrixB = -1;
 	GLint m_uniCoordSys = -1;
 
-	t_mat_gl m_matPerspective = m::unit<t_mat_gl>();
-	t_mat_gl m_matPerspective_inv = m::unit<t_mat_gl>();
-	t_mat_gl m_matViewport = m::unit<t_mat_gl>();
-	t_mat_gl m_matViewport_inv = m::unit<t_mat_gl>();
-	t_mat_gl m_matCamBase = m::create<t_mat_gl>({1,0,0,0,  0,1,0,0,  0,0,1,-5,  0,0,0,1});
-	t_mat_gl m_matCamRot = m::unit<t_mat_gl>();
-	t_mat_gl m_matCam = m::unit<t_mat_gl>();
-	t_mat_gl m_matCam_inv = m::unit<t_mat_gl>();
-	t_mat_gl m_matA = m::unit<t_mat_gl>();
-	t_mat_gl m_matB = m::unit<t_mat_gl>();
-	t_vec_gl m_vecCamX = m::create<t_vec_gl>({1.,0.,0.,0.});
-	t_vec_gl m_vecCamY = m::create<t_vec_gl>({0.,1.,0.,0.});
+	t_mat_gl m_matPerspective = tl2::unit<t_mat_gl>();
+	t_mat_gl m_matPerspective_inv = tl2::unit<t_mat_gl>();
+	t_mat_gl m_matViewport = tl2::unit<t_mat_gl>();
+	t_mat_gl m_matViewport_inv = tl2::unit<t_mat_gl>();
+	t_mat_gl m_matCamBase = tl2::create<t_mat_gl>({1,0,0,0,  0,1,0,0,  0,0,1,-5,  0,0,0,1});
+	t_mat_gl m_matCamRot = tl2::unit<t_mat_gl>();
+	t_mat_gl m_matCam = tl2::unit<t_mat_gl>();
+	t_mat_gl m_matCam_inv = tl2::unit<t_mat_gl>();
+	t_mat_gl m_matA = tl2::unit<t_mat_gl>();
+	t_mat_gl m_matB = tl2::unit<t_mat_gl>();
+	t_vec_gl m_vecCamX = tl2::create<t_vec_gl>({1.,0.,0.,0.});
+	t_vec_gl m_vecCamY = tl2::create<t_vec_gl>({0.,1.,0.,0.});
 	t_real_gl m_phi_saved = 0, m_theta_saved = 0;
 	t_real_gl m_zoom = 1.;
 	t_real_gl m_CoordMax = 2.5;		// extent of coordinate axes
@@ -246,9 +246,9 @@ public:
 
 	QPointF GlToScreenCoords(const t_vec_gl& vec, bool *pVisible=nullptr);
 	static t_mat_gl GetArrowMatrix(const t_vec_gl& vecTo, 
-		t_real_gl postscale = 1,  const t_vec_gl& vecPostTrans = m::create<t_vec_gl>({0,0,0.5}), 
-		const t_vec_gl& vecFrom = m::create<t_vec_gl>({0,0,1}),
-		t_real_gl prescale = 1,  const t_vec_gl& vecPreTrans = m::create<t_vec_gl>({0,0,0}));
+		t_real_gl postscale = 1,  const t_vec_gl& vecPostTrans = tl2::create<t_vec_gl>({0,0,0.5}),
+		const t_vec_gl& vecFrom = tl2::create<t_vec_gl>({0,0,1}),
+		t_real_gl prescale = 1,  const t_vec_gl& vecPreTrans = tl2::create<t_vec_gl>({0,0,0}));
 
 	void SetCamBase(const t_mat_gl& mat, const t_vec_gl& vecX, const t_vec_gl& vecY)
 	{ m_matCamBase = mat; m_vecCamX = vecX; m_vecCamY = vecY; UpdateCam(); }

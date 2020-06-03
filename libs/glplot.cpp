@@ -121,7 +121,7 @@ qgl_funcs* GlPlot_impl::GetGlFunctions(QOpenGLWidget *pWidget)
 QPointF GlPlot_impl::GlToScreenCoords(const t_vec_gl& vec4, bool *pVisible)
 {
 	auto [ vecPersp, vec ] =
-		m::hom_to_screen_coords<t_mat_gl, t_vec_gl>
+		tl2::hom_to_screen_coords<t_mat_gl, t_vec_gl>
 			(vec4, m_matCam, m_matPerspective, m_matViewport, true);
 
 	// position not visible -> return a point outside the viewport
@@ -139,15 +139,15 @@ QPointF GlPlot_impl::GlToScreenCoords(const t_vec_gl& vec4, bool *pVisible)
 t_mat_gl GlPlot_impl::GetArrowMatrix(const t_vec_gl& vecTo, t_real_gl postscale, const t_vec_gl& vecPostTrans,
 	const t_vec_gl& vecFrom, t_real_gl prescale, const t_vec_gl& vecPreTrans)
 {
-	t_mat_gl mat = m::unit<t_mat_gl>(4);
+	t_mat_gl mat = tl2::unit<t_mat_gl>(4);
 
-	mat *= m::hom_translation<t_mat_gl>(vecPreTrans[0], vecPreTrans[1], vecPreTrans[2]);
-	mat *= m::hom_scaling<t_mat_gl>(prescale, prescale, prescale);
+	mat *= tl2::hom_translation<t_mat_gl>(vecPreTrans[0], vecPreTrans[1], vecPreTrans[2]);
+	mat *= tl2::hom_scaling<t_mat_gl>(prescale, prescale, prescale);
 
-	mat *= m::rotation<t_mat_gl, t_vec_gl>(vecFrom, vecTo);
+	mat *= tl2::rotation<t_mat_gl, t_vec_gl>(vecFrom, vecTo);
 
-	mat *= m::hom_scaling<t_mat_gl>(postscale, postscale, postscale);
-	mat *= m::hom_translation<t_mat_gl>(vecPostTrans[0], vecPostTrans[1], vecPostTrans[2]);
+	mat *= tl2::hom_scaling<t_mat_gl>(postscale, postscale, postscale);
+	mat *= tl2::hom_translation<t_mat_gl>(vecPostTrans[0], vecPostTrans[1], vecPostTrans[2]);
 
 	return mat;
 }
@@ -181,7 +181,7 @@ GlPlotObj GlPlot_impl::CreateTriangleObject(const std::vector<t_vec3_gl>& verts,
 
 		for(const t_vec3_gl& vert : verts)
 		{
-			t_real_gl norm = bNorm ? m::norm<t_vec3_gl>(vert) : 1;
+			t_real_gl norm = bNorm ? tl2::norm<t_vec3_gl>(vert) : 1;
 
 			for(int i=0; i<iRepeat; ++i)
 				for(int iElem=0; iElem<iElems; ++iElem)
@@ -332,7 +332,7 @@ void GlPlot_impl::SetObjectMatrix(std::size_t idx, const t_mat_gl& mat)
 void GlPlot_impl::SetObjectCol(std::size_t idx, t_real_gl r, t_real_gl g, t_real_gl b, t_real_gl a)
 {
 	if(idx >= m_objs.size()) return;
-	m_objs[idx].m_color = m::create<t_vec_gl>({r,g,b,a});
+	m_objs[idx].m_color = tl2::create<t_vec_gl>({r,g,b,a});
 }
 
 
@@ -401,8 +401,8 @@ std::size_t GlPlot_impl::AddLinkedObject(std::size_t linkTo,
 {
 	GlPlotObj obj;
 	obj.linkedObj = linkTo;
-	obj.m_mat = m::hom_translation<t_mat_gl>(x, y, z);
-	obj.m_color = m::create<t_vec_gl>({r, g, b, a});
+	obj.m_mat = tl2::hom_translation<t_mat_gl>(x, y, z);
+	obj.m_color = tl2::create<t_vec_gl>({r, g, b, a});
 
 	QMutexLocker _locker{&m_mutexObj};
 	m_objs.emplace_back(std::move(obj));
@@ -416,16 +416,16 @@ std::size_t GlPlot_impl::AddSphere(t_real_gl rad, t_real_gl x, t_real_gl y, t_re
 {
 	constexpr int numsubdivs = 2;
 
-	auto solid = m::create_icosahedron<t_vec3_gl>(1);
-	auto [triagverts, norms, uvs] = m::spherify<t_vec3_gl>(
-		m::subdivide_triangles<t_vec3_gl>(
-			m::create_triangles<t_vec3_gl>(solid), numsubdivs), rad);
-	auto [boundingSpherePos, boundingSphereRad] = m::bounding_sphere<t_vec3_gl>(triagverts);
+	auto solid = tl2::create_icosahedron<t_vec3_gl>(1);
+	auto [triagverts, norms, uvs] = tl2::spherify<t_vec3_gl>(
+		tl2::subdivide_triangles<t_vec3_gl>(
+			tl2::create_triangles<t_vec3_gl>(solid), numsubdivs), rad);
+	auto [boundingSpherePos, boundingSphereRad] = tl2::bounding_sphere<t_vec3_gl>(triagverts);
 
 	QMutexLocker _locker{&m_mutexObj};
 
-	auto obj = CreateTriangleObject(std::get<0>(solid), triagverts, norms, m::create<t_vec_gl>({r,g,b,a}), true);
-	obj.m_mat = m::hom_translation<t_mat_gl>(x, y, z);
+	auto obj = CreateTriangleObject(std::get<0>(solid), triagverts, norms, tl2::create<t_vec_gl>({r,g,b,a}), true);
+	obj.m_mat = tl2::hom_translation<t_mat_gl>(x, y, z);
 	obj.m_boundingSpherePos = std::move(boundingSpherePos);
 	obj.m_boundingSphereRad = boundingSphereRad;
 	//obj.m_boundingSphereRad = rad;
@@ -439,14 +439,14 @@ std::size_t GlPlot_impl::AddCylinder(t_real_gl rad, t_real_gl h,
 	t_real_gl x, t_real_gl y, t_real_gl z,
 	t_real_gl r, t_real_gl g, t_real_gl b, t_real_gl a)
 {
-	auto solid = m::create_cylinder<t_vec3_gl>(rad, h, true);
-	auto [triagverts, norms, uvs] = m::create_triangles<t_vec3_gl>(solid);
-	auto [boundingSpherePos, boundingSphereRad] = m::bounding_sphere<t_vec3_gl>(triagverts);
+	auto solid = tl2::create_cylinder<t_vec3_gl>(rad, h, true);
+	auto [triagverts, norms, uvs] = tl2::create_triangles<t_vec3_gl>(solid);
+	auto [boundingSpherePos, boundingSphereRad] = tl2::bounding_sphere<t_vec3_gl>(triagverts);
 
 	QMutexLocker _locker{&m_mutexObj};
 
-	auto obj = CreateTriangleObject(std::get<0>(solid), triagverts, norms, m::create<t_vec_gl>({r,g,b,a}), false);
-	obj.m_mat = m::hom_translation<t_mat_gl>(x, y, z);
+	auto obj = CreateTriangleObject(std::get<0>(solid), triagverts, norms, tl2::create<t_vec_gl>({r,g,b,a}), false);
+	obj.m_mat = tl2::hom_translation<t_mat_gl>(x, y, z);
 	obj.m_boundingSpherePos = std::move(boundingSpherePos);
 	obj.m_boundingSphereRad = boundingSphereRad;
 	m_objs.emplace_back(std::move(obj));
@@ -459,14 +459,14 @@ std::size_t GlPlot_impl::AddCone(t_real_gl rad, t_real_gl h,
 	t_real_gl x, t_real_gl y, t_real_gl z,
 	t_real_gl r, t_real_gl g, t_real_gl b, t_real_gl a)
 {
-	auto solid = m::create_cone<t_vec3_gl>(rad, h);
-	auto [triagverts, norms, uvs] = m::create_triangles<t_vec3_gl>(solid);
-	auto [boundingSpherePos, boundingSphereRad] = m::bounding_sphere<t_vec3_gl>(triagverts);
+	auto solid = tl2::create_cone<t_vec3_gl>(rad, h);
+	auto [triagverts, norms, uvs] = tl2::create_triangles<t_vec3_gl>(solid);
+	auto [boundingSpherePos, boundingSphereRad] = tl2::bounding_sphere<t_vec3_gl>(triagverts);
 
 	QMutexLocker _locker{&m_mutexObj};
 
-	auto obj = CreateTriangleObject(std::get<0>(solid), triagverts, norms, m::create<t_vec_gl>({r,g,b,a}), false);
-	obj.m_mat = m::hom_translation<t_mat_gl>(x, y, z);
+	auto obj = CreateTriangleObject(std::get<0>(solid), triagverts, norms, tl2::create<t_vec_gl>({r,g,b,a}), false);
+	obj.m_mat = tl2::hom_translation<t_mat_gl>(x, y, z);
 	obj.m_boundingSpherePos = std::move(boundingSpherePos);
 	obj.m_boundingSphereRad = boundingSphereRad;
 	m_objs.emplace_back(std::move(obj));
@@ -479,17 +479,17 @@ std::size_t GlPlot_impl::AddArrow(t_real_gl rad, t_real_gl h,
 	t_real_gl x, t_real_gl y, t_real_gl z,
 	t_real_gl r, t_real_gl g, t_real_gl b, t_real_gl a)
 {
-	auto solid = m::create_cylinder<t_vec3_gl>(rad, h, 2, 32, rad, rad*1.5);
-	auto [triagverts, norms, uvs] = m::create_triangles<t_vec3_gl>(solid);
-	auto [boundingSpherePos, boundingSphereRad] = m::bounding_sphere<t_vec3_gl>(triagverts);
+	auto solid = tl2::create_cylinder<t_vec3_gl>(rad, h, 2, 32, rad, rad*1.5);
+	auto [triagverts, norms, uvs] = tl2::create_triangles<t_vec3_gl>(solid);
+	auto [boundingSpherePos, boundingSphereRad] = tl2::bounding_sphere<t_vec3_gl>(triagverts);
 
 	QMutexLocker _locker{&m_mutexObj};
 
-	auto obj = CreateTriangleObject(std::get<0>(solid), triagverts, norms, m::create<t_vec_gl>({r,g,b,a}), false);
-	obj.m_mat = GetArrowMatrix(m::create<t_vec_gl>({1,0,0}), 1., m::create<t_vec_gl>({x,y,z}), m::create<t_vec_gl>({0,0,1}));
+	auto obj = CreateTriangleObject(std::get<0>(solid), triagverts, norms, tl2::create<t_vec_gl>({r,g,b,a}), false);
+	obj.m_mat = GetArrowMatrix(tl2::create<t_vec_gl>({1,0,0}), 1., tl2::create<t_vec_gl>({x,y,z}), tl2::create<t_vec_gl>({0,0,1}));
 	obj.m_boundingSpherePos = std::move(boundingSpherePos);
 	obj.m_boundingSphereRad = boundingSphereRad;
-	obj.m_labelPos = m::create<t_vec3_gl>({0., 0., 0.75});
+	obj.m_labelPos = tl2::create<t_vec3_gl>({0., 0., 0.75});
 	m_objs.emplace_back(std::move(obj));
 
 	return m_objs.size()-1;		// object handle
@@ -498,12 +498,12 @@ std::size_t GlPlot_impl::AddArrow(t_real_gl rad, t_real_gl h,
 
 std::size_t GlPlot_impl::AddCoordinateCross(t_real_gl min, t_real_gl max)
 {
-	auto col = m::create<t_vec_gl>({0,0,0,1});
+	auto col = tl2::create<t_vec_gl>({0,0,0,1});
 	auto verts = std::vector<t_vec3_gl>
 	{{
-		m::create<t_vec3_gl>({min,0,0}), m::create<t_vec3_gl>({max,0,0}),
-		m::create<t_vec3_gl>({0,min,0}), m::create<t_vec3_gl>({0,max,0}),
-		m::create<t_vec3_gl>({0,0,min}), m::create<t_vec3_gl>({0,0,max}),
+		tl2::create<t_vec3_gl>({min,0,0}), tl2::create<t_vec3_gl>({max,0,0}),
+		tl2::create<t_vec3_gl>({0,min,0}), tl2::create<t_vec3_gl>({0,max,0}),
+		tl2::create<t_vec3_gl>({0,0,min}), tl2::create<t_vec3_gl>({0,0,max}),
 	}};
 
 	QMutexLocker _locker{&m_mutexObj};
@@ -680,7 +680,7 @@ void main()
 
 	// set glsl version and constants
 	const std::string strGlsl = std::to_string(_GLSL_MAJ_VER*100 + _GLSL_MIN_VER*10);
-	std::string strPi = std::to_string(m::pi<t_real_gl>);	// locale-dependent !
+	std::string strPi = std::to_string(tl2::pi<t_real_gl>);	// locale-dependent !
 	algo::replace_all(strPi, std::string(","), std::string("."));	// ensure decimal point
 
 	for(std::string* strSrc : { &strFragShader, &strVertexShader })
@@ -796,12 +796,12 @@ void GlPlot_impl::resizeGL()
 	if(!pGl)
 		return;
 
-	m_matViewport = m::hom_viewport<t_mat_gl>(w, h, 0., 1.);
-	std::tie(m_matViewport_inv, std::ignore) = m::inv<t_mat_gl>(m_matViewport);
+	m_matViewport = tl2::hom_viewport<t_mat_gl>(w, h, 0., 1.);
+	std::tie(m_matViewport_inv, std::ignore) = tl2::inv<t_mat_gl>(m_matViewport);
 
-	m_matPerspective = m::hom_perspective<t_mat_gl>(0.01, 100., m::pi<t_real_gl>*0.5, t_real_gl(h)/t_real_gl(w));
-	//m_matPerspective = m::hom_ortho<t_mat_gl>(0.01, 100., -t_real_gl(w)*0.0025, t_real_gl(w)*0.0025, -t_real_gl(h)*0.0025, t_real_gl(h)*0.0025);
-	std::tie(m_matPerspective_inv, std::ignore) = m::inv<t_mat_gl>(m_matPerspective);
+	m_matPerspective = tl2::hom_perspective<t_mat_gl>(0.01, 100., tl2::pi<t_real_gl>*0.5, t_real_gl(h)/t_real_gl(w));
+	//m_matPerspective = tl2::hom_ortho<t_mat_gl>(0.01, 100., -t_real_gl(w)*0.0025, t_real_gl(w)*0.0025, -t_real_gl(h)*0.0025, t_real_gl(h)*0.0025);
+	std::tie(m_matPerspective_inv, std::ignore) = tl2::inv<t_mat_gl>(m_matPerspective);
 
 	pGl->glViewport(0, 0, w, h);
 	pGl->glDepthRange(0, 1);
@@ -836,15 +836,15 @@ void GlPlot_impl::SetBTrafo(const t_mat_gl& matB, const t_mat_gl* matA)
 	else
 	{
 		bool ok = true;
-		std::tie(m_matA, ok) = m::inv(m_matB);
+		std::tie(m_matA, ok) = tl2::inv(m_matB);
 		if(!ok)
 		{
-			m_matA = m::unit<t_mat_gl>();
+			m_matA = tl2::unit<t_mat_gl>();
 			std::cerr << "Error: Cannot invert B matrix." << std::endl;
 		}
 		else
 		{
-			m_matA *= t_real_gl(2)*m::pi<t_real_gl>;
+			m_matA *= t_real_gl(2)*tl2::pi<t_real_gl>;
 			m_matA(3,3) = 1;
 		}
 	}
@@ -878,10 +878,10 @@ void GlPlot_impl::UpdateCam()
 	m_matCam = m_matCamBase;
 	m_matCam(2,3) /= m_zoom;
 	m_matCam *= m_matCamRot;
-	std::tie(m_matCam_inv, std::ignore) = m::inv<t_mat_gl>(m_matCam);
+	std::tie(m_matCam_inv, std::ignore) = tl2::inv<t_mat_gl>(m_matCam);
 
 	/*auto M = m_matCam_inv; M(0,3) = M(1,3) = M(2,3) = 0;
-	t_vec3_gl vecCamPos = M * m::create<t_vec3_gl>({-m_matCam(0,3), -m_matCam(1,3), -m_matCam(2,3)});
+	t_vec3_gl vecCamPos = M * tl2::create<t_vec3_gl>({-m_matCam(0,3), -m_matCam(1,3), -m_matCam(2,3)});
 	std::cout << vecCamPos[0] << " " << vecCamPos[1] << " " << vecCamPos[2] << std::endl;*/
 
 	m_bPickerNeedsUpdate = true;
@@ -948,23 +948,23 @@ void GlPlot_impl::UpdatePicker()
 	if(!m_bInitialised || !m_bPlatformSupported || !m_bPickerEnabled) return;
 
 	// picker ray
-	auto [org, dir] = m::hom_line_from_screen_coords<t_mat_gl, t_vec_gl>(
+	auto [org, dir] = tl2::hom_line_from_screen_coords<t_mat_gl, t_vec_gl>(
 		m_posMouse.x(), m_posMouse.y(), 0., 1., m_matCam_inv,
 		m_matPerspective_inv, m_matViewport_inv, &m_matViewport, true);
-	t_vec3_gl org3 = m::create<t_vec3_gl>({org[0], org[1], org[2]});
-	t_vec3_gl dir3 = m::create<t_vec3_gl>({dir[0], dir[1], dir[2]});
+	t_vec3_gl org3 = tl2::create<t_vec3_gl>({org[0], org[1], org[2]});
+	t_vec3_gl dir3 = tl2::create<t_vec3_gl>({dir[0], dir[1], dir[2]});
 
 
 	// intersection with unit sphere around origin
 	bool hasSphereInters = false;
-	t_vec_gl vecClosestSphereInters = m::create<t_vec_gl>({0,0,0,0});
+	t_vec_gl vecClosestSphereInters = tl2::create<t_vec_gl>({0,0,0,0});
 
 	auto intersUnitSphere =
-	m::intersect_line_sphere<t_vec3_gl, std::vector>(org3, dir3,
-		m::create<t_vec3_gl>({0,0,0}), t_real_gl(m_pickerSphereRadius));
+	tl2::intersect_line_sphere<t_vec3_gl, std::vector>(org3, dir3,
+		tl2::create<t_vec3_gl>({0,0,0}), t_real_gl(m_pickerSphereRadius));
 	for(const auto& result : intersUnitSphere)
 	{
-		t_vec_gl vecInters4 = m::create<t_vec_gl>({result[0], result[1], result[2], 1});
+		t_vec_gl vecInters4 = tl2::create<t_vec_gl>({result[0], result[1], result[2], 1});
 
 		if(!hasSphereInters)
 		{	// first intersection
@@ -977,27 +977,27 @@ void GlPlot_impl::UpdatePicker()
 			t_vec_gl newPosTrafo = m_matCam * vecInters4;
 
 			// ... it is closer.
-			if(m::norm(newPosTrafo) < m::norm(oldPosTrafo))
+			if(tl2::norm(newPosTrafo) < tl2::norm(oldPosTrafo))
 				vecClosestSphereInters = vecInters4;
 		}
 	}
 
 
 	// crystal or lab coordinate system?
-	const t_mat_gl matUnit = m::unit<t_mat_gl>();
+	const t_mat_gl matUnit = tl2::unit<t_mat_gl>();
 	const t_mat_gl *coordTrafo = &matUnit;
 	t_mat_gl coordTrafoInv = matUnit;
 	if(m_iCoordSys == 1)
 	{
 		coordTrafo = &m_matA;
-		coordTrafoInv = m_matB / (t_real_gl(2)*m::pi<t_real_gl>);
+		coordTrafoInv = m_matB / (t_real_gl(2)*tl2::pi<t_real_gl>);
 		coordTrafoInv(3,3) = 1;
 	}
 
 
 	// intersection with geometry
 	bool hasInters = false;
-	t_vec_gl vecClosestInters = m::create<t_vec_gl>({0,0,0,0});
+	t_vec_gl vecClosestInters = tl2::create<t_vec_gl>({0,0,0,0});
 	std::size_t objInters = 0xffffffff;
 
 
@@ -1017,11 +1017,11 @@ void GlPlot_impl::UpdatePicker()
 		t_mat_gl matTrafo = (*coordTrafo) * obj.m_mat * coordTrafoInv;
 
 		// scaling factor, TODO: maximum factor for non-uniform scaling
-		auto scale = std::cbrt(std::abs(m::det(matTrafo)));
+		auto scale = std::cbrt(std::abs(tl2::det(matTrafo)));
 
 		// intersection with bounding sphere?
 		auto boundingInters =
-			m::intersect_line_sphere<t_vec3_gl, std::vector>(org3, dir3,
+			tl2::intersect_line_sphere<t_vec3_gl, std::vector>(org3, dir3,
 				matTrafo * linkedObj->m_boundingSpherePos, scale*linkedObj->m_boundingSphereRad);
 		if(boundingInters.size() == 0)
 			continue;
@@ -1038,11 +1038,11 @@ void GlPlot_impl::UpdatePicker()
 
 			// coordTrafoInv only keeps 3d objects from locally distorting
 			auto [vecInters, bInters, lamInters] =
-				m::intersect_line_poly<t_vec3_gl, t_mat_gl>(org3, dir3, poly, matTrafo);
+				tl2::intersect_line_poly<t_vec3_gl, t_mat_gl>(org3, dir3, poly, matTrafo);
 
 			if(bInters)
 			{
-				t_vec_gl vecInters4 = m::create<t_vec_gl>({vecInters[0], vecInters[1], vecInters[2], 1});
+				t_vec_gl vecInters4 = tl2::create<t_vec_gl>({vecInters[0], vecInters[1], vecInters[2], 1});
 
 				if(!hasInters)
 				{	// first intersection
@@ -1055,7 +1055,7 @@ void GlPlot_impl::UpdatePicker()
 					t_vec_gl oldPosTrafo = m_matCam * vecClosestInters;
 					t_vec_gl newPosTrafo = m_matCam * vecInters4;
 
-					if(m::norm(newPosTrafo) < m::norm(oldPosTrafo))
+					if(tl2::norm(newPosTrafo) < tl2::norm(oldPosTrafo))
 					{	// ...it is closer
 						vecClosestInters = vecInters4;
 						objInters = curObj;
@@ -1066,8 +1066,8 @@ void GlPlot_impl::UpdatePicker()
 	}
 
 	m_bPickerNeedsUpdate = false;
-	t_vec3_gl vecClosestInters3 = m::create<t_vec3_gl>({vecClosestInters[0], vecClosestInters[1], vecClosestInters[2]});
-	t_vec3_gl vecClosestSphereInters3 = m::create<t_vec3_gl>({vecClosestSphereInters[0], vecClosestSphereInters[1], vecClosestSphereInters[2]});
+	t_vec3_gl vecClosestInters3 = tl2::create<t_vec3_gl>({vecClosestInters[0], vecClosestInters[1], vecClosestInters[2]});
+	t_vec3_gl vecClosestSphereInters3 = tl2::create<t_vec3_gl>({vecClosestSphereInters[0], vecClosestSphereInters[1], vecClosestSphereInters[2]});
 	emit PickerIntersection(hasInters ? &vecClosestInters3 : nullptr, objInters,
 		hasSphereInters ? &vecClosestSphereInters3 : nullptr);
 }
@@ -1083,8 +1083,8 @@ void GlPlot_impl::mouseMoveEvent(const QPointF& pos)
 		t_real_gl phi = diff.x() + m_phi_saved;
 		t_real_gl theta = diff.y() + m_theta_saved;
 
-		m_matCamRot = m::rotation<t_mat_gl, t_vec_gl>(m_vecCamX, theta/180.*M_PI, 0);
-		m_matCamRot *= m::rotation<t_mat_gl, t_vec_gl>(m_vecCamY, phi/180.*M_PI, 0);
+		m_matCamRot = tl2::rotation<t_mat_gl, t_vec_gl>(m_vecCamX, theta/180.*M_PI, 0);
+		m_matCamRot *= tl2::rotation<t_mat_gl, t_vec_gl>(m_vecCamY, phi/180.*M_PI, 0);
 
 		UpdateCam();
 	}
@@ -1174,8 +1174,8 @@ void GlPlot_impl::DoPaintGL(qgl_funcs *pGl)
 	m_pShaders->setUniformValue(m_uniMatrixCamInv, m_matCam_inv);
 
 
-	auto colOverride = m::create<t_vec_gl>({1,1,1,1});
-	auto colHighlight = m::create<t_vec_gl>({1,1,1,1});
+	auto colOverride = tl2::create<t_vec_gl>({1,1,1,1});
+	auto colHighlight = tl2::create<t_vec_gl>({1,1,1,1});
 
 	// render triangle geometry
 	for(const auto& obj : m_objs)
@@ -1244,7 +1244,7 @@ void GlPlot_impl::DoPaintGL(qgl_funcs *pGl)
  */
 void GlPlot_impl::DoPaintNonGL(QPainter &painter)
 {
-	const t_mat_gl matUnit = m::unit<t_mat_gl>();
+	const t_mat_gl matUnit = tl2::unit<t_mat_gl>();
 
 	QFont fontOrig = painter.font();
 	QPen penOrig = painter.pen();
@@ -1254,22 +1254,22 @@ void GlPlot_impl::DoPaintNonGL(QPainter &painter)
 
 
 	// coordinate labels
-	painter.drawText(GlToScreenCoords(m::create<t_vec_gl>({0.,0.,0.,1.})), "0");
+	painter.drawText(GlToScreenCoords(tl2::create<t_vec_gl>({0.,0.,0.,1.})), "0");
 	for(t_real_gl f=-std::floor(m_CoordMax); f<=std::floor(m_CoordMax); f+=0.5)
 	{
-		if(m::equals<t_real_gl>(f, 0))
+		if(tl2::equals<t_real_gl>(f, 0))
 			continue;
 
 		std::ostringstream ostrF;
 		ostrF << f;
-		painter.drawText(GlToScreenCoords(m::create<t_vec_gl>({f,0.,0.,1.})), ostrF.str().c_str());
-		painter.drawText(GlToScreenCoords(m::create<t_vec_gl>({0.,f,0.,1.})), ostrF.str().c_str());
-		painter.drawText(GlToScreenCoords(m::create<t_vec_gl>({0.,0.,f,1.})), ostrF.str().c_str());
+		painter.drawText(GlToScreenCoords(tl2::create<t_vec_gl>({f,0.,0.,1.})), ostrF.str().c_str());
+		painter.drawText(GlToScreenCoords(tl2::create<t_vec_gl>({0.,f,0.,1.})), ostrF.str().c_str());
+		painter.drawText(GlToScreenCoords(tl2::create<t_vec_gl>({0.,0.,f,1.})), ostrF.str().c_str());
 	}
 
-	painter.drawText(GlToScreenCoords(m::create<t_vec_gl>({m_CoordMax*t_real_gl(1.2), 0., 0., 1.})), "x");
-	painter.drawText(GlToScreenCoords(m::create<t_vec_gl>({0., m_CoordMax*t_real_gl(1.2), 0., 1.})), "y");
-	painter.drawText(GlToScreenCoords(m::create<t_vec_gl>({0., 0., m_CoordMax*t_real_gl(1.2), 1.})), "z");
+	painter.drawText(GlToScreenCoords(tl2::create<t_vec_gl>({m_CoordMax*t_real_gl(1.2), 0., 0., 1.})), "x");
+	painter.drawText(GlToScreenCoords(tl2::create<t_vec_gl>({0., m_CoordMax*t_real_gl(1.2), 0., 1.})), "y");
+	painter.drawText(GlToScreenCoords(tl2::create<t_vec_gl>({0., 0., m_CoordMax*t_real_gl(1.2), 1.})), "z");
 
 
 	// render object labels
@@ -1283,7 +1283,7 @@ void GlPlot_impl::DoPaintNonGL(QPainter &painter)
 			if(m_iCoordSys == 1 && !obj.m_invariant) coordTrafo = &m_matA;
 
 			t_vec3_gl posLabel3d = (*coordTrafo) * obj.m_mat * obj.m_labelPos;
-			auto posLabel2d = GlToScreenCoords(m::create<t_vec_gl>({posLabel3d[0], posLabel3d[1], posLabel3d[2], 1.}));
+			auto posLabel2d = GlToScreenCoords(tl2::create<t_vec_gl>({posLabel3d[0], posLabel3d[1], posLabel3d[2], 1.}));
 
 			QFont fontLabel = fontOrig;
 			QPen penLabel = penOrig;

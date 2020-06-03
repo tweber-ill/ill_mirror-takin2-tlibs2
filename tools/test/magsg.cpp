@@ -7,7 +7,7 @@
  */
 
 #include "libs/magsg.h"
-#include "libs/math_algos.h"
+#include "libs/math20.h"
 using namespace m_ops;
 
 
@@ -15,7 +15,7 @@ int main()
 {
 	using t_real = double;
 	using t_vec = std::vector<t_real>;
-	using t_mat = m::mat<t_real, std::vector>;
+	using t_mat = tl2::mat<t_real, std::vector>;
 
 	Spacegroups<t_mat, t_vec> sgs;
 	sgs.Load("magsg.xml");

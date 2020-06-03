@@ -15,7 +15,7 @@
 #include <memory>
 #include <iostream>
 
-#include "math_algos.h"
+#include "math20.h"
 
 #include <boost/algorithm/string.hpp>
 #include <boost/property_tree/ptree.hpp>
@@ -30,7 +30,7 @@ namespace ptree = boost::property_tree;
  * forward declarations
  */
 template<class t_mat, class t_vec>
-requires m::is_mat<t_mat> && m::is_vec<t_vec>
+requires tl2::is_mat<t_mat> && tl2::is_vec<t_vec>
 class Spacegroups;
 // ----------------------------------------------------------------------------
 
@@ -42,7 +42,7 @@ class Spacegroups;
  * Symmetry operations
  */
 template<class t_mat, class t_vec>
-requires m::is_mat<t_mat> && m::is_vec<t_vec>
+requires tl2::is_mat<t_mat> && tl2::is_vec<t_vec>
 class Symmetry
 {
 	friend class Spacegroups<t_mat, t_vec>;
@@ -75,7 +75,7 @@ public:
  * Wyckoff positions
  */
 template<class t_mat, class t_vec>
-requires m::is_mat<t_mat> && m::is_vec<t_vec>
+requires tl2::is_mat<t_mat> && tl2::is_vec<t_vec>
 class WycPositions
 {
 	friend class Spacegroups<t_mat, t_vec>;
@@ -114,7 +114,7 @@ public:
  * a magnetic space group
  */
 template<class t_mat, class t_vec>
-requires m::is_mat<t_mat> && m::is_vec<t_vec>
+requires tl2::is_mat<t_mat> && tl2::is_vec<t_vec>
 class Spacegroup
 {
 	friend class Spacegroups<t_mat, t_vec>;
@@ -173,7 +173,7 @@ public:
  * a collection of magnetic space groups
  */
 template<class t_mat, class t_vec>
-requires m::is_mat<t_mat> && m::is_vec<t_vec>
+requires tl2::is_mat<t_mat> && tl2::is_vec<t_vec>
 class Spacegroups
 {
 private:
@@ -289,23 +289,23 @@ bool Spacegroups<t_mat, t_vec>::Load(const std::string& strFile)
 		// reads in a vector
 		auto get_vec = [](const std::string& str) -> t_vec
 		{
-			t_vec vec = m::zero<t_vec>(3);
+			t_vec vec = tl2::zero<t_vec>(3);
 
 			// abbreviations
 			if(str == "0")
 				;
 			else if(str == "x")
-				vec = m::create<t_vec>({1,0,0});
+				vec = tl2::create<t_vec>({1,0,0});
 			else if(str == "y")
-				vec = m::create<t_vec>({0,1,0});
+				vec = tl2::create<t_vec>({0,1,0});
 			else if(str == "z")
-				vec = m::create<t_vec>({0,0,1});
+				vec = tl2::create<t_vec>({0,0,1});
 			else if(str == "-x")
-				vec = m::create<t_vec>({-1,0,0});
+				vec = tl2::create<t_vec>({-1,0,0});
 			else if(str == "-y")
-				vec = m::create<t_vec>({0,-1,0});
+				vec = tl2::create<t_vec>({0,-1,0});
 			else if(str == "-z")
-				vec = m::create<t_vec>({0,0,-1});
+				vec = tl2::create<t_vec>({0,0,-1});
 			else
 			{
 				// read vector
@@ -320,13 +320,13 @@ bool Spacegroups<t_mat, t_vec>::Load(const std::string& strFile)
 		// reads in a matrix
 		auto get_mat = [](const std::string& str) -> t_mat
 		{
-			t_mat mat = m::zero<t_mat>(3,3);
+			t_mat mat = tl2::zero<t_mat>(3,3);
 
 			// abbreviations
 			if(str == "0")
 				;
 			else if(str == "1")
-				mat = m::unit<t_mat>(3);
+				mat = tl2::unit<t_mat>(3);
 			else
 			{
 				// read matrix
@@ -358,8 +358,8 @@ bool Spacegroups<t_mat, t_vec>::Load(const std::string& strFile)
 			auto opBNS2OGTrans = bns2og->get_optional<std::string>("v");
 			auto opBNS2OGdiv = bns2og->get_optional<t_real>("d");
 
-			sg.m_rotBNS2OG = opBNS2OGTrafo ? get_mat(*opBNS2OGTrafo) : m::unit<t_mat>(3,3);
-			sg.m_transBNS2OG = opBNS2OGTrans ? get_vec(*opBNS2OGTrans) : m::zero<t_vec>(3);
+			sg.m_rotBNS2OG = opBNS2OGTrafo ? get_mat(*opBNS2OGTrafo) : tl2::unit<t_mat>(3,3);
+			sg.m_transBNS2OG = opBNS2OGTrans ? get_vec(*opBNS2OGTrans) : tl2::zero<t_vec>(3);
 			t_real divBNS2OG = opBNS2OGdiv ? *opBNS2OGdiv : t_real(1);
 			sg.m_transBNS2OG /= divBNS2OG;
 		}
@@ -394,8 +394,8 @@ bool Spacegroups<t_mat, t_vec>::Load(const std::string& strFile)
 
 				t_real div = opdiv ? *opdiv : t_real(1);
 				t_real inv = opinv ? *opinv : t_real(1);
-				t_mat rot = opTrafo ? get_mat(*opTrafo) : m::unit<t_mat>(3,3);
-				t_vec trans = opTrans ? get_vec(*opTrans) : m::zero<t_vec>(3);
+				t_mat rot = opTrafo ? get_mat(*opTrafo) : tl2::unit<t_mat>(3,3);
+				t_vec trans = opTrans ? get_vec(*opTrans) : tl2::zero<t_vec>(3);
 				trans /= div;
 
 				rotations.emplace_back(std::move(rot));
@@ -456,7 +456,7 @@ bool Spacegroups<t_mat, t_vec>::Load(const std::string& strFile)
 					break;
 
 				t_real div = opdiv ? *opdiv : t_real(1);
-				t_vec vec = opVec ? get_vec(*opVec) : m::zero<t_vec>(3);
+				t_vec vec = opVec ? get_vec(*opVec) : tl2::zero<t_vec>(3);
 				vec /= div;
 
 				vectors.emplace_back(std::move(vec));
@@ -530,9 +530,9 @@ bool Spacegroups<t_mat, t_vec>::Load(const std::string& strFile)
 						break;
 
 					t_real div = opdiv ? *opdiv : t_real(1);
-					t_mat rot = opRot ? get_mat(*opRot) : m::unit<t_mat>(3,3);
+					t_mat rot = opRot ? get_mat(*opRot) : tl2::unit<t_mat>(3,3);
 					t_mat rotMag = opRotMag ? get_mat(*opRotMag) : rot;
-					t_vec trans = opTrans ? get_vec(*opTrans) : m::zero<t_vec>(3);
+					t_vec trans = opTrans ? get_vec(*opTrans) : tl2::zero<t_vec>(3);
 					trans /= div;
 
 					wycpos.m_rot.emplace_back(std::move(rot));
