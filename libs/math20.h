@@ -1,7 +1,7 @@
 /**
- * future math library, developed from scratch to eventually replace tlibs(2)
+ * tlibs2 -- math library
  * container-agnostic math algorithms
- * @author Tobias Weber <tweber@ill.fr>
+ * @author Tobias Weber <tobias.weber@tum.de>, <tweber@ill.fr>
  * @date dec-2017 -- 2020
  * @license GPLv3, see 'LICENSE' file
  * @desc The present version was forked on 8-Nov-2018 from the privately developed "magtools" project (https://github.com/t-weber/magtools).
@@ -44,6 +44,7 @@
 
 #include "log.h"
 #include "str.h"
+#include "traits.h"
 
 
 
@@ -129,18 +130,19 @@ T lerp(const T& a, const T& b, REAL val)
 
 template<class T>
 typename T::value_type vec_angle_unsigned(const T& q1, const T& q2)
+requires is_basic_vec<T>
 {
 	// TODO: check argument type
 
 	// for vectors
-	typedef typename T::value_type REAL;
+	using t_real = typename T::value_type;
 
 	if(q1.size() != q2.size())
-		return REAL();
+		return t_real(0);
 
-	REAL dot = REAL();
-	REAL len1 = REAL();
-	REAL len2 = REAL();
+	t_real dot = t_real(0);
+	t_real len1 = t_real(0);
+	t_real len2 = t_real(0);
 	for(std::size_t i=0; i<q1.size(); ++i)
 	{
 		dot += q1[i]*q2[i];
@@ -167,11 +169,10 @@ typename T::value_type vec_angle_unsigned(const T& q1, const T& q2)
 template<class T>
 T slerp(const T& q1, const T& q2, typename T::value_type t)
 {
-	typedef typename T::value_type REAL;
+	using t_real = typename T::value_type;
+	t_real angle = vec_angle_unsigned<T>(q1, q2);
 
-	REAL angle = vec_angle_unsigned<T>(q1, q2);
-
-	T q = std::sin((REAL(1)-t)*angle)/std::sin(angle) * q1 +
+	T q = std::sin((t_real(1)-t)*angle)/std::sin(angle) * q1 +
 	std::sin(t*angle)/std::sin(angle) * q2;
 
 	return q;
@@ -625,130 +626,6 @@ std::tuple<T,T> stereographic_proj(T twophi_crys, T twotheta_crys, T rad)
 
 	return std::make_tuple(x, y);
 }
-
-
-
-
-// ----------------------------------------------------------------------------
-// concepts
-// ----------------------------------------------------------------------------
-/**
- * requirements for having a value_type
- */
-template<class T>
-concept has_value_type = requires { typename T::value_type; };
-
-
-/**
- * requirements for a scalar type
- */
-template<class T>
-concept is_scalar =
-	std::is_floating_point_v<T> || std::is_integral_v<T> /*|| std::is_arithmetic_v<T>*/;
-
-
-/**
- * requirements for a basic vector container like std::vector
- */
-template<class T>
-concept is_basic_vec = requires(const T& a)
-{
-	a.size();					// must have a size() member function
-	a.operator[](1);			// must have an operator[]
-} && has_value_type<T>;
-
-/**
- * requirements of a vector type with a dynamic size
- */
-template<class T>
-concept is_dyn_vec = requires(const T& a)
-{
-	T(3);						// constructor
-};
-
-/**
- * requirements for a vector container
- */
-template<class T>
-concept is_vec = requires(const T& a)
-{
-	a+a;						// operator+
-	a-a;						// operator-
-	a[0]*a;						// operator*
-	a*a[0];
-	a/a[0];						// operator/
-} && is_basic_vec<T>;
-
-
-/**
- * requirements for a basic matrix container
- */
-template<class T>
-concept is_basic_mat = requires(const T& a)
-{
-	a.size1();					// must have a size1() member function
-	a.size2();					// must have a size2() member function
-	a.operator()(1,1);			// must have an operator()
-} && has_value_type<T>;
-
-/**
- * requirements of a matrix type with a dynamic size
- */
-template<class T>
-concept is_dyn_mat = requires(const T& a)
-{
-	T(3,3);						// constructor
-};
-
-/**
- * requirements for a matrix container
- */
-template<class T>
-concept is_mat = requires(const T& a)
-{
-	a+a;						// operator+
-	a-a;						// operator-
-	a(0,0)*a;					// operator*
-	a*a(0,0);
-	a/a(0,0);					// operator/
-} && is_basic_mat<T>;
-
-
-
-
-/**
- * requirements for a complex number
- */
-template<class T>
-concept is_complex = requires(const T& a)
-{
-	std::conj(a);
-	a.real();			// must have a real() member function
-	a.imag();			// must have an imag() member function
-
-	a+a;
-	a-a;
-	a*a;
-	a/a;
-} && has_value_type<T>;
-// ----------------------------------------------------------------------------
-
-
-
-
-
-// ----------------------------------------------------------------------------
-// type traits
-// ----------------------------------------------------------------------------
-/**
- * if it exists, get T's underlying value_type, otherwise use the type T directly
- */
-template<class T, bool b = has_value_type<T>> struct _underlying_value_type {};
-template<class T> struct _underlying_value_type<T, false> { using ty = T; };
-template<class T> struct _underlying_value_type<T, true> { using ty = typename T::value_type; };
-template<class T> using underlying_value_type = typename _underlying_value_type<T>::ty;
-// ----------------------------------------------------------------------------
-
 
 
 
@@ -1215,6 +1092,49 @@ requires is_mat<t_mat>
 
 	return mat2;
 }
+
+
+// -----------------------------------------------------------------------------
+/**
+ * set values lower than epsilon to zero
+ * scalar version
+ */
+template<typename t_real>
+void set_eps_0(t_real& d, t_real eps = std::numeric_limits<t_real>::epsilon())
+requires is_scalar<t_real>
+{
+	if(std::abs(d) < eps)
+		d = t_real(0);
+};
+
+
+/**
+ * set values lower than epsilon to zero
+ * vector version
+ */
+template<typename t_vec, typename t_real = typename t_vec::value_type>
+void set_eps_0(t_vec& vec, t_real eps = std::numeric_limits<t_real>::epsilon())
+requires is_basic_vec<t_vec>
+{
+	for(t_real& d : vec)
+		set_eps_0<t_real>(d, eps);
+};
+
+
+/**
+ * set values lower than epsilon to zero
+ * matrix version
+ */
+template<typename t_mat, typename t_real = typename t_mat::value_type>
+void set_eps_0(t_mat& mat, t_real eps = std::numeric_limits<t_real>::epsilon())
+requires is_basic_mat<t_mat>
+{
+	for(std::size_t i=0; i<mat.size1(); ++i)
+		for(std::size_t j=0; j<mat.size2(); ++j)
+			set_eps_0<t_real>(mat(i,j), eps);
+};
+// -----------------------------------------------------------------------------
+
 
 
 /**
@@ -2080,7 +2000,9 @@ requires is_vec<t_vec> && is_mat<t_mat>
 
 
 /**
- * project vector vec onto another vector vecProj
+ * project vec1 onto vec2
+ * proj_op = |vec2><vec2¦/ len(vec2)^2,  len(vec2) = sqrt(<vec2|vec2>)
+ * proj = proj_op * vec1 = |vec2> * <vec2|vec1> / <vec2|vec2>
  */
 template<class t_vec>
 t_vec project(const t_vec& vec, const t_vec& vecProj, bool bIsNormalised = true)
@@ -5474,9 +5396,7 @@ namespace tl2_la {
  * calculates the convex hull
  * https://github.com/t-weber/misc/blob/master/geo/qhulltst.cpp
  */
-template<class t_vec = ublas::vector<double>,
-template<class...> class t_cont = std::vector,
-class T = typename t_vec::value_type>
+template<class t_vec>, template<class...> class t_cont = std::vector, class T = typename t_vec::value_type>
 t_cont<t_cont<t_vec>> get_convexhull(const t_cont<t_vec>& vecVerts)
 {
 	using t_real_qh = double;

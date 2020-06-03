@@ -1137,13 +1137,12 @@ void FilePsi<t_real>::ParsePolData()
 	}
 
 
-	// cleanup, TODO: port old set_eps_0 function
-	/*
+	// cleanup
 	for(std::size_t iPol=0; iPol<m_vecPolStates.size(); ++iPol)
 	{
 		for(unsigned iComp=0; iComp<6; ++iComp)
 			set_eps_0(m_vecPolStates[iPol][iComp]);
-	}*/
+	}
 }
 
 
