@@ -6,8 +6,8 @@
  * @desc The present version was forked on 8-Nov-2018 from the privately developed "magtools" project (https://github.com/t-weber/magtools).
  */
 
-#include "libs/_cxx20/magsg.h"
-#include "libs/_cxx20/math_algos.h"
+#include "libs/magsg.h"
+#include "libs/math_algos.h"
 using namespace m_ops;
 
 
