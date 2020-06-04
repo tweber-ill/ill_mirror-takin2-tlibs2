@@ -318,8 +318,8 @@ class FilePsi : public FileInstrBase<_t_real>
 		std::vector<std::array<t_real, 6>> m_vecPolStates;
 
 		// instrument-specific device names
-		std::string m_strPolVec1 {"p1"}, m_strPolVec2 {"p2"};
-		std::string m_strPolCur1 {"i1"}, m_strPolCur2 {"i2"};
+		std::string m_strPolVec1 = "p1", m_strPolVec2 = "p2";
+		std::string m_strPolCur1 = "i1", m_strPolCur2 = "i2";
 
 
 	protected:

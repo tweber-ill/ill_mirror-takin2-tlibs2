@@ -1,6 +1,5 @@
 /**
- * tlibs2
- * julia interface helpers
+ * tlibs2 -- julia interface helpers
  * @author Tobias Weber <tobias.weber@tum.de>, <tweber@ill.fr>
  * @date 2017 -- 2018
  * @license GPLv3, see 'LICENSE' file
@@ -147,7 +146,7 @@ jl_array_t* make_jl_2darr(const t_cont<t_cont<T>>& vecvec)
 	if(!iCols) iRows = 0;
 
 	jl_array_t *pArr = jl_alloc_array_2d(
-		jl_apply_array_type(reinterpret_cast<jl_value_t*>(jl_traits<T>::get_type()), 2), 
+		jl_apply_array_type(reinterpret_cast<jl_value_t*>(jl_traits<T>::get_type()), 2),
 		iRows, iCols);
 	T* pDat = reinterpret_cast<T*>(jl_array_data(pArr));
 

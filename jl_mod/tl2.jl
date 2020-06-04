@@ -1,5 +1,5 @@
 #
-# tlibs2 julia module
+# tlibs2 -- julia module
 # @author Tobias Weber <tobias.weber@tum.de>, <tweber@ill.fr>
 # @date 2017 -- 2018
 # @license GPLv3, see <<LICENSE>> file

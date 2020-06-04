@@ -23,9 +23,8 @@
 #include <algorithm>
 #include <limits>
 
-#include "mat.h"
+#include "math20.h"
 #include "log.h"
-#include "traits.h"
 
 
 namespace tl2 {
