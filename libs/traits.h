@@ -20,10 +20,11 @@
 
 namespace tl2 {
 
-#if defined(__cpp_concepts) && __cplusplus >= 202002L
+#if defined(__cpp_concepts) && __cplusplus >= 201709L
 	// ----------------------------------------------------------------------------
 	// concepts
 	// ----------------------------------------------------------------------------
+
 	/**
 	 * requirements for having a value_type
 	 */
@@ -72,6 +73,32 @@ namespace tl2 {
 		a*a[0];
 		a/a[0];						// operator/
 	} && is_basic_vec<T>;
+
+
+	/**
+	 * requirements for a quaternion container
+	 * (modelled after Boost's quaternion interface)
+	 */
+	template<class T>
+	concept is_quat = requires(const T& a)
+	{
+		a+a;						// operator+
+		a-a;						// operator-
+		a*a;						// operator*
+		a/a;						// operator/
+
+		a + a.R_component_1();
+		a.R_component_1() + a;
+
+		a.R_component_1()*a;		// operator*
+		a*a.R_component_1();
+		a/a.R_component_1();		// operator/
+
+		a.R_component_1();
+		a.R_component_2();
+		a.R_component_3();
+		a.R_component_4();
+	};
 
 
 	/**

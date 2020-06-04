@@ -11,7 +11,7 @@
 #define __TLIBS2_PHYS__
 
 #include "units.h"
-#if defined(__cpp_concepts) && __cplusplus >= 202002L
+#if defined(__cpp_concepts) && __cplusplus >= 201709L
 	#include "math20.h"
 #else
 	#include "math17.h"
