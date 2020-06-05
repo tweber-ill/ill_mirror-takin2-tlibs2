@@ -5847,7 +5847,7 @@ template<class t_quat>
 t_quat rotation_quat_x(typename t_quat::value_type angle)
 requires is_quat<t_quat>
 {
-	using T = t_quat::value_type;
+	using T = typename t_quat::value_type;
 	return t_quat{std::cos(T(0.5)*angle), std::sin(T(0.5)*angle), T(0), T(0)};
 }
 
@@ -5856,7 +5856,7 @@ template<class t_quat>
 t_quat rotation_quat_y(typename t_quat::value_type angle)
 requires is_quat<t_quat>
 {
-	using T = t_quat::value_type;
+	using T = typename t_quat::value_type;
 	return t_quat{std::cos(T(0.5)*angle), T(0), std::sin(T(0.5)*angle), T(0)};
 }
 
@@ -5865,7 +5865,7 @@ template<class t_quat>
 t_quat rotation_quat_z(typename t_quat::value_type angle)
 requires is_quat<t_quat>
 {
-	using T = t_quat::value_type;
+	using T = typename t_quat::value_type;
 	return t_quat{std::cos(T(0.5)*angle), T(0), T(0), std::sin(T(0.5)*angle)};
 }
 

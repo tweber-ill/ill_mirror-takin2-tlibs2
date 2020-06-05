@@ -11,12 +11,13 @@
 #define __TLIBS2_PHYS__
 
 #include "units.h"
+#include "log.h"
+
 #if defined(__cpp_concepts) && __cplusplus >= 201709L
 	#include "math20.h"
 #else
 	#include "math17.h"
 #endif
-#include "log.h"
 
 #include <boost/units/pow.hpp>
 

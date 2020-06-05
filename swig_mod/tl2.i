@@ -1,6 +1,6 @@
 /**
  * tlibs2 -- swig interface
- * @author Tobias Weber
+ * @author Tobias Weber <tweber@ill.fr>
  * @date 4-jun-2020
  * @license see 'LICENSE' file
  */
