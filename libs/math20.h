@@ -864,9 +864,9 @@ requires is_basic_vec<t_vec>
 /**
  * are two matrices equal within an epsilon range?
  */
-template<class t_mat>
+template<class t_mat, class t_real>
 bool equals(const t_mat& mat1, const t_mat& mat2,
-	typename t_mat::value_type eps = std::numeric_limits<typename t_mat::value_type>::epsilon(),
+	t_real eps = std::numeric_limits<t_real>::epsilon(),
 	int _maxSize = -1)
 requires is_mat<t_mat>
 {
@@ -4835,7 +4835,6 @@ extern "C"
 
 namespace tl2_la {
 
-
 /**
  * LU decomposition of a matrix, mat = P * L * U, returning raw results
  * http://www.math.utah.edu/software/lapack/lapack-d/dgetrf.html
@@ -5143,7 +5142,7 @@ eigenvec(const t_mat_cplx& mat, bool only_evals=false, bool is_hermitian=false, 
 template<class t_mat, class t_vec, class t_real = typename t_mat::value_type>
 std::tuple<bool, std::vector<t_real>, std::vector<t_real>, std::vector<t_vec>, std::vector<t_vec>>
 eigenvec(const t_mat& mat, bool only_evals=false, bool is_symmetric=false, bool normalise=false)
-	requires tl2::is_mat<t_mat> && tl2::is_vec<t_vec> && !tl2::is_complex<t_real>
+	requires (tl2::is_mat<t_mat> && tl2::is_vec<t_vec> && !tl2::is_complex<t_real>)
 {
 	std::vector<t_real> evals_re, evals_im;
 	std::vector<t_vec> evecs_re, evecs_im;
@@ -5347,7 +5346,7 @@ namespace tl2 {
  * QR decomposition of a matrix
  * returns [ok, Q, R]
  */
-template<class t_mat, class t_vec = std::vector<typename t_mat::value_type>>
+template<class t_mat, class t_vec /*= std::vector<typename t_mat::value_type>*/>
 std::tuple<bool, t_mat, t_mat> qr(const t_mat& mat)
 requires is_mat<t_mat> && is_vec<t_vec>
 {
@@ -5512,7 +5511,7 @@ requires is_vec<t_vec> && is_dyn_mat<t_mat>
 #include <QhullFacetList.h>
 #include <QhullVertexSet.h>
 
-namespace tl2_la {
+namespace tl2_hull {
 
 /**
  * calculates the convex hull
@@ -5767,7 +5766,7 @@ requires is_quat<t_quat>
  * @desc see e.g.: (Bronstein 2008), Ch. 4
  */
 template<class t_quat, class t_vec>
-t_vec rotation_axis(const t_quat& quat)
+std::pair<t_vec, typename t_vec::value_type> rotation_axis(const t_quat& quat)
 requires is_quat<t_quat> && is_vec<t_vec>
 {
 	using T = typename t_vec::value_type;
@@ -5781,7 +5780,7 @@ requires is_quat<t_quat> && is_vec<t_vec>
 	T angle = rotation_angle(quat);
 	vec /= std::sin(T{0.5}*angle);
 
-	return vec;
+	return std::make_pair(vec, angle);
 }
 
 

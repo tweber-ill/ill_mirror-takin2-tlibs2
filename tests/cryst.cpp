@@ -4,8 +4,8 @@
  * @date feb-19
  * @license GPLv3, see 'LICENSE' file
  *
- * g++ -std=c++17 -fconcepts -o cryst cryst.cpp
- * g++ -std=c++17 -fconcepts -DUSE_LAPACK -I/usr/include/lapacke -I/usr/local/opt/lapack/include -L/usr/local/opt/lapack/lib -o cryst cryst.cpp -llapacke
+ * g++ -std=c++20 -o cryst cryst.cpp
+ * g++ -std=c++20 -DUSE_LAPACK -I/usr/include/lapacke -I/usr/local/opt/lapack/include -L/usr/local/opt/lapack/lib -o cryst cryst.cpp -llapacke
  */
 
 #define BOOST_TEST_MODULE Xtal Test
@@ -17,11 +17,15 @@ namespace testtools = boost::test_tools;
 #include <iostream>
 #include <vector>
 
-#include "../../libs/math20.h"
+#include "libs/math20.h"
 using namespace tl2_ops;
 
 
-using t_types = std::tuple<long double, double, float>;
+#ifdef USE_LAPACK
+	using t_types = std::tuple<double, float>;
+#else
+	using t_types = std::tuple<long double, double, float>;
+#endif
 BOOST_AUTO_TEST_CASE_TEMPLATE(test_xtal, t_real, t_types)
 {
 	using t_cplx = std::complex<t_real>;
@@ -40,6 +44,6 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(test_xtal, t_real, t_types)
 	std::cout << "B2 = " << B2 << std::endl;
 
 	BOOST_TEST(ok);
-	BOOST_TEST(tl2::equals(B, B2, std::numeric_limits<t_real>::epsilon()*10.));
+	BOOST_TEST(tl2::equals(B, B2, std::numeric_limits<t_real>::epsilon()*1e2));
 	std::cout << std::endl;
 }

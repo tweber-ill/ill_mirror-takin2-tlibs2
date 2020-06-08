@@ -4,8 +4,8 @@
  * @date mar-19
  * @license GPLv3, see 'LICENSE' file
  *
- * g++ -std=c++17 -fconcepts -o mat1 mat1.cpp
- * g++ -std=c++17 -fconcepts -DUSE_LAPACK -I/usr/include/lapacke -I/usr/local/opt/lapack/include -L/usr/local/opt/lapack/lib -o leastsq leastsq.cpp -llapacke
+ * g++ -std=c++20 -o mat1 mat1.cpp
+ * g++ -std=c++20 -DUSE_LAPACK -I/usr/include/lapacke -I/usr/local/opt/lapack/include -L/usr/local/opt/lapack/lib -o leastsq leastsq.cpp -llapacke
  */
 
 #define BOOST_TEST_MODULE Mat1
@@ -16,7 +16,7 @@ namespace testtools = boost::test_tools;
 #include <iostream>
 #include <vector>
 
-#include "../../libs/math20.h"
+#include "libs/math20.h"
 using namespace tl2_ops;
 
 

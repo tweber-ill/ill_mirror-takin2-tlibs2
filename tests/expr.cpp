@@ -4,7 +4,7 @@
  * @date 28-mar-20
  * @license GPLv3, see 'LICENSE' file
  *
- * g++ -std=c++17 -o expr expr.cpp ../../libs/log.cpp
+ * g++ -std=c++20 -o expr expr.cpp ../../libs/log.cpp
  */
 
 #define BOOST_TEST_MODULE Expr Test
@@ -13,9 +13,9 @@ namespace test = boost::unit_test;
 namespace testtools = boost::test_tools;
 
 
-#include "../../libs/expr.h"
-#include "../../libs/str.h"
-#include "../../libs/math20.h"
+#include "libs/expr.h"
+#include "libs/str.h"
+#include "libs/math20.h"
 
 
 using t_types_real = std::tuple<double, float>;

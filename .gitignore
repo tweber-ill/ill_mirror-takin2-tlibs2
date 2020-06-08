@@ -1,16 +1,9 @@
-# Prerequisites
-*.d
-
 # Compiled Object files
 *.slo
 *.lo
 *.o
 *.obj
 *.moc
-
-# Precompiled Headers
-*.gch
-*.pch
 
 # Compiled Dynamic libraries
 *.so
@@ -19,10 +12,6 @@
 !libs/tl2jl.dylib
 !tools/test/jl/tl2jl.dylib
 !tools/test/jl/tl2jl.so
-
-# Fortran module files
-*.mod
-*.smod
 
 # Compiled Static libraries
 *.lai
@@ -46,6 +35,7 @@ plugins/**
 tmp/**
 !tmp/.dir
 build/**
+tests/build/**
 tools/structfact/build/**
 tools/cif2xml/build/**
 tools/magstructfact/build/**
@@ -70,4 +60,3 @@ stack.hh
 *.blg
 *.fls
 *.fdb_latexmk
-
