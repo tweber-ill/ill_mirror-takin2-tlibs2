@@ -44,6 +44,7 @@ tools/pol/build/**
 *.pyc
 .DS_Store
 *.csv
+tests/py/__pycache__/**
 
 # Temporary lexer/parser files
 cliparser_impl.*
