@@ -23,7 +23,6 @@
 #include "str.h"
 #include "log.h"
 #include "file.h"
-#include "math20.h"
 #include "phys.h"
 
 

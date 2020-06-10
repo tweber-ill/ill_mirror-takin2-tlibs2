@@ -107,6 +107,10 @@ extern "C"
 #endif
 
 
+// for compatibility with new math lib
+#define equals float_equal
+
+
 namespace tl2 {
 
 // -----------------------------------------------------------------------------
