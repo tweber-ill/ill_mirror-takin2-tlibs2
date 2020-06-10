@@ -13,6 +13,8 @@
 //#define USE_LINALG_OPS
 //#define USE_FADDEEVA
 //#define USE_LAPACK
+//#define USE_QHULL
+
 
 #include <cstddef>
 #include <cstdint>
@@ -33,6 +35,7 @@
 #include <iostream>
 #include <sstream>
 #include <iomanip>
+#include <stdexcept>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/math/special_functions/factorials.hpp>
@@ -130,7 +133,7 @@ T lerp(const T& a, const T& b, REAL val)
  * unsigned angle between two vectors
  */
 template<class t_vec>
-typename t_vec::value_type vec_angle_unsigned(const t_vec& q1, const t_vec& q2)
+typename t_vec::value_type angle_unsigned(const t_vec& q1, const t_vec& q2)
 requires is_basic_vec<t_vec>
 {
 	using t_real = typename t_vec::value_type;
@@ -164,7 +167,7 @@ requires is_basic_vec<t_vec>
  * unsigned angle between two quaternions
  */
 template<class t_quat>
-typename t_quat::value_type vec_angle_unsigned(const t_quat& q1, const t_quat& q2)
+typename t_quat::value_type angle_unsigned(const t_quat& q1, const t_quat& q2)
 requires is_quat<t_quat>
 {
 	using t_real = typename t_quat::value_type;
@@ -194,6 +197,7 @@ requires is_quat<t_quat>
 }
 
 
+
 /**
  * - see: K. Shoemake, "Animating rotation with quaternion curves":
  *        http://dx.doi.org/10.1145/325334.325242
@@ -203,7 +207,7 @@ template<class T>
 T slerp(const T& q1, const T& q2, typename T::value_type t)
 {
 	using t_real = typename T::value_type;
-	t_real angle = vec_angle_unsigned<T>(q1, q2);
+	t_real angle = angle_unsigned<T>(q1, q2);
 
 	T q = std::sin((t_real(1)-t)*angle)/std::sin(angle) * q1 +
 	std::sin(t*angle)/std::sin(angle) * q2;
@@ -3885,9 +3889,14 @@ requires is_basic_vec<t_cont<t_elem>>
 
 	using namespace tl2_ops;
 
-	t_elem meanvec = std::accumulate(std::next(vec.begin(), 1), vec.end(), *vec.begin());
-	meanvec /= vec.size();
+	//t_elem meanvec = std::accumulate(std::next(vec.begin(), 1), vec.end(), *vec.begin());
 
+	t_elem meanvec = *vec.begin();
+	auto iter = std::next(vec.begin(), 1);
+	for(; iter!=vec.end(); iter=std::next(iter, 1))
+		meanvec += *iter;
+
+	meanvec /= vec.size();
 	return meanvec;
 }
 
@@ -5501,6 +5510,141 @@ requires is_vec<t_vec> && is_dyn_mat<t_mat>
 	return std::make_tuple(v, ok);
 }
 
+
+
+/**
+ * signed angle between two vectors
+ */
+template<typename t_vec>
+typename t_vec::value_type angle(const t_vec& vec0,
+	const t_vec& vec1, const t_vec* pvec_norm=nullptr)
+requires is_vec<t_vec>
+{
+	using namespace tl2_ops;
+	using t_real = typename t_vec::value_type;
+
+	if(vec0.size() != vec1.size())
+		throw std::runtime_error("angle: Vector sizes do not match.");
+
+	if(vec0.size() == 2)
+	{
+		// signed angles wrt basis
+		t_real angle0 = std::atan2(vec0[1], vec0[0]);
+		t_real angle1 = std::atan2(vec1[1], vec1[0]);
+
+		return angle1 - angle0;
+	}
+	if(vec0.size() == 3)
+	{
+		t_real dC = inner(vec0, vec1);
+		t_vec veccross = cross<t_vec>({vec0, vec1});
+		t_real dS = norm(veccross);
+
+		t_real dAngle = std::atan2(dS, dC);
+
+		// get signed angle
+		if(pvec_norm)
+		{
+			if(inner(veccross, *pvec_norm) < t_real{0})
+				dAngle = -dAngle;
+		}
+
+		return dAngle;
+	}
+
+	throw std::runtime_error("angle: only implemented for size == 2 and size == 3.");
+}
+
+
+
+/**
+ * sort vertices in a convex polygon
+ */
+template<class t_vec, template<class...> class t_cont = std::vector>
+void sort_poly_verts_norm(t_cont<t_vec>& vecPoly, const t_vec& _vecNorm)
+requires is_vec<t_vec>
+{
+	using namespace tl2_ops;
+
+	if(vecPoly.size() <= 1)
+		return;
+
+	// line from centre to vertex
+	const t_vec vecCentre = mean(vecPoly);
+	const t_vec vecNorm = _vecNorm / norm(_vecNorm);
+
+	t_vec vec0 = vecPoly[0] - vecCentre;
+
+	std::stable_sort(vecPoly.begin(), vecPoly.end(),
+	[&vecCentre, &vec0, &vecNorm](const t_vec& vertex1, const t_vec& vertex2) -> bool
+	{
+		t_vec vec1 = vertex1 - vecCentre;
+		t_vec vec2 = vertex2 - vecCentre;
+
+		return angle(vec0, vec1, &vecNorm) < angle(vec0, vec2, &vecNorm);
+	});
+}
+
+
+/**
+ * sort vertices in a convex polygon using an absolute centre for determining the normal
+ */
+template<class t_vec, template<class...> class t_cont = std::vector>
+void sort_poly_verts(t_cont<t_vec>& vecPoly, const t_vec& vecAbsCentre)
+requires is_vec<t_vec>
+{
+	using namespace tl2_ops;
+
+	if(vecPoly.size() <= 1)
+		return;
+
+	// line from centre to vertex
+	const t_vec vecCentre = mean(vecPoly);
+	// face normal
+	t_vec vecNorm = vecCentre - vecAbsCentre;
+
+	sort_poly_verts_norm<t_vec, t_cont>(vecPoly, vecNorm);
+}
+
+
+/**
+ * sort vertices in a convex polygon determining normal
+ */
+template<class t_vec, template<class...> class t_cont = std::vector>
+void sort_poly_verts(t_cont<t_vec>& vecPoly)
+requires is_vec<t_vec>
+{
+	using namespace tl2_ops;
+	using t_real = typename t_vec::value_type;
+
+	if(vecPoly.size() <= 1)
+		return;
+
+	// line from centre to vertex
+	const t_vec vecCentre = mean(vecPoly);
+	// face normal
+	t_vec vecNormBest = zero<t_vec>(vecCentre.size());
+	t_real tBestCross = t_real(0);
+
+	// find non-collinear vectors
+	for(std::size_t iVecPoly=1; iVecPoly<vecPoly.size(); ++iVecPoly)
+	{
+		t_vec vecNorm = cross<t_vec>({vecPoly[0]-vecCentre, vecPoly[1]-vecCentre});
+		t_real tCross = norm(vecNorm);
+		if(tCross > tBestCross)
+		{
+			tBestCross = tCross;
+			vecNormBest = vecNorm;
+		}
+	}
+
+	// nothing found
+	if(vecNormBest.size() < vecCentre.size())
+		return;
+
+	sort_poly_verts_norm<t_vec, t_cont>(vecPoly, vecNormBest);
+}
+
 }
 
 
@@ -5511,19 +5655,25 @@ requires is_vec<t_vec> && is_dyn_mat<t_mat>
 #include <QhullFacetList.h>
 #include <QhullVertexSet.h>
 
-namespace tl2_hull {
+namespace tl2_qh {
 
 /**
  * calculates the convex hull
  * https://github.com/t-weber/misc/blob/master/geo/qhulltst.cpp
  */
-template<class t_vec, template<class...> class t_cont = std::vector, class T = typename t_vec::value_type>
+template<class t_vec, template<class...> class t_cont = std::vector>
 t_cont<t_cont<t_vec>> get_convexhull(const t_cont<t_vec>& vecVerts)
+requires tl2::is_vec<t_vec>
 {
+	using namespace tl2_ops;
+
+	using t_real = typename t_vec::value_type;
 	using t_real_qh = double;
+	using t_facetlist_iter = typename orgQhull::QhullLinkedList<orgQhull::QhullFacet>::iterator;
+	using t_vertexset_iter = typename orgQhull::QhullSet<orgQhull::QhullVertex>::iterator;
 
 	t_cont<t_cont<t_vec>> vecPolys;
-	const t_vec vecCentre = mean(vecVerts);
+	const t_vec vecCentre = tl2::mean(vecVerts);
 
 	// copy vertices
 	int dim = vecVerts[0].size();
@@ -5542,39 +5692,35 @@ t_cont<t_cont<t_vec>> get_convexhull(const t_cont<t_vec>& vecVerts)
 
 
 	orgQhull::Qhull qhull{"tlibs2", dim, int(vecVerts.size()), mem.get(), ""};
-
 	orgQhull::QhullFacetList facets = qhull.facetList();
-	//std::cout << "Convex hull has " << facets.size() << " facets.";
 
-	for(orgQhull::QhullLinkedList<orgQhull::QhullFacet>::iterator iter=facets.begin();
-		iter!=facets.end(); ++iter)
+	for(t_facetlist_iter iter=facets.begin(); iter!=facets.end(); ++iter)
+	{
+		// triangulable?
+		if(iter->isUpperDelaunay())
+			continue;
+
+		t_cont<t_vec> vecPoly;
+		orgQhull::QhullVertexSet vertices = iter->vertices();
+		for(t_vertexset_iter iterVertex=vertices.begin(); iterVertex!=vertices.end(); ++iterVertex)
 		{
-			// triangulable?
-			if(iter->isUpperDelaunay())
-				continue;
+			orgQhull::QhullPoint point = (*iterVertex).point();
+			t_vec vecPoint(dim);
+			for(int i=0; i<dim; ++i)
+				vecPoint[i] = t_real(point[i]);
 
-			t_cont<t_vec> vecPoly;
-			orgQhull::QhullVertexSet vertices = iter->vertices();
-			for(orgQhull::QhullSet<orgQhull::QhullVertex>::iterator iterVertex=vertices.begin();
-				iterVertex!=vertices.end(); ++iterVertex)
-				{
-					orgQhull::QhullPoint point = (*iterVertex).point();
-					t_vec vecPoint(dim);
-					for(int i=0; i<dim; ++i)
-						vecPoint[i] = T(point[i]);
-
-					vecPoly.emplace_back(std::move(vecPoint));
-				}
-
-				sort_poly_verts<t_vec, t_cont, T>(vecPoly, vecCentre);
-				vecPolys.emplace_back(std::move(vecPoly));
+			vecPoly.emplace_back(std::move(vecPoint));
 		}
 
-		// too few polygons => remove polyhedron
-		if(vecPolys.size() < 3)
-			vecPolys = decltype(vecPolys){};
+		tl2::sort_poly_verts<t_vec, t_cont>(vecPoly, vecCentre);
+		vecPolys.emplace_back(std::move(vecPoly));
+	}
 
-		return vecPolys;
+	// too few polygons => remove polyhedron
+	if(vecPolys.size() < 3)
+		vecPolys = decltype(vecPolys){};
+
+	return vecPolys;
 }
 }
 #endif
@@ -5663,7 +5809,8 @@ requires is_quat<t_quat> && is_mat<t_mat>
 				break;
 			}
 
-			if(iComp>=2) throw Err("rot3_to_quat: Invalid condition.");
+			if(iComp>=2)
+				throw std::runtime_error("rot3_to_quat: Invalid condition.");
 		}
 	}
 

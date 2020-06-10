@@ -12,7 +12,7 @@ cmake_policy(SET CMP0086 NEW)
 project(tlibs2)
 
 
-message("Build type: ${CMAKE_BUILD_TYPE}")
+message("Project: ${PROJECT_NAME}, build type: ${CMAKE_BUILD_TYPE}.")
 
 if(NOT "${CMAKE_BUILD_TYPE}" STREQUAL "Release")
 	set(CMAKE_VERBOSE_MAKEFILE TRUE)
@@ -43,6 +43,7 @@ message("Using Python version ${PYTHONLIBS_VERSION_STRING}.")
 # -----------------------------------------------------------------------------
 
 
+
 include_directories(
 	"${PROJECT_SOURCE_DIR}" "${PROJECT_SOURCE_DIR}/libs"
 	"${Boost_INCLUDE_DIRS}" "${Boost_INCLUDE_DIRS}/.."
@@ -63,6 +64,10 @@ set_source_files_properties(swig_mod/tl2.i PROPERTIES SWIG_FLAGS "-I ${PROJECT_S
 swig_add_library(tl2_py LANGUAGE python SOURCES swig_mod/tl2.i libs/log.cpp)
 
 target_link_libraries(tl2_py "${PYTHON_LIBRARIES}")
+
+
+# installation
+install(TARGETS tl2_py LIBRARY DESTINATION lib64)
 # -----------------------------------------------------------------------------
 
 

@@ -15,6 +15,8 @@
 //#define USE_LINALG_OPS
 //#define USE_FADDEEVA
 //#define USE_LAPACK
+//#define USE_QHULL
+
 
 #include "log.h"
 #include "str.h"
