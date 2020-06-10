@@ -5,13 +5,13 @@
  * @license GPLv3, see 'LICENSE' file
  * @desc Forked on 7-Nov-2018 from the privately and TUM-PhD-developed "tlibs" project (https://github.com/t-weber/tlibs).
  *
- * g++-8 -std=c++17 -shared -fPIC -O2 -march=native -I. -I/usr/local/include/julia -I/usr/include/julia -o tl2jl.so log.cpp jl.cpp -lboost_system -lboost_iostreams -lMinuit2 -lgomp -ljulia
+ * g++ -std=c++20 -shared -fPIC -O2 -march=native -I. -I.. -I/usr/local/include/julia -I/usr/include/julia -o tl2_jl.so ../libs/log.cpp jl.cpp -lboost_system -lboost_iostreams -lMinuit2 -lgomp -ljulia
  */
 
 #include "jl.h"
-#include "log.h"
-#include "instr.h"
-#include "fit.h"
+#include "libs/log.h"
+#include "libs/instr.h"
+#include "libs/fit.h"
 
 
 using t_real = double;

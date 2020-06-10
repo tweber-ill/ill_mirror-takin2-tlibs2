@@ -14,11 +14,12 @@ t_real = Float64
 g_enable_debug = 1
 
 
+
 #
 # initialises tlibs2
 #
 function __init__()
-	ccall((:load_tl2, :tl2jl), Cvoid, (Cint,), g_enable_debug)
+	ccall((:load_tl2, :tl2_jl), Cvoid, (Cint,), g_enable_debug)
 end
 
 
@@ -27,7 +28,7 @@ end
 # loads instrument data files
 #
 function loadinstr(strFile::String) :: Array{Any, 1}
-	scandata = ccall((:load_instr, :tl2jl), Array{Any, 1}, (Cstring,), strFile)
+	scandata = ccall((:load_instr, :tl2_jl), Array{Any, 1}, (Cstring,), strFile)
 	if length(scandata) == 0 return scandata end
 
 	thedict = Dict{String,String}()
@@ -53,6 +54,7 @@ function __build_cfunc_string(fkt, num_args)
 	argtup *= ")"
 
 	str = "@cfunction($fkt" * ", " * ty * ", " * argtup * ")"
+	#println("Function: " * str)
 	return str
 end
 
@@ -99,11 +101,11 @@ function fit(fkt, x, y, yerr; fixed = [], values = Dict(), errors = Dict())
 	# map to a C function pointer with num_args arguments
 	#cfkt = cfunction(fkt, t_real, NTuple{num_args, t_real})
 	cfuncstr = __build_cfunc_string(fkt, num_args)
-	cfkt = Meta.eval(Meta.parse(cfuncstr))
+	cfkt = eval(Meta.parse(cfuncstr))
 
 
 	# call C function pointer
-	bOk = ccall((:fit, :tl2jl),
+	bOk = ccall((:fit, :tl2_jl),
 		# return type
 		Cint,
 
@@ -171,11 +173,11 @@ function minimise(fkt; fixed = [], values = Dict(), errors = Dict())
 	# map to a C function pointer with num_args arguments
 	#cfkt = cfunction(fkt, t_real, NTuple{num_args, t_real})
 	cfuncstr = __build_cfunc_string(fkt, num_args)
-	cfkt = Meta.eval(Meta.parse(cfuncstr))
+	cfkt = eval(Meta.parse(cfuncstr))
 
 
 	# call C function pointer
-	bOk = ccall((:minimise, :tl2jl),
+	bOk = ccall((:minimise, :tl2_jl),
 		# return type
 		Cint,
 
@@ -251,6 +253,7 @@ function poisson_err(x) :: t_real
 end
 
 
+
 #
 # Conversions
 #
@@ -258,6 +261,7 @@ SIGMA2HWHM = sqrt(2. * log(2.))
 SIGMA2FWHM = 2. * SIGMA2HWHM
 HWHM2SIGMA = 1. / SIGMA2HWHM
 FWHM2SIGMA = 1. / SIGMA2FWHM
+
 
 
 end		# module tl2

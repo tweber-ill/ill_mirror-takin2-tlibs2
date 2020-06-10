@@ -10,7 +10,8 @@ include("tl2.jl")
 
 
 # load data file
-a = tl2.loadinstr("/Users/tw/Measurements/mnsi/mira-18/data/13511_00035079.dat")
+#a = tl2.loadinstr("/Users/tw/Measurements/mnsi/mira-18/data/13511_00035079.dat")
+a = tl2.loadinstr("/home/tw/Measurements/mnsi/mira_18/data/13511_00035079.dat")
 cols = a[1]
 data = a[2]
 #println(cols)

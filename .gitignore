@@ -9,9 +9,10 @@
 *.so
 *.dylib
 *.dll
-!libs/tl2jl.dylib
-!tools/test/jl/tl2jl.dylib
-!tools/test/jl/tl2jl.so
+!tests/jl/tl2_jl.so
+!tests/jl/tl2_jl.dylib
+!tests/py/_tl2_py.so
+!tests/py/_tl2_py.dylib
 
 # Compiled Static libraries
 *.lai
@@ -24,32 +25,15 @@
 *.out
 *.app
 
-# External libraries
-ext/**
-plugins/**
-!ext/.dir
-!plugins/.dir
-!plugins/qtas.py
-
 # Temporary files
 tmp/**
 !tmp/.dir
 build/**
 tests/build/**
-tools/structfact/build/**
-tools/cif2xml/build/**
-tools/magstructfact/build/**
-tools/magsgbrowser/build/**
-tools/pol/build/**
 *.pyc
 .DS_Store
 *.csv
 tests/py/__pycache__/**
-
-# Temporary lexer/parser files
-cliparser_impl.*
-clilexer_impl.*
-stack.hh
 
 # Temporary tex files
 *.log
