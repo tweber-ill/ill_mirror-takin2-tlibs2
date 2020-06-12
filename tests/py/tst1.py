@@ -5,6 +5,8 @@
 # @license GPLv3, see 'LICENSE' file
 #
 
+import os
+import math
 import tl2
 
 
@@ -16,20 +18,38 @@ def get_E(ki, kf):
 	return (ki**2. - kf**2.) / E_to_k2
 
 
-datfile = "/home/tw/Projects/repos/skx/exp/data1/elast_1.dat"
-dat = tl2.FileInstrBaseD.LoadInstr(datfile)
+def load_data(datfile):
+	print("Loading \"%s\"." % (datfile))
+	dat = tl2.FileInstrBaseD.LoadInstr(datfile)
+	if dat == None:
+		return
 
-cnt = dat.GetCountVar()
-mon = dat.GetMonVar()
-cntcol = dat.GetCol(cnt)
-moncol = dat.GetCol(mon)
+	cnt = dat.GetCountVar()
+	mon = dat.GetMonVar()
+	cntcol = dat.GetCol(cnt)
+	moncol = dat.GetCol(mon)
 
-for point_idx in range(cntcol.size()):
-	(h, k, l, ki, kf) = dat.GetScanHKLKiKf(point_idx)
-	E = get_E(ki, kf)
+	for point_idx in range(cntcol.size()):
+		(h, k, l, ki, kf) = dat.GetScanHKLKiKf(point_idx)
+		E = get_E(ki, kf)
 
-	counts = cntcol[point_idx]
-	mon_counts = moncol[point_idx]
+		counts = cntcol[point_idx]
+		counts_err = math.sqrt(counts)
+		mon_counts = moncol[point_idx]
+		intensity = counts/mon_counts
+		intensity_err = counts_err / mon_counts
 
-	print("Q = (%.4f %.4f %.4f), E = %.4f: Monitor: %d, Counts: %d" \
-		% (h, k, l, E, mon_counts, counts))
+		print("Q = (%.4f %.4f %.4f), E = %.4f: Monitor: %d, Counts: %d +- %d, Counts/Monitor: %.5g +- %.5g" \
+			% (h, k, l, E, mon_counts, counts, counts_err, intensity, intensity_err))
+	print()
+
+
+def load_all(dir):
+	for datfile in os.listdir(dir):
+		load_data(dir + "/" + datfile)
+
+
+#datfile = "/home/tw/Projects/repos/skx/exp/data1/elast_1.dat"
+#load_data(datfile)
+
+load_all("/home/tw/tmp/mvo_phonon")
