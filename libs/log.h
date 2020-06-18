@@ -21,9 +21,9 @@
 #include <mutex>
 #include <utility>
 #include <exception>
-#include "algos.h"
-
 #include <boost/type_index.hpp>
+
+#include "algos.h"
 
 
 namespace tl2 {
