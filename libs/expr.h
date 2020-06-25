@@ -284,7 +284,7 @@ protected:
 				longest_input = input;
 				longest_matching = matching;
 
-				if(m_istr->peek() == std::char_traits<char>::eof() || m_istr->eof())
+				if(m_istr->peek() == std::char_traits<char>::eof())
 					break;
 			}
 			else
@@ -296,7 +296,7 @@ protected:
 		}
 
 		// at EOF
-		if(longest_matching.size() == 0 && input.length() == 0)
+		if(longest_matching.size() == 0 && (input.length() == 0 || m_istr->eof()))
 		{
 			return std::make_tuple((int)Token::TOK_END, t_num{0}, longest_input);
 		}
@@ -319,13 +319,7 @@ protected:
 		}
 
 		// found match
-		if(longest_matching.size())
-		{
-			return std::make_tuple((int)std::get<0>(longest_matching[0]), std::get<1>(longest_matching[0]), longest_input);
-		}
-
-		// should not get here
-		return std::make_tuple((int)Token::TOK_INVALID, t_num{0}, longest_input);
+		return std::make_tuple((int)std::get<0>(longest_matching[0]), std::get<1>(longest_matching[0]), longest_input);
 	}
 	// ------------------------------------------------------------------------
 

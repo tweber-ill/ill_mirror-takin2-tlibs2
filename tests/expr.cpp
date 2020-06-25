@@ -33,7 +33,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(test_expr_real, t_real, t_types_real)
 	result = parser.parse("4 + 5*6");
 	BOOST_TEST(tl2::equals<t_real>(result, 34, eps));
 
-	result = parser.parse("-(sqrt(4)-5)^3 - 5/2");
+	result = parser.parse(" - (sqrt(4)-5)^3 -  5/2 ");
 	BOOST_TEST(tl2::equals<t_real>(result, 24.5, eps));
 
 	result = parser.parse("-cos(sin(1.23))^(-1.2 + 3.2)");
@@ -45,7 +45,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(test_expr_func, t_real, t_types_real)
 {
 	static constexpr t_real eps = 1e-6;
 
-	auto tupres = tl2::eval_expr<std::string, t_real>("2 + 2*3*4");
+	auto tupres = tl2::eval_expr<std::string, t_real>("\t2 + \t2*3*4\n");
 
 	BOOST_TEST(
 		std::get<0>(tupres),
