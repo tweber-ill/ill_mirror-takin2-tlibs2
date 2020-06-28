@@ -24,9 +24,9 @@ using t_types = std::tuple<double, float>;
 BOOST_AUTO_TEST_CASE_TEMPLATE(test_leastsq, t_real, t_types)
 {
 	using t_cplx = std::complex<t_real>;
-	using t_vec = std::vector<t_real>;
+	using t_vec = tl2::vec<t_real, std::vector>;
 	using t_mat = tl2::mat<t_real, std::vector>;
-	using t_vec_cplx = std::vector<t_cplx>;
+	using t_vec_cplx = tl2::vec<t_cplx, std::vector>;
 	using t_mat_cplx = tl2::mat<t_cplx, std::vector>;
 
 

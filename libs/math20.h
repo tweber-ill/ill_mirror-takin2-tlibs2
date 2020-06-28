@@ -65,6 +65,14 @@ namespace ublas = boost::numeric::ublas;
 
 
 namespace tl2 {
+// ----------------------------------------------------------------------------
+// forward declarations
+// ----------------------------------------------------------------------------
+template<class t_mat>
+t_mat prod(const t_mat& mat1, const t_mat& mat2, bool assert_sizes=true)
+requires tl2::is_basic_mat<t_mat> && tl2::is_dyn_mat<t_mat>;
+// ----------------------------------------------------------------------------
+
 
 // ----------------------------------------------------------------------------
 // helpers
@@ -669,7 +677,7 @@ std::tuple<T,T> stereographic_proj(T twophi_crys, T twotheta_crys, T rad)
 // ----------------------------------------------------------------------------
 // forward declarations
 // ----------------------------------------------------------------------------
-template<class t_mat, class t_vec = std::vector<typename t_mat::value_type>>
+template<class t_mat, class t_vec>
 std::tuple<bool, t_mat, t_mat> qr(const t_mat& mat)
 requires is_mat<t_mat> && is_vec<t_vec>;
 
@@ -769,746 +777,8 @@ public:
 	size_t size2() const { return COLS; }
 };
 // ----------------------------------------------------------------------------
-
-
-
-// ----------------------------------------------------------------------------
-// matrix
-// ----------------------------------------------------------------------------
-
-template<class T=double, template<class...> class t_cont = std::vector>
-requires is_basic_vec<t_cont<T>> && is_dyn_vec<t_cont<T>>
-class mat
-{
-public:
-	using value_type = T;
-	using container_type = t_cont<T>;
-
-	mat() = default;
-	mat(std::size_t ROWS, std::size_t COLS) : m_data(ROWS*COLS), m_rowsize(ROWS), m_colsize(COLS) {}
-	~mat() = default;
-
-	std::size_t size1() const { return m_rowsize; }
-	std::size_t size2() const { return m_colsize; }
-	const T& operator()(std::size_t row, std::size_t col) const { return m_data[row*m_colsize + col]; }
-	T& operator()(std::size_t row, std::size_t col) { return m_data[row*m_colsize + col]; }
-
-private:
-	container_type m_data;
-	std::size_t m_rowsize, m_colsize;
-};
-// ----------------------------------------------------------------------------
-
-
-
-// ----------------------------------------------------------------------------
-// n-dim algos
-// ----------------------------------------------------------------------------
-
-
-/**
- * are two scalars equal within an epsilon range?
- */
-template<class T>
-bool equals(T t1, T t2, T eps = std::numeric_limits<T>::epsilon())
-requires is_scalar<T>
-{
-	return std::abs(t1 - t2) <= eps;
 }
 
-/**
- * are two complex numbers equal within an epsilon range?
- */
-template<class T>
-bool equals(const T& t1, const T& t2,
-	typename T::value_type eps = std::numeric_limits<typename T::value_type>::epsilon())
-requires is_complex<T>
-{
-	return (std::abs(t1.real() - t2.real()) <= eps) &&
-		(std::abs(t1.imag() - t2.imag()) <= eps);
-}
-
-/**
- * are two vectors equal within an epsilon range?
- */
-template<class t_vec>
-bool equals(const t_vec& vec1, const t_vec& vec2,
-	typename t_vec::value_type eps = std::numeric_limits<typename t_vec::value_type>::epsilon(),
-	int _maxSize = -1)
-requires is_basic_vec<t_vec>
-{
-	using T = typename t_vec::value_type;
-
-	// size has to be equal
-	if(vec1.size() != vec2.size())
-		return false;
-
-	std::size_t maxSize = vec1.size();
-	if(_maxSize >= 0)
-		maxSize = std::min(std::size_t(_maxSize), maxSize);
-
-	// check each element
-	for(std::size_t i=0; i<maxSize; ++i)
-	{
-		if constexpr(is_complex<decltype(eps)>)
-		{
-			if(!equals<T>(vec1[i], vec2[i], eps.real()))
-				return false;
-		}
-		else
-		{
-			if(!equals<T>(vec1[i], vec2[i], eps))
-				return false;
-		}
-	}
-
-	return true;
-}
-
-/**
- * are two matrices equal within an epsilon range?
- */
-template<class t_mat, class t_real>
-bool equals(const t_mat& mat1, const t_mat& mat2,
-	t_real eps = std::numeric_limits<t_real>::epsilon(),
-	int _maxSize = -1)
-requires is_mat<t_mat>
-{
-	using T = typename t_mat::value_type;
-
-	if(mat1.size1() != mat2.size1() || mat1.size2() != mat2.size2())
-		return false;
-
-	std::size_t maxSize1 = mat1.size1();
-	std::size_t maxSize2 = mat1.size2();
-	if(_maxSize >= 0)
-	{
-		maxSize1 = std::min(std::size_t(_maxSize), maxSize1);
-		maxSize2 = std::min(std::size_t(_maxSize), maxSize2);
-	}
-
-	for(std::size_t i=0; i<maxSize1; ++i)
-	{
-		for(std::size_t j=0; j<maxSize2; ++j)
-		{
-			if(!equals<T>(mat1(i,j), mat2(i,j), eps))
-				return false;
-		}
-	}
-
-	return true;
-}
-
-
-/**
- * check if two collections of matrices or vectors are equal
- */
-template<class t_obj, template<class...> class t_vec=std::vector>
-bool equals_all(const t_vec<t_obj>& vec1, const t_vec<t_obj>& _vec2,
-	typename t_obj::value_type eps = std::numeric_limits<typename t_obj::value_type>::epsilon(),
-	int maxSize=-1)
-{
-	auto vec2 = _vec2;
-	if(vec1.size() != vec2.size())
-		return false;
-
-	for(const auto& obj1 : vec1)
-	{
-		// find obj1 in vec2
-		auto iter = std::find_if(vec2.crbegin(), vec2.crend(),
-		[&obj1, eps, maxSize](const t_obj& obj2) -> bool
-		{
-			return tl2::equals<t_obj>(obj1, obj2, eps, maxSize);
-		});
-
-		// not found
-		if(iter == vec2.crend())
-			return false;
-
-		// remove already checked element
-		vec2.erase(iter.base()-1);
-	}
-
-	return true;
-}
-
-
-/**
- * remove duplicate vectors or matrices in the container
- */
-template<class t_obj, template<class...> class t_cont = std::vector>
-t_cont<t_obj> remove_duplicates(const t_cont<t_obj>& objs,
-	typename t_obj::value_type eps = std::numeric_limits<typename t_obj::value_type>::epsilon())
-{
-	t_cont<t_obj> newobjs = objs;
-
-	for(const auto& elem : objs)
-	{
-		// find obj in container
-		auto iter = std::find_if(newobjs.cbegin(), newobjs.cend(), 
-		[&elem, eps](const t_obj& elem2) -> bool
-		{
-			return tl2::equals<t_obj>(elem, elem2, eps);
-		});
-
-		// not found
-		if(iter == newobjs.cend())
-			newobjs.push_back(elem);
-	}
-
-	return newobjs;
-}
-
-
-/**
- * set submatrix to unit
- */
-template<class t_mat>
-void unit(t_mat& mat, std::size_t rows_begin, std::size_t cols_begin, std::size_t rows_end, std::size_t cols_end)
-requires is_basic_mat<t_mat>
-{
-	for(std::size_t i=rows_begin; i<rows_end; ++i)
-		for(std::size_t j=cols_begin; j<cols_end; ++j)
-			mat(i,j) = (i==j ? 1 : 0);
-}
-
-
-/**
- * unit matrix
- */
-template<class t_mat>
-t_mat unit(std::size_t N1, std::size_t N2)
-requires is_basic_mat<t_mat>
-{
-	t_mat mat;
-	if constexpr(is_dyn_mat<t_mat>)
-		mat = t_mat(N1, N2);
-
-	unit<t_mat>(mat, 0,0, mat.size1(),mat.size2());
-	return mat;
-}
-
-
-/**
- * unit matrix
- */
-template<class t_mat>
-t_mat unit(std::size_t N=0)
-requires is_basic_mat<t_mat>
-{
-	return unit<t_mat>(N,N);
-}
-
-
-/**
- * zero matrix
- */
-template<class t_mat>
-t_mat zero(std::size_t N1, std::size_t N2)
-requires is_basic_mat<t_mat>
-{
-	t_mat mat;
-	if constexpr(is_dyn_mat<t_mat>)
-		mat = t_mat(N1, N2);
-
-	for(std::size_t i=0; i<mat.size1(); ++i)
-		for(std::size_t j=0; j<mat.size2(); ++j)
-			mat(i,j) = 0;
-
-	return mat;
-}
-
-/**
- * zero matrix
- */
-template<class t_mat>
-t_mat zero(std::size_t N=0)
-requires is_basic_mat<t_mat>
-{
-	return zero<t_mat>(N, N);
-}
-
-
-/**
- * zero vector
- */
-template<class t_vec>
-t_vec zero(std::size_t N=0)
-requires is_basic_vec<t_vec>
-{
-	t_vec vec;
-	if constexpr(is_dyn_vec<t_vec>)
-		vec = t_vec(N);
-
-	for(std::size_t i=0; i<vec.size(); ++i)
-		vec[i] = 0;
-
-	return vec;
-}
-
-
-/**
- * row permutation matrix
- */
-template<class t_mat>
-t_mat perm(std::size_t N1, std::size_t N2, std::size_t from, std::size_t to)
-requires is_basic_mat<t_mat>
-{
-	t_mat mat;
-	if constexpr(is_dyn_mat<t_mat>)
-		mat = t_mat(N1, N2);
-
-	unit<t_mat>(mat, 0,0, mat.size1(),mat.size2());
-
-	mat(from, from) = mat(to, to) = 0;
-	mat(from, to) = mat(to, from) = 1;
-
-	return mat;
-}
-
-
-/**
- * diagonal matrix
- */
-template<class t_mat, class t_vec=std::vector<typename t_mat::value_type>>
-t_mat diag(const t_vec& vals)
-requires is_basic_mat<t_mat> && is_basic_vec<t_vec>
-{
-	const std::size_t N = vals.size();
-	t_mat mat = zero<t_mat>(N);
-
-	// static matrix does not necessarily have the required size!
-	if constexpr(!tl2::is_dyn_mat<t_mat>)
-		assert(mat.size1() == mat.size1() && mat.size1() == N);
-
-	for(std::size_t i=0; i<std::min(mat.size1(), N); ++i)
-		mat(i,i) = vals[i];
-
-	return mat;
-}
-
-
-/**
- * vector of diagonal matrix elements
- */
-template<class t_vec, class t_mat>
-t_vec diag_vec(const t_mat& mat)
-requires is_vec<t_vec> && is_mat<t_mat>
-{
-	std::size_t N = std::min(mat.size1(), mat.size2());
-
-	t_vec vec = zero<t_vec>(N);
-	for(std::size_t i=0; i<N; ++i)
-		vec[i] = mat(i,i);
-
-	return vec;
-}
-
-
-
-/**
- * tests for zero vector
- */
-template<class t_vec>
-bool equals_0(const t_vec& vec,
-	typename t_vec::value_type eps = std::numeric_limits<typename t_vec::value_type>::epsilon())
-requires is_basic_vec<t_vec>
-{
-	return equals<t_vec>(vec, zero<t_vec>(vec.size()), eps);
-}
-
-/**
- * tests for zero matrix
- */
-template<class t_mat>
-bool equals_0(const t_mat& mat,
-	typename t_mat::value_type eps = std::numeric_limits<typename t_mat::value_type>::epsilon())
-requires is_mat<t_mat>
-{
-	return equals<t_mat>(mat, zero<t_mat>(mat.size1(), mat.size2()), eps);
-}
-
-
-/**
- * transpose matrix
- * WARNING: not possible for static non-square matrix!
- */
-template<class t_mat>
-t_mat trans(const t_mat& mat)
-requires is_mat<t_mat>
-{
-	t_mat mat2;
-	if constexpr(is_dyn_mat<t_mat>)
-		mat2 = t_mat(mat.size2(), mat.size1());
-
-	for(std::size_t i=0; i<mat.size1(); ++i)
-		for(std::size_t j=0; j<mat.size2(); ++j)
-			mat2(j,i) = mat(i,j);
-
-	return mat2;
-}
-
-
-// -----------------------------------------------------------------------------
-/**
- * set values lower than epsilon to zero
- * scalar version
- */
-template<typename t_real>
-void set_eps_0(t_real& d, t_real eps = std::numeric_limits<t_real>::epsilon())
-requires is_scalar<t_real>
-{
-	if(std::abs(d) < eps)
-		d = t_real(0);
-};
-
-
-/**
- * set values lower than epsilon to zero
- * vector version
- */
-template<typename t_vec, typename t_real = typename t_vec::value_type>
-void set_eps_0(t_vec& vec, t_real eps = std::numeric_limits<t_real>::epsilon())
-requires is_basic_vec<t_vec>
-{
-	for(t_real& d : vec)
-		set_eps_0<t_real>(d, eps);
-};
-
-
-/**
- * set values lower than epsilon to zero
- * matrix version
- */
-template<typename t_mat, typename t_real = typename t_mat::value_type>
-void set_eps_0(t_mat& mat, t_real eps = std::numeric_limits<t_real>::epsilon())
-requires is_basic_mat<t_mat>
-{
-	for(std::size_t i=0; i<mat.size1(); ++i)
-		for(std::size_t j=0; j<mat.size2(); ++j)
-			set_eps_0<t_real>(mat(i,j), eps);
-};
-// -----------------------------------------------------------------------------
-
-
-
-/**
- * create vector from initializer_list
- */
-template<class t_vec>
-t_vec create(const std::initializer_list<typename t_vec::value_type>& lst)
-requires is_basic_vec<t_vec>
-{
-	t_vec vec;
-	if constexpr(is_dyn_vec<t_vec>)
-		vec = t_vec(lst.size());
-
-	auto iterLst = lst.begin();
-	for(std::size_t i=0; i<vec.size(); ++i)
-	{
-		if(iterLst != lst.end())
-		{
-			vec[i] = *iterLst;
-			std::advance(iterLst, 1);
-		}
-		else	// vector larger than given list?
-		{
-			vec[i] = 0;
-		}
-	}
-
-	return vec;
-}
-
-
-/**
- * create matrix from nested initializer_lists in columns/rows order
- */
-template<class t_mat,
-	template<class...> class t_cont_outer = std::initializer_list,
-	template<class...> class t_cont = std::initializer_list>
-t_mat create_mat(const t_cont_outer<t_cont<typename t_mat::value_type>>& lst)
-requires is_mat<t_mat>
-{
-	const std::size_t iCols = lst.size();
-	const std::size_t iRows = lst.begin()->size();
-
-	t_mat mat = unit<t_mat>(iRows, iCols);
-
-	auto iterCol = lst.begin();
-	for(std::size_t iCol=0; iCol<iCols; ++iCol)
-	{
-		auto iterRow = iterCol->begin();
-		for(std::size_t iRow=0; iRow<iRows; ++iRow)
-		{
-			mat(iRow, iCol) = *iterRow;
-			std::advance(iterRow, 1);
-		}
-
-		std::advance(iterCol, 1);
-	}
-
-	return mat;
-}
-
-
-/**
- * create matrix from nested initializer_lists in columns/rows order
- */
-template<class t_mat,
-	template<class...> class t_cont_outer = std::initializer_list,
-	template<class...> class t_cont = std::initializer_list>
-t_mat create(const t_cont_outer<t_cont<typename t_mat::value_type>>& lst)
-requires is_mat<t_mat>
-{
-	return create_mat<t_mat, t_cont_outer, t_cont>(lst);
-}
-
-
-/**
- * create matrix from column (or row) vectors
- */
-template<class t_mat, class t_vec, template<class...> class t_cont_outer = std::initializer_list>
-t_mat create(const t_cont_outer<t_vec>& lst, bool bRow = false)
-requires is_mat<t_mat> && is_basic_vec<t_vec>
-{
-	const std::size_t iCols = lst.size();
-	const std::size_t iRows = lst.begin()->size();
-
-	t_mat mat = unit<t_mat>(iRows, iCols);
-
-	auto iterCol = lst.begin();
-	for(std::size_t iCol=0; iCol<iCols; ++iCol)
-	{
-		for(std::size_t iRow=0; iRow<iRows; ++iRow)
-			mat(iRow, iCol) = (*iterCol)[iRow];
-		std::advance(iterCol, 1);
-	}
-
-	if(bRow) mat = trans<t_mat>(mat);
-	return mat;
-}
-
-
-/**
- * create matrix from initializer_list in column/row order
- */
-template<class t_mat>
-t_mat create_mat(const std::initializer_list<typename t_mat::value_type>& lst)
-requires is_mat<t_mat>
-{
-	const std::size_t N = std::sqrt(lst.size());
-
-	t_mat mat = unit<t_mat>(N, N);
-
-	auto iter = lst.begin();
-	for(std::size_t iRow=0; iRow<N; ++iRow)
-	{
-		for(std::size_t iCol=0; iCol<N; ++iCol)
-		{
-			mat(iRow, iCol) = *iter;
-			std::advance(iter, 1);
-		}
-	}
-
-	return mat;
-}
-
-
-/**
- * create matrix from initializer_list in column/row order
- */
-template<class t_mat>
-t_mat create(const std::initializer_list<typename t_mat::value_type>& lst)
-requires is_mat<t_mat>
-{
-	return create_mat<t_mat>(lst);
-}
-
-
-/**
- * convert between vector types
- */
-template<class t_vecTo, class t_vecFrom>
-t_vecTo convert(const t_vecFrom& vec)
-requires is_basic_vec<t_vecFrom> && is_basic_vec<t_vecTo>
-{
-	using t_ty = typename t_vecTo::value_type;
-
-	t_vecTo vecRet;
-	if constexpr(is_dyn_vec<t_vecTo>)
-		vecRet = t_vecTo(vec.size());
-
-	for(std::size_t i=0; i<vec.size(); ++i)
-		vecRet[i] = static_cast<t_ty>(vec[i]);
-
-	return vecRet;
-}
-
-
-/**
- * get a column vector from a matrix
- */
-template<class t_mat, class t_vec>
-t_vec col(const t_mat& mat, std::size_t col)
-requires is_mat<t_mat> && is_basic_vec<t_vec>
-{
-	t_vec vec;
-	if constexpr(is_dyn_vec<t_vec>)
-		vec = t_vec(mat.size1());
-
-	for(std::size_t i=0; i<mat.size1(); ++i)
-		vec[i] = mat(i, col);
-
-	return vec;
-}
-
-/**
- * get a row vector from a matrix
- */
-template<class t_mat, class t_vec>
-t_vec row(const t_mat& mat, std::size_t row)
-requires is_mat<t_mat> && is_basic_vec<t_vec>
-{
-	t_vec vec;
-	if constexpr(is_dyn_vec<t_vec>)
-		vec = t_vec(mat.size2());
-
-	for(std::size_t i=0; i<mat.size2(); ++i)
-		vec[i] = mat(row, i);
-
-	return vec;
-}
-
-
-/**
- * inner product <vec1|vec2>
- */
-template<class t_vec>
-typename t_vec::value_type inner(const t_vec& vec1, const t_vec& vec2)
-requires is_basic_vec<t_vec>
-{
-	typename t_vec::value_type val(0);
-
-	for(std::size_t i=0; i<vec1.size(); ++i)
-	{
-		if constexpr(is_complex<typename t_vec::value_type>)
-			val += std::conj(vec1[i]) * vec2[i];
-		else
-			val += vec1[i] * vec2[i];
-	}
-
-	return val;
-}
-
-
-/**
- * inner product between two vectors of different type
- */
-template<class t_vec1, class t_vec2>
-typename t_vec1::value_type inner(const t_vec1& vec1, const t_vec2& vec2)
-requires is_basic_vec<t_vec1> && is_basic_vec<t_vec2>
-{
-	if(vec1.size()==0 || vec2.size()==0)
-		return typename t_vec1::value_type{};
-
-	// first element
-	auto val = vec1[0]*vec2[0];
-
-	// remaining elements
-	for(std::size_t i=1; i<std::min(vec1.size(), vec2.size()); ++i)
-	{
-		if constexpr(is_complex<typename t_vec1::value_type>)
-		{
-			auto prod = std::conj(vec1[i]) * vec2[i];
-			val = val + prod;
-		}
-		else
-		{
-			auto prod = vec1[i]*vec2[i];
-			val = val + prod;
-		}
-	}
-
-	return val;
-}
-
-
-/**
- * matrix-matrix product
- * c_ij = a_ik b_kj
- */
-template<class t_mat>
-t_mat prod(const t_mat& mat1, const t_mat& mat2, bool assert_sizes=true)
-requires tl2::is_basic_mat<t_mat> && tl2::is_dyn_mat<t_mat>
-{
-	// if not asserting sizes, the inner size will use the minimum of the two matrix sizes
-	if(assert_sizes)
-	{
-		if constexpr(tl2::is_dyn_mat<t_mat>)
-			assert((mat1.size2() == mat2.size1()));
-		else
-			static_assert(mat1.size2() == mat2.size1());
-	}
-
-
-	t_mat matRet(mat1.size1(), mat2.size2());
-	const std::size_t innersize = std::min(mat1.size2(), mat2.size1());
-
-	for(std::size_t row=0; row<matRet.size1(); ++row)
-	{
-		for(std::size_t col=0; col<matRet.size2(); ++col)
-		{
-			matRet(row, col) = 0;
-			for(std::size_t i=0; i<innersize; ++i)
-				matRet(row, col) += mat1(row, i) * mat2(i, col);
-		}
-	}
-
-	return matRet;
-}
-
-
-
-/**
- * 2-norm
- */
-template<class t_vec>
-typename t_vec::value_type norm(const t_vec& vec)
-requires is_basic_vec<t_vec>
-{
-	return std::sqrt(inner<t_vec>(vec, vec));
-}
-
-
-/**
- * outer product
- */
-template<class t_mat, class t_vec>
-t_mat outer(const t_vec& vec1, const t_vec& vec2)
-requires is_basic_vec<t_vec> && is_mat<t_mat>
-{
-	const std::size_t N1 = vec1.size();
-	const std::size_t N2 = vec2.size();
-
-	t_mat mat;
-	if constexpr(is_dyn_mat<t_mat>)
-		mat = t_mat(N1, N2);
-
-	for(std::size_t n1=0; n1<N1; ++n1)
-	{
-		for(std::size_t n2=0; n2<N2; ++n2)
-		{
-			if constexpr(is_complex<typename t_vec::value_type>)
-				mat(n1, n2) = std::conj(vec1[n1]) * vec2[n2];
-			else
-				mat(n1, n2) = vec1[n1]*vec2[n2];
-		}
-	}
-
-	return mat;
-}
-}
 
 
 namespace tl2_ops {
@@ -1939,6 +1209,806 @@ requires tl2::is_basic_mat<t_mat> && tl2::is_dyn_mat<t_mat>
 
 
 namespace tl2 {
+// ----------------------------------------------------------------------------
+// vector and matrix containers
+// ----------------------------------------------------------------------------
+
+template<class T=double, template<class...> class t_cont = std::vector>
+requires is_basic_vec<t_cont<T>> && is_dyn_vec<t_cont<T>>
+class vec : public t_cont<T>
+{
+public:
+	using value_type = T;
+	using container_type = t_cont<T>;
+
+	vec() = default;
+	vec(std::size_t SIZE) : t_cont<T>(SIZE) {}
+	vec(const std::initializer_list<T>& lst) : t_cont<T>(lst.size())
+	{
+		for(auto iterLst=lst.begin(); iterLst!=lst.end(); std::advance(iterLst, 1))
+			this->operator[](*iterLst);
+	}
+	~vec() = default;
+
+	const value_type& operator()(std::size_t i) const { return this->operator[](i); }
+	value_type& operator()(std::size_t i) { return this->operator[](i); }
+
+
+	friend vec operator+(const vec& vec1, const vec& vec2) { return tl2_ops::operator+(vec1, vec2); }
+	friend vec operator-(const vec& vec1, const vec& vec2) { return tl2_ops::operator-(vec1, vec2); }
+	friend const vec& operator+(const vec& vec1) { return tl2_ops::operator+(vec1); }
+	friend vec operator-(const vec& vec1) { return tl2_ops::operator-(vec1); }
+
+	friend vec operator*(value_type d, const vec& vec1) { return tl2_ops::operator*(d, vec1); }
+	friend vec operator*(const vec& vec1, value_type d) { return tl2_ops::operator*(vec1, d); }
+	friend vec operator/(const vec& vec1, value_type d) { return tl2_ops::operator/(vec1, d); }
+
+	vec& operator*=(const vec& vec2) { return tl2_ops::operator*=(*this, vec2); }
+	vec& operator+=(const vec& vec2) { return tl2_ops::operator+=(*this, vec2); }
+	vec& operator-=(const vec& vec2) { return tl2_ops::operator-=(*this, vec2); }
+	vec& operator*=(value_type d) { return tl2_ops::operator*=(*this, d); }
+	vec& operator/=(value_type d) { return tl2_ops::operator/=(*this, d); }
+
+private:
+};
+
+
+template<class T=double, template<class...> class t_cont = std::vector>
+requires is_basic_vec<t_cont<T>> && is_dyn_vec<t_cont<T>>
+class mat
+{
+public:
+	using value_type = T;
+	using container_type = t_cont<T>;
+
+	mat() = default;
+	mat(std::size_t ROWS, std::size_t COLS) : m_data(ROWS*COLS), m_rowsize{ROWS}, m_colsize{COLS} {}
+	~mat() = default;
+
+	std::size_t size1() const { return m_rowsize; }
+	std::size_t size2() const { return m_colsize; }
+	const T& operator()(std::size_t row, std::size_t col) const { return m_data[row*m_colsize + col]; }
+	T& operator()(std::size_t row, std::size_t col) { return m_data[row*m_colsize + col]; }
+
+
+	friend mat operator+(const mat& mat1, const mat& mat2) { return tl2_ops::operator+(mat1, mat2); }
+	friend mat operator-(const mat& mat1, const mat& mat2) { return tl2_ops::operator-(mat1, mat2); }
+	friend const mat& operator+(const mat& mat1) { return tl2_ops::operator+(mat1); }
+	friend mat operator-(const mat& mat1) { return tl2_ops::operator-(mat1); }
+
+	friend mat operator*(const mat& mat1, const mat& mat2) { return tl2_ops::operator*(mat1, mat2); }
+	friend mat operator*(const mat& mat1, value_type d) { return tl2_ops::operator*(mat1, d); }
+	friend mat operator*(value_type d, const mat& mat1) { return tl2_ops::operator*(d, mat1); }
+	friend mat operator/(const mat& mat1, value_type d) { return tl2_ops::operator/(mat1, d); }
+
+	template<class t_vec> requires is_basic_vec<t_cont<T>> && is_dyn_vec<t_cont<T>>
+	friend t_vec operator*(const mat& mat1, const t_vec& vec2) { return tl2_ops::operator*(mat1, vec2); }
+
+	mat& operator*=(const mat& mat2) { return tl2_ops::operator*=(*this, mat2); }
+	mat& operator+=(const mat& mat2) { return tl2_ops::operator+=(*this, mat2); }
+	mat& operator-=(const mat& mat2) { return tl2_ops::operator-=(*this, mat2); }
+	mat& operator*=(value_type d) { return tl2_ops::operator*=(*this, d); }
+	mat& operator/=(value_type d) { return tl2_ops::operator/=(*this, d); }
+
+private:
+	container_type m_data;
+	std::size_t m_rowsize, m_colsize;
+};
+
+// ----------------------------------------------------------------------------
+
+
+
+
+// ----------------------------------------------------------------------------
+// n-dim algos
+// ----------------------------------------------------------------------------
+
+
+/**
+ * are two scalars equal within an epsilon range?
+ */
+template<class T>
+bool equals(T t1, T t2, T eps = std::numeric_limits<T>::epsilon())
+requires is_scalar<T>
+{
+	return std::abs(t1 - t2) <= eps;
+}
+
+/**
+ * are two complex numbers equal within an epsilon range?
+ */
+template<class T>
+bool equals(const T& t1, const T& t2,
+	typename T::value_type eps = std::numeric_limits<typename T::value_type>::epsilon())
+requires is_complex<T>
+{
+	return (std::abs(t1.real() - t2.real()) <= eps) &&
+		(std::abs(t1.imag() - t2.imag()) <= eps);
+}
+
+/**
+ * are two vectors equal within an epsilon range?
+ */
+template<class t_vec>
+bool equals(const t_vec& vec1, const t_vec& vec2,
+	typename t_vec::value_type eps = std::numeric_limits<typename t_vec::value_type>::epsilon(),
+	int _maxSize = -1)
+requires is_basic_vec<t_vec>
+{
+	using T = typename t_vec::value_type;
+
+	// size has to be equal
+	if(vec1.size() != vec2.size())
+		return false;
+
+	std::size_t maxSize = vec1.size();
+	if(_maxSize >= 0)
+		maxSize = std::min(std::size_t(_maxSize), maxSize);
+
+	// check each element
+	for(std::size_t i=0; i<maxSize; ++i)
+	{
+		if constexpr(is_complex<decltype(eps)>)
+		{
+			if(!equals<T>(vec1[i], vec2[i], eps.real()))
+				return false;
+		}
+		else
+		{
+			if(!equals<T>(vec1[i], vec2[i], eps))
+				return false;
+		}
+	}
+
+	return true;
+}
+
+/**
+ * are two matrices equal within an epsilon range?
+ */
+template<class t_mat, class t_real>
+bool equals(const t_mat& mat1, const t_mat& mat2,
+	t_real eps = std::numeric_limits<t_real>::epsilon(),
+	int _maxSize = -1)
+requires is_mat<t_mat>
+{
+	using T = typename t_mat::value_type;
+
+	if(mat1.size1() != mat2.size1() || mat1.size2() != mat2.size2())
+		return false;
+
+	std::size_t maxSize1 = mat1.size1();
+	std::size_t maxSize2 = mat1.size2();
+	if(_maxSize >= 0)
+	{
+		maxSize1 = std::min(std::size_t(_maxSize), maxSize1);
+		maxSize2 = std::min(std::size_t(_maxSize), maxSize2);
+	}
+
+	for(std::size_t i=0; i<maxSize1; ++i)
+	{
+		for(std::size_t j=0; j<maxSize2; ++j)
+		{
+			if(!equals<T>(mat1(i,j), mat2(i,j), eps))
+				return false;
+		}
+	}
+
+	return true;
+}
+
+
+/**
+ * check if two collections of matrices or vectors are equal
+ */
+template<class t_obj, template<class...> class t_vec=std::vector>
+bool equals_all(const t_vec<t_obj>& vec1, const t_vec<t_obj>& _vec2,
+	typename t_obj::value_type eps = std::numeric_limits<typename t_obj::value_type>::epsilon(),
+	int maxSize=-1)
+{
+	auto vec2 = _vec2;
+	if(vec1.size() != vec2.size())
+		return false;
+
+	for(const auto& obj1 : vec1)
+	{
+		// find obj1 in vec2
+		auto iter = std::find_if(vec2.crbegin(), vec2.crend(),
+		[&obj1, eps, maxSize](const t_obj& obj2) -> bool
+		{
+			return tl2::equals<t_obj>(obj1, obj2, eps, maxSize);
+		});
+
+		// not found
+		if(iter == vec2.crend())
+			return false;
+
+		// remove already checked element
+		vec2.erase(iter.base()-1);
+	}
+
+	return true;
+}
+
+
+/**
+ * remove duplicate vectors or matrices in the container
+ */
+template<class t_obj, template<class...> class t_cont = std::vector>
+t_cont<t_obj> remove_duplicates(const t_cont<t_obj>& objs,
+	typename t_obj::value_type eps = std::numeric_limits<typename t_obj::value_type>::epsilon())
+{
+	t_cont<t_obj> newobjs = objs;
+
+	for(const auto& elem : objs)
+	{
+		// find obj in container
+		auto iter = std::find_if(newobjs.cbegin(), newobjs.cend(), 
+		[&elem, eps](const t_obj& elem2) -> bool
+		{
+			return tl2::equals<t_obj>(elem, elem2, eps);
+		});
+
+		// not found
+		if(iter == newobjs.cend())
+			newobjs.push_back(elem);
+	}
+
+	return newobjs;
+}
+
+
+/**
+ * set submatrix to unit
+ */
+template<class t_mat>
+void unit(t_mat& mat, std::size_t rows_begin, std::size_t cols_begin, std::size_t rows_end, std::size_t cols_end)
+requires is_basic_mat<t_mat>
+{
+	for(std::size_t i=rows_begin; i<rows_end; ++i)
+		for(std::size_t j=cols_begin; j<cols_end; ++j)
+			mat(i,j) = (i==j ? 1 : 0);
+}
+
+
+/**
+ * unit matrix
+ */
+template<class t_mat>
+t_mat unit(std::size_t N1, std::size_t N2)
+requires is_basic_mat<t_mat>
+{
+	t_mat mat;
+	if constexpr(is_dyn_mat<t_mat>)
+		mat = t_mat(N1, N2);
+
+	unit<t_mat>(mat, 0,0, mat.size1(),mat.size2());
+	return mat;
+}
+
+
+/**
+ * unit matrix
+ */
+template<class t_mat>
+t_mat unit(std::size_t N=0)
+requires is_basic_mat<t_mat>
+{
+	return unit<t_mat>(N,N);
+}
+
+
+/**
+ * zero matrix
+ */
+template<class t_mat>
+t_mat zero(std::size_t N1, std::size_t N2)
+requires is_basic_mat<t_mat>
+{
+	t_mat mat;
+	if constexpr(is_dyn_mat<t_mat>)
+		mat = t_mat(N1, N2);
+
+	for(std::size_t i=0; i<mat.size1(); ++i)
+		for(std::size_t j=0; j<mat.size2(); ++j)
+			mat(i,j) = 0;
+
+	return mat;
+}
+
+/**
+ * zero matrix
+ */
+template<class t_mat>
+t_mat zero(std::size_t N=0)
+requires is_basic_mat<t_mat>
+{
+	return zero<t_mat>(N, N);
+}
+
+
+/**
+ * zero vector
+ */
+template<class t_vec>
+t_vec zero(std::size_t N=0)
+requires is_basic_vec<t_vec>
+{
+	t_vec vec;
+	if constexpr(is_dyn_vec<t_vec>)
+		vec = t_vec(N);
+
+	for(std::size_t i=0; i<vec.size(); ++i)
+		vec[i] = 0;
+
+	return vec;
+}
+
+
+/**
+ * row permutation matrix
+ */
+template<class t_mat>
+t_mat perm(std::size_t N1, std::size_t N2, std::size_t from, std::size_t to)
+requires is_basic_mat<t_mat>
+{
+	t_mat mat;
+	if constexpr(is_dyn_mat<t_mat>)
+		mat = t_mat(N1, N2);
+
+	unit<t_mat>(mat, 0,0, mat.size1(),mat.size2());
+
+	mat(from, from) = mat(to, to) = 0;
+	mat(from, to) = mat(to, from) = 1;
+
+	return mat;
+}
+
+
+/**
+ * diagonal matrix
+ */
+template<class t_mat, class t_vec = std::vector<typename t_mat::value_type>>
+t_mat diag(const t_vec& vals)
+requires is_basic_mat<t_mat> && is_basic_vec<t_vec>
+{
+	const std::size_t N = vals.size();
+	t_mat mat = zero<t_mat>(N);
+
+	// static matrix does not necessarily have the required size!
+	if constexpr(!tl2::is_dyn_mat<t_mat>)
+		assert(mat.size1() == mat.size1() && mat.size1() == N);
+
+	for(std::size_t i=0; i<std::min(mat.size1(), N); ++i)
+		mat(i,i) = vals[i];
+
+	return mat;
+}
+
+
+/**
+ * vector of diagonal matrix elements
+ */
+template<class t_vec, class t_mat>
+t_vec diag_vec(const t_mat& mat)
+requires is_vec<t_vec> && is_mat<t_mat>
+{
+	std::size_t N = std::min(mat.size1(), mat.size2());
+
+	t_vec vec = zero<t_vec>(N);
+	for(std::size_t i=0; i<N; ++i)
+		vec[i] = mat(i,i);
+
+	return vec;
+}
+
+
+
+/**
+ * tests for zero vector
+ */
+template<class t_vec>
+bool equals_0(const t_vec& vec,
+	typename t_vec::value_type eps = std::numeric_limits<typename t_vec::value_type>::epsilon())
+requires is_basic_vec<t_vec>
+{
+	return equals<t_vec>(vec, zero<t_vec>(vec.size()), eps);
+}
+
+/**
+ * tests for zero matrix
+ */
+template<class t_mat>
+bool equals_0(const t_mat& mat,
+	typename t_mat::value_type eps = std::numeric_limits<typename t_mat::value_type>::epsilon())
+requires is_mat<t_mat>
+{
+	return equals<t_mat>(mat, zero<t_mat>(mat.size1(), mat.size2()), eps);
+}
+
+
+/**
+ * transpose matrix
+ * WARNING: not possible for static non-square matrix!
+ */
+template<class t_mat>
+t_mat trans(const t_mat& mat)
+requires is_mat<t_mat>
+{
+	t_mat mat2;
+	if constexpr(is_dyn_mat<t_mat>)
+		mat2 = t_mat(mat.size2(), mat.size1());
+
+	for(std::size_t i=0; i<mat.size1(); ++i)
+		for(std::size_t j=0; j<mat.size2(); ++j)
+			mat2(j,i) = mat(i,j);
+
+	return mat2;
+}
+
+
+// -----------------------------------------------------------------------------
+/**
+ * set values lower than epsilon to zero
+ * scalar version
+ */
+template<typename t_real>
+void set_eps_0(t_real& d, t_real eps = std::numeric_limits<t_real>::epsilon())
+requires is_scalar<t_real>
+{
+	if(std::abs(d) < eps)
+		d = t_real(0);
+};
+
+
+/**
+ * set values lower than epsilon to zero
+ * vector version
+ */
+template<typename t_vec, typename t_real = typename t_vec::value_type>
+void set_eps_0(t_vec& vec, t_real eps = std::numeric_limits<t_real>::epsilon())
+requires is_basic_vec<t_vec>
+{
+	for(t_real& d : vec)
+		set_eps_0<t_real>(d, eps);
+};
+
+
+/**
+ * set values lower than epsilon to zero
+ * matrix version
+ */
+template<typename t_mat, typename t_real = typename t_mat::value_type>
+void set_eps_0(t_mat& mat, t_real eps = std::numeric_limits<t_real>::epsilon())
+requires is_basic_mat<t_mat>
+{
+	for(std::size_t i=0; i<mat.size1(); ++i)
+		for(std::size_t j=0; j<mat.size2(); ++j)
+			set_eps_0<t_real>(mat(i,j), eps);
+};
+// -----------------------------------------------------------------------------
+
+
+
+/**
+ * create vector from initializer_list
+ */
+template<class t_vec>
+t_vec create(const std::initializer_list<typename t_vec::value_type>& lst)
+requires is_basic_vec<t_vec>
+{
+	t_vec vec;
+	if constexpr(is_dyn_vec<t_vec>)
+		vec = t_vec(lst.size());
+
+	auto iterLst = lst.begin();
+	for(std::size_t i=0; i<vec.size(); ++i)
+	{
+		if(iterLst != lst.end())
+		{
+			vec[i] = *iterLst;
+			std::advance(iterLst, 1);
+		}
+		else	// vector larger than given list?
+		{
+			vec[i] = 0;
+		}
+	}
+
+	return vec;
+}
+
+
+/**
+ * create matrix from nested initializer_lists in columns/rows order
+ */
+template<class t_mat,
+	template<class...> class t_cont_outer = std::initializer_list,
+	template<class...> class t_cont = std::initializer_list>
+t_mat create_mat(const t_cont_outer<t_cont<typename t_mat::value_type>>& lst)
+requires is_mat<t_mat>
+{
+	const std::size_t iCols = lst.size();
+	const std::size_t iRows = lst.begin()->size();
+
+	t_mat mat = unit<t_mat>(iRows, iCols);
+
+	auto iterCol = lst.begin();
+	for(std::size_t iCol=0; iCol<iCols; ++iCol)
+	{
+		auto iterRow = iterCol->begin();
+		for(std::size_t iRow=0; iRow<iRows; ++iRow)
+		{
+			mat(iRow, iCol) = *iterRow;
+			std::advance(iterRow, 1);
+		}
+
+		std::advance(iterCol, 1);
+	}
+
+	return mat;
+}
+
+
+/**
+ * create matrix from nested initializer_lists in columns/rows order
+ */
+template<class t_mat,
+	template<class...> class t_cont_outer = std::initializer_list,
+	template<class...> class t_cont = std::initializer_list>
+t_mat create(const t_cont_outer<t_cont<typename t_mat::value_type>>& lst)
+requires is_mat<t_mat>
+{
+	return create_mat<t_mat, t_cont_outer, t_cont>(lst);
+}
+
+
+/**
+ * create matrix from column (or row) vectors
+ */
+template<class t_mat, class t_vec, template<class...> class t_cont_outer = std::initializer_list>
+t_mat create(const t_cont_outer<t_vec>& lst, bool bRow = false)
+requires is_mat<t_mat> && is_basic_vec<t_vec>
+{
+	const std::size_t iCols = lst.size();
+	const std::size_t iRows = lst.begin()->size();
+
+	t_mat mat = unit<t_mat>(iRows, iCols);
+
+	auto iterCol = lst.begin();
+	for(std::size_t iCol=0; iCol<iCols; ++iCol)
+	{
+		for(std::size_t iRow=0; iRow<iRows; ++iRow)
+			mat(iRow, iCol) = (*iterCol)[iRow];
+		std::advance(iterCol, 1);
+	}
+
+	if(bRow) mat = trans<t_mat>(mat);
+	return mat;
+}
+
+
+/**
+ * create matrix from initializer_list in column/row order
+ */
+template<class t_mat>
+t_mat create_mat(const std::initializer_list<typename t_mat::value_type>& lst)
+requires is_mat<t_mat>
+{
+	const std::size_t N = std::sqrt(lst.size());
+
+	t_mat mat = unit<t_mat>(N, N);
+
+	auto iter = lst.begin();
+	for(std::size_t iRow=0; iRow<N; ++iRow)
+	{
+		for(std::size_t iCol=0; iCol<N; ++iCol)
+		{
+			mat(iRow, iCol) = *iter;
+			std::advance(iter, 1);
+		}
+	}
+
+	return mat;
+}
+
+
+/**
+ * create matrix from initializer_list in column/row order
+ */
+template<class t_mat>
+t_mat create(const std::initializer_list<typename t_mat::value_type>& lst)
+requires is_mat<t_mat>
+{
+	return create_mat<t_mat>(lst);
+}
+
+
+/**
+ * convert between vector types
+ */
+template<class t_vecTo, class t_vecFrom>
+t_vecTo convert(const t_vecFrom& vec)
+requires is_basic_vec<t_vecFrom> && is_basic_vec<t_vecTo>
+{
+	using t_ty = typename t_vecTo::value_type;
+
+	t_vecTo vecRet;
+	if constexpr(is_dyn_vec<t_vecTo>)
+		vecRet = t_vecTo(vec.size());
+
+	for(std::size_t i=0; i<vec.size(); ++i)
+		vecRet[i] = static_cast<t_ty>(vec[i]);
+
+	return vecRet;
+}
+
+
+/**
+ * get a column vector from a matrix
+ */
+template<class t_mat, class t_vec>
+t_vec col(const t_mat& mat, std::size_t col)
+requires is_mat<t_mat> && is_basic_vec<t_vec>
+{
+	t_vec vec;
+	if constexpr(is_dyn_vec<t_vec>)
+		vec = t_vec(mat.size1());
+
+	for(std::size_t i=0; i<mat.size1(); ++i)
+		vec[i] = mat(i, col);
+
+	return vec;
+}
+
+/**
+ * get a row vector from a matrix
+ */
+template<class t_mat, class t_vec>
+t_vec row(const t_mat& mat, std::size_t row)
+requires is_mat<t_mat> && is_basic_vec<t_vec>
+{
+	t_vec vec;
+	if constexpr(is_dyn_vec<t_vec>)
+		vec = t_vec(mat.size2());
+
+	for(std::size_t i=0; i<mat.size2(); ++i)
+		vec[i] = mat(row, i);
+
+	return vec;
+}
+
+
+/**
+ * inner product <vec1|vec2>
+ */
+template<class t_vec>
+typename t_vec::value_type inner(const t_vec& vec1, const t_vec& vec2)
+requires is_basic_vec<t_vec>
+{
+	typename t_vec::value_type val(0);
+
+	for(std::size_t i=0; i<vec1.size(); ++i)
+	{
+		if constexpr(is_complex<typename t_vec::value_type>)
+			val += std::conj(vec1[i]) * vec2[i];
+		else
+			val += vec1[i] * vec2[i];
+	}
+
+	return val;
+}
+
+
+/**
+ * inner product between two vectors of different type
+ */
+template<class t_vec1, class t_vec2>
+typename t_vec1::value_type inner(const t_vec1& vec1, const t_vec2& vec2)
+requires is_basic_vec<t_vec1> && is_basic_vec<t_vec2>
+{
+	if(vec1.size()==0 || vec2.size()==0)
+		return typename t_vec1::value_type{};
+
+	// first element
+	auto val = vec1[0]*vec2[0];
+
+	// remaining elements
+	for(std::size_t i=1; i<std::min(vec1.size(), vec2.size()); ++i)
+	{
+		if constexpr(is_complex<typename t_vec1::value_type>)
+		{
+			auto prod = std::conj(vec1[i]) * vec2[i];
+			val = val + prod;
+		}
+		else
+		{
+			auto prod = vec1[i]*vec2[i];
+			val = val + prod;
+		}
+	}
+
+	return val;
+}
+
+
+/**
+ * matrix-matrix product
+ * c_ij = a_ik b_kj
+ */
+template<class t_mat>
+t_mat prod(const t_mat& mat1, const t_mat& mat2, bool assert_sizes/*=true*/)
+requires tl2::is_basic_mat<t_mat> && tl2::is_dyn_mat<t_mat>
+{
+	// if not asserting sizes, the inner size will use the minimum of the two matrix sizes
+	if(assert_sizes)
+	{
+		if constexpr(tl2::is_dyn_mat<t_mat>)
+			assert((mat1.size2() == mat2.size1()));
+		else
+			static_assert(mat1.size2() == mat2.size1());
+	}
+
+
+	t_mat matRet(mat1.size1(), mat2.size2());
+	const std::size_t innersize = std::min(mat1.size2(), mat2.size1());
+
+	for(std::size_t row=0; row<matRet.size1(); ++row)
+	{
+		for(std::size_t col=0; col<matRet.size2(); ++col)
+		{
+			matRet(row, col) = 0;
+			for(std::size_t i=0; i<innersize; ++i)
+				matRet(row, col) += mat1(row, i) * mat2(i, col);
+		}
+	}
+
+	return matRet;
+}
+
+
+
+/**
+ * 2-norm
+ */
+template<class t_vec>
+typename t_vec::value_type norm(const t_vec& vec)
+requires is_basic_vec<t_vec>
+{
+	return std::sqrt(inner<t_vec>(vec, vec));
+}
+
+
+/**
+ * outer product
+ */
+template<class t_mat, class t_vec>
+t_mat outer(const t_vec& vec1, const t_vec& vec2)
+requires is_basic_vec<t_vec> && is_mat<t_mat>
+{
+	const std::size_t N1 = vec1.size();
+	const std::size_t N2 = vec2.size();
+
+	t_mat mat;
+	if constexpr(is_dyn_mat<t_mat>)
+		mat = t_mat(N1, N2);
+
+	for(std::size_t n1=0; n1<N1; ++n1)
+	{
+		for(std::size_t n2=0; n2<N2; ++n2)
+		{
+			if constexpr(is_complex<typename t_vec::value_type>)
+				mat(n1, n2) = std::conj(vec1[n1]) * vec2[n2];
+			else
+				mat(n1, n2) = vec1[n1]*vec2[n2];
+		}
+	}
+
+	return mat;
+}
+
+
 // ----------------------------------------------------------------------------
 // with metric
 
@@ -5355,7 +5425,7 @@ namespace tl2 {
  * QR decomposition of a matrix
  * returns [ok, Q, R]
  */
-template<class t_mat, class t_vec /*= std::vector<typename t_mat::value_type>*/>
+template<class t_mat, class t_vec>
 std::tuple<bool, t_mat, t_mat> qr(const t_mat& mat)
 requires is_mat<t_mat> && is_vec<t_vec>
 {
@@ -5476,7 +5546,7 @@ requires is_vec<t_vec> && is_dyn_mat<t_mat>
 
 	if(use_qr)
 	{
-		auto [ok_qr, Q, R] = qr<t_mat>(X);
+		auto [ok_qr, Q, R] = qr<t_mat, t_vec>(X);
 		if(!ok_qr)
 				return std::make_tuple(t_vec{}, false);
 

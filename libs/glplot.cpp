@@ -1319,7 +1319,7 @@ void GlPlot_impl::paintGL()
 	{
 		if(auto *pContext = m_pPlot->context(); !pContext) return;
 		QPainter painter(m_pPlot);
-		painter.setRenderHint(QPainter::HighQualityAntialiasing);
+		painter.setRenderHint(QPainter::Antialiasing);
 
 		// gl painting
 		{
