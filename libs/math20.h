@@ -245,7 +245,7 @@ T bilinear_interp(T x0y0, T x1y0, T x0y1, T x1y1, T x, T y)
 
 
 template<typename T=double, typename REAL=double,
-template<class...> class t_vec=std::vector>
+template<class...> class t_vec = std::vector>
 t_vec<T> linspace(const T& tmin, const T& tmax, std::size_t iNum)
 {
 	t_vec<T> vec;
@@ -258,7 +258,7 @@ t_vec<T> linspace(const T& tmin, const T& tmax, std::size_t iNum)
 
 
 template<typename T=double, typename REAL=double,
-template<class...> class t_vec=std::vector>
+template<class...> class t_vec = std::vector>
 t_vec<T> logspace(const T& tmin, const T& tmax, std::size_t iNum, T tBase=T(10))
 {
 	t_vec<T> vec = linspace<T, REAL>(tmin, tmax, iNum);
@@ -1213,7 +1213,7 @@ namespace tl2 {
 // vector and matrix containers
 // ----------------------------------------------------------------------------
 
-template<class T=double, template<class...> class t_cont = std::vector>
+template<class T = double, template<class...> class t_cont = std::vector>
 requires is_basic_vec<t_cont<T>> && is_dyn_vec<t_cont<T>>
 class vec : public t_cont<T>
 {
@@ -1222,13 +1222,14 @@ public:
 	using container_type = t_cont<T>;
 
 	vec() = default;
+	~vec() = default;
+
 	vec(std::size_t SIZE) : t_cont<T>(SIZE) {}
 	vec(const std::initializer_list<T>& lst) : t_cont<T>(lst.size())
 	{
 		for(auto iterLst=lst.begin(); iterLst!=lst.end(); std::advance(iterLst, 1))
 			this->operator[](*iterLst);
 	}
-	~vec() = default;
 
 	const value_type& operator()(std::size_t i) const { return this->operator[](i); }
 	value_type& operator()(std::size_t i) { return this->operator[](i); }
@@ -1262,8 +1263,9 @@ public:
 	using container_type = t_cont<T>;
 
 	mat() = default;
-	mat(std::size_t ROWS, std::size_t COLS) : m_data(ROWS*COLS), m_rowsize{ROWS}, m_colsize{COLS} {}
 	~mat() = default;
+
+	mat(std::size_t ROWS, std::size_t COLS) : m_data(ROWS*COLS), m_rowsize{ROWS}, m_colsize{COLS} {}
 
 	std::size_t size1() const { return m_rowsize; }
 	std::size_t size2() const { return m_colsize; }
@@ -1402,7 +1404,7 @@ requires is_mat<t_mat>
 /**
  * check if two collections of matrices or vectors are equal
  */
-template<class t_obj, template<class...> class t_vec=std::vector>
+template<class t_obj, template<class...> class t_vec = std::vector>
 bool equals_all(const t_vec<t_obj>& vec1, const t_vec<t_obj>& _vec2,
 	typename t_obj::value_type eps = std::numeric_limits<typename t_obj::value_type>::epsilon(),
 	int maxSize=-1)
@@ -3361,8 +3363,6 @@ create_plane(const t_vec& norm, typename t_vec::value_type l=1)
 requires is_vec<t_vec>
 {
 	using t_real = typename t_vec::value_type;
-	//using t_mat = tl2::mat<t_real, std::vector>;
-	//using namespace tl2_ops;
 
 	t_vec norm_old = create<t_vec>({ 0, 0, -1 });
 	t_mat rot = rotation<t_mat, t_vec>(norm_old, norm);
@@ -3410,7 +3410,6 @@ requires is_vec<t_vec>
 	t_cont<t_vec> vertices;
 
 	// inner vertex
-	//vertices.push_back(create<t_vec>({ 0, 0, 0 }));
 	for(std::size_t pt=0; pt<num_points; ++pt)
 	{
 		const t_real phi = t_real(pt)/t_real(num_points) * t_real(2)*pi<t_real>;
@@ -3426,16 +3425,6 @@ requires is_vec<t_vec>
 	t_cont<t_cont<std::size_t>> faces;
 	t_cont<t_vec> normals;
 	t_cont<t_cont<t_vec>> uvs;	// TODO
-
-	// directly generate triangles
-	/*for(std::size_t face=0; face<num_points; ++face)
-	{
-		std::size_t idx0 = face + 1;	// outer 1
-		std::size_t idx1 = (face == num_points-1 ? 1 : face + 2);	// outer 2
-		std::size_t idx2 = 0;	// inner
-
-		faces.push_back({ idx0, idx1, idx2 });
-	}*/
 
 	t_cont<std::size_t> face(num_points);
 	std::iota(face.begin(), face.end(), 0);
@@ -4332,7 +4321,6 @@ requires is_mat<t_mat>
 
 
 
-
 // ----------------------------------------------------------------------------
 // complex algos
 // ----------------------------------------------------------------------------
@@ -4340,13 +4328,15 @@ requires is_mat<t_mat>
 /**
  * split a complex vector into two vectors with the real and imag parts
  */
-template<class t_cplx = std::complex<double>, class t_real = typename t_cplx::value_type, template<class...> class t_vec>
-std::tuple<t_vec<t_real>, t_vec<t_real>>
-split_cplx(const t_vec<t_cplx>& vec)
-requires is_complex<t_cplx> && is_vec<t_vec<t_cplx>>
+template<class t_vec_cplx, class t_vec_real>
+std::tuple<t_vec_real, t_vec_real> split_cplx(const t_vec_cplx& vec)
+requires is_complex<typename t_vec_cplx::value_type> && is_vec<t_vec_cplx> && is_vec<t_vec_real>
 {
-	t_vec<t_real> vecRe = zero<t_vec<t_real>>(vec.size());
-	t_vec<t_real> vecIm = zero<t_vec<t_real>>(vec.size());
+	using t_cplx = typename t_vec_cplx::value_type;
+	using t_real = typename t_vec_real::value_type;
+
+	t_vec_real vecRe = zero<t_vec_real>(vec.size());
+	t_vec_real vecIm = zero<t_vec_real>(vec.size());
 
 	auto iter = vec.begin();
 	auto iterRe = vecRe.begin();
