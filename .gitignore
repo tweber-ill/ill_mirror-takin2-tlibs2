@@ -30,6 +30,7 @@ tests/jl/*.dat
 tmp/**
 !tmp/.dir
 build/**
+script/build/**
 tests/build/**
 *.pyc
 .DS_Store
@@ -46,3 +47,8 @@ tests/py/__pycache__/**
 *.blg
 *.fls
 *.fdb_latexmk
+
+# LLVM intermediate files
+*.asm
+*.s
+*.bc

@@ -1,0 +1,111 @@
+#
+# crystallographic A & B matrices, B = 2pi * A^(-T)
+# see: https://en.wikipedia.org/wiki/Fractional_coordinates
+# @author Tobias Weber <tweber@ill.fr>
+# @date 2020
+# @license see 'LICENSE' file
+# @desc Forked on 5-July-2020 from the privately developed "matrix_calc" project (https://github.com/t-weber/matrix_calc).
+#
+
+
+#
+# from: https://en.wikipedia.org/wiki/Fractional_coordinates
+#
+func mat 3 3 B_matrix(scalar a, scalar b, scalar c, scalar alpha, scalar beta, scalar gamma)
+{
+	scalar sc = sin(gamma);
+	scalar ca = cos(alpha);
+	scalar cb = cos(beta);
+	scalar cc = cos(gamma);
+	scalar rr = sqrt(1. + 2.*ca*cb*cc - (ca*ca + cb*cb + cc*cc));
+
+	mat 3 3 B;
+	B[0,0] = 1./a;						B[0,1] = 0.;						B[0,2] = 0.;
+	B[1,0] = -1./a * cc/sc;				B[1,1] = 1./b * 1./sc;				B[1,2] = 0.;
+	B[2,0] = (cc*ca - cb)/(a*sc*rr);	B[2,1] = (cb*cc-ca)/(b*sc*rr);		B[2,2] = sc/(c*rr);
+
+	B = B*(2*pi);
+	ret B;
+}
+
+
+func mat 3 3 rotate_z(scalar phi)
+{
+	scalar cos_phi = cos(phi);
+	scalar sin_phi = sin(phi);
+
+	mat 3 3 rot;
+	rot[0,0] = +cos_phi;	rot[0,1] = -sin_phi;	rot[0,2]=0;
+	rot[1,0] = +sin_phi;	rot[1,1] = +cos_phi;	rot[1,2]=0;
+	rot[2,0] = 0;			rot[2,1] = 0;			rot[2,2]=1;
+
+	ret rot;
+}
+
+
+func mat 3 3 A_matrix(scalar a, scalar b, scalar c, scalar alpha, scalar beta, scalar gamma)
+{
+	mat 3 3 rot_z_gamma = rotate_z(gamma);
+
+	#
+	# define the va vector along x
+	#
+	vec 3 va = [a, 0, 0];
+
+	#
+	# rotate vb vector around the va vector in the xy plane
+	#
+	vec 3 vb = (rot_z_gamma * va) / a * b;
+
+	#
+	# angle between vc and va vector: va.vc/(a*c) = cos(beta)
+	#	->  va[0]*vc[0]/(a*c) = cos(beta)
+	#	->  vc[0] = cos(beta) * (a*c) / va[0]
+	#	->  vc[0] = cos(beta) * c
+	#
+	# angle between vc and vb vector: vb.vc/(b*c) = cos(alpha)
+	#	-> (vb[0]*vc[0] + vb[1]*vc[1]) = cos(alpha) * (b*c)
+	#	-> vc[1] = (cos(alpha) * b*c - vb[0]*vc[0]) / vb[1]
+	#
+	# vc vector length: vc[0]^2 + vc[1]^2 + vc[2]^2 = c^2
+	#	-> vc[2]^2 = c^2 - vc[0]^2 - vc[1]^2
+	#
+	vec 3 vc;
+	vc[0] = cos(beta)*c;
+	vc[1] = (cos(alpha) * b*c - vb[0]*vc[0]) / vb[1];
+	vc[2] = sqrt(fabs(c^2 - vc[0]^2 - vc[1]^2));
+
+	mat 3 3 A;
+	A[0,0]=va[0];		A[0,1]=vb[0];		A[0,2]=vc[0];
+	A[1,0]=va[1];		A[1,1]=vb[1];		A[1,2]=vc[1];
+	A[2,0]=va[2];		A[2,1]=vb[2];		A[2,2]=vc[2];
+
+	ret A;
+}
+
+
+func start()
+{
+	scalar a = getflt("a = ");
+	scalar b = getflt("b = ");
+	scalar c = getflt("c = ");
+	scalar alpha = getflt("alpha = ");
+	scalar beta = getflt("beta = ");
+	scalar gamma = getflt("gamma = ");
+
+	alpha = alpha/180*pi;
+	beta = beta/180*pi;
+	gamma = gamma/180*pi;
+
+
+	# own calculation
+	mat 3 3 A = A_matrix(a,b,c, alpha,beta,gamma);
+	mat 3 3 B = 2*pi*A'^(-1);
+	putstr("A matrix: " + A);
+	putstr("B matrix: " + B);
+
+
+	# comparison
+	mat 3 3 B2 = B_matrix(a,b,c, alpha,beta,gamma);
+	putstr("B matrix: " + B2);
+}
