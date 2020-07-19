@@ -3,12 +3,7 @@
  * @author Tobias Weber <tweber@ill.fr>
  * @date 09-dec-19
  * @license see 'LICENSE' file
- * @desc Forked on 5-July-2020 from the privately developed "matrix_calc" project (https://github.com/t-weber/matrix_calc).
- *
- * References:
- *	https://github.com/westes/flex/tree/master/examples/manual
- *	http://www.gnu.org/software/bison/manual/html_node/index.html
- *	http://git.savannah.gnu.org/cgit/bison.git/tree/examples
+ * @desc Forked on 18/July/2020 from my privatly developed "matrix_calc" project (https://github.com/t-weber/matrix_calc).
  */
 
 %option c++
@@ -18,20 +13,32 @@
 
 %{
 	#include <string>
+	#include <sstream>
+	#include <iomanip>
+
 	#include "parser.h"
 %}
 
 
-white		[ \t\r]
-sign		[+-]
-num		[0-9]
-int		{num}+
-sint		{sign}?{int}
-real		{int}\.{num}*|\.{int}
-ident		[A-Za-z_]+[A-Za-z0-9_]*
+white	[ \t\r]
+
+num_bin	[01]
+num_oct	[0-7]
+num_dec	[0-9]
+num_hex	[0-9a-fA-F]
+
+int_bin "0b"{num_bin}+
+int_dec {num_dec}+
+int_hex "0x"{num_hex}+
+
+real	{num_dec}+(\.{num_dec}*)?
+realeng	{real}([Ee][+-]?{num_dec}+)?
+
+ident	[A-Za-z_]+[A-Za-z0-9_]*
 
 
 %%
+
 
 "\n"		{ IncCurLine(); }
 {white}+	/* whitespace */
@@ -40,13 +47,14 @@ ident		[A-Za-z_]+[A-Za-z0-9_]*
 ";"			{ return yytext[0]; }
 "+"|"-"		{ return yytext[0]; }
 "*"|"/"|"%"	{ return yytext[0]; }
-"^"|"'"			{ return yytext[0]; }
+"^"|"'"		{ return yytext[0]; }
 "("|")"		{ return yytext[0]; }
 "{"|"}"		{ return yytext[0]; }
 "["|"]"		{ return yytext[0]; }
 "|"|"|"		{ return yytext[0]; }
 ","			{ return yytext[0]; }
 
+"~"			{ return yy::Parser::make_RANGE(); }
 "=="		{ return yy::Parser::make_EQU(); }
 "<>"		{ return yy::Parser::make_NEQ(); }
 ">="		{ return yy::Parser::make_GEQ(); }
@@ -58,6 +66,7 @@ ident		[A-Za-z_]+[A-Za-z0-9_]*
 "or"		{ return yy::Parser::make_OR(); }
 "not"		{ return yy::Parser::make_NOT(); }
 
+"assign"	{ return yy::Parser::make_ASSIGN(); }
 "="			{ return yytext[0]; }
 
 "scalar"|"var"	{ return yy::Parser::make_SCALARDECL(); }
@@ -75,17 +84,54 @@ ident		[A-Za-z_]+[A-Za-z0-9_]*
 "loop"		{ return yy::Parser::make_LOOP(); }
 "do"		{ return yy::Parser::make_DO(); }
 
-{int}		{ return yy::Parser::make_INT(std::stol(yytext)); }
-{real}([eE]{sint})?	{ return yy::Parser::make_REAL(std::stod(yytext)); }
-{ident}		{ return yy::Parser::make_IDENT(yytext); }
+
+{int_bin}	{
+	long dec = 0;
+
+	std::size_t pos = 0;
+	for(const char* pc=yytext+yyleng-1; pc>=yytext+2; --pc)
+	{
+		if(*pc != '0')
+			dec += (1<<pos);
+		++pos;
+	}
+
+	return yy::Parser::make_INT(dec);
+}
+
+{int_dec}	{
+	return yy::Parser::make_INT(std::stol(yytext));
+}
+
+{int_hex}	{
+	long l = 0;
+	std::istringstream{yytext} >> std::hex >> l;
+	return yy::Parser::make_INT(l);
+}
+
+{realeng}	{
+	return yy::Parser::make_REAL(std::stod(yytext));
+}
+
+
+{ident}		{
+	return yy::Parser::make_IDENT(yytext);
+}
+
+
 "\""[^\"]*"\""	{
+	// string
 	std::string str{yytext+1, yytext+yyleng-1};
 	return yy::Parser::make_STRING(str); }
 
+
 . {
-	LexerError(
-		(std::string{"Invalid token: \""} + 
-		std::string{yytext} + 
-		std::string{"\"."}).c_str());
+	std::string err = "Unknown token: \"";
+	err += yytext;
+	err += "\".";
+
+	LexerError(err.c_str());
 }
+
+
 %%

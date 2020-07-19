@@ -3,7 +3,7 @@
  * @author Tobias Weber <tweber@ill.fr>
  * @date jun-20
  * @license see 'LICENSE' file
- * @desc Forked on 5-July-2020 from the privately developed "matrix_calc" project (https://github.com/t-weber/matrix_calc).
+ * @desc Forked on 18/July/2020 from my privatly developed "matrix_calc" project (https://github.com/t-weber/matrix_calc).
  */
 
 #include "printast.h"
@@ -166,7 +166,7 @@ t_astret ASTPrinter::visit(const ASTFunc* ast)
 	(*m_ostr) << " />\n";
 
 	std::size_t argidx = 0;
-	for(const auto& arg : ast->GetArgNames())
+	for(const auto& arg : ast->GetArgs())
 	{
 		std::string argTypeName = Symbol::get_type_name(std::get<1>(arg));
 
@@ -185,9 +185,33 @@ t_astret ASTPrinter::visit(const ASTFunc* ast)
 
 t_astret ASTPrinter::visit(const ASTReturn* ast)
 {
-	(*m_ostr) << "<Return>\n";
-	ast->GetTerm()->accept(this);
-	(*m_ostr) << "</Return>\n";
+	const auto& retvals = ast->GetRets()->GetList();
+	std::size_t numRets = retvals.size();
+
+	if(numRets == 0)
+	{
+		(*m_ostr) << "<Return />\n";
+	}
+	else if(numRets == 1)
+	{
+		(*m_ostr) << "<Return>\n";
+		(*retvals.begin())->accept(this);
+		(*m_ostr) << "</Return>\n";
+	}
+	else if(numRets > 1)
+	{
+		(*m_ostr) << "<MultiReturn>\n";
+		std::size_t elemnr = 0;
+		for(const auto& elem : retvals)
+		{
+			(*m_ostr) << "<val_" << elemnr << ">\n";
+			elem->accept(this);
+			(*m_ostr) << "</val_" << elemnr << ">\n";
+
+			++elemnr;
+		}
+		(*m_ostr) << "</MultiReturn>\n";
+	}
 
 	return nullptr;
 }
@@ -195,9 +219,35 @@ t_astret ASTPrinter::visit(const ASTReturn* ast)
 
 t_astret ASTPrinter::visit(const ASTAssign* ast)
 {
-	(*m_ostr) << "<Assign ident=\"" << ast->GetIdent() << "\">\n";
-	ast->GetExpr()->accept(this);
-	(*m_ostr) << "</Assign>\n";
+	// multiple assignments
+	if(ast->IsMultiAssign())
+	{
+		(*m_ostr) << "<MultiAssign>\n";
+
+		const auto& idents = ast->GetIdents();
+		std::size_t identidx = 0;
+		for(const auto& ident : idents)
+		{
+			(*m_ostr) << "<ident_" << identidx << ">";
+			(*m_ostr) << ident;
+			(*m_ostr) << "</ident_" << identidx << ">\n";
+			++identidx;
+		}
+
+		(*m_ostr) << "<rhs>\n";
+		ast->GetExpr()->accept(this);
+		(*m_ostr) << "</rhs>\n";
+
+		(*m_ostr) << "</MultiAssign>\n";
+	}
+
+	// single assignment
+	else
+	{
+		(*m_ostr) << "<Assign ident=\"" << ast->GetIdent() << "\">\n";
+		ast->GetExpr()->accept(this);
+		(*m_ostr) << "</Assign>\n";
+	}
 
 	return nullptr;
 }
@@ -205,7 +255,10 @@ t_astret ASTPrinter::visit(const ASTAssign* ast)
 
 t_astret ASTPrinter::visit(const ASTArrayAccess* ast)
 {
-	(*m_ostr) << "<ArrayAccess>\n";
+	(*m_ostr) << "<ArrayAccess"
+		<< " is_range_12=\"" << ast->IsRanged12() << "\""
+		<< " is_range_34=\"" << ast->IsRanged34() << "\""
+		<< ">\n";
 
 	(*m_ostr) << "<idx1>\n";
 	ast->GetNum1()->accept(this);
@@ -216,6 +269,20 @@ t_astret ASTPrinter::visit(const ASTArrayAccess* ast)
 		(*m_ostr) << "<idx2>\n";
 		ast->GetNum2()->accept(this);
 		(*m_ostr) << "</idx2>\n";
+	}
+
+	if(ast->GetNum3())
+	{
+		(*m_ostr) << "<idx3>\n";
+		ast->GetNum3()->accept(this);
+		(*m_ostr) << "</idx3>\n";
+	}
+
+	if(ast->GetNum4())
+	{
+		(*m_ostr) << "<idx4>\n";
+		ast->GetNum4()->accept(this);
+		(*m_ostr) << "</idx4>\n";
 	}
 
 	(*m_ostr) << "<term>\n";
@@ -230,7 +297,10 @@ t_astret ASTPrinter::visit(const ASTArrayAccess* ast)
 
 t_astret ASTPrinter::visit(const ASTArrayAssign* ast)
 {
-	(*m_ostr) << "<ArrayAssign ident=\"" << ast->GetIdent() << "\">\n";
+	(*m_ostr) << "<ArrayAssign ident=\"" << ast->GetIdent() << "\""
+		<< " is_range_12=\"" << ast->IsRanged12() << "\""
+		<< " is_range_34=\"" << ast->IsRanged34() << "\""
+		<< ">\n";
 
 	(*m_ostr) << "<idx1>\n";
 	ast->GetNum1()->accept(this);
@@ -241,6 +311,20 @@ t_astret ASTPrinter::visit(const ASTArrayAssign* ast)
 		(*m_ostr) << "<idx2>\n";
 		ast->GetNum2()->accept(this);
 		(*m_ostr) << "</idx2>\n";
+	}
+
+	if(ast->GetNum3())
+	{
+		(*m_ostr) << "<idx3>\n";
+		ast->GetNum3()->accept(this);
+		(*m_ostr) << "</idx3>\n";
+	}
+
+	if(ast->GetNum4())
+	{
+		(*m_ostr) << "<idx4>\n";
+		ast->GetNum2()->accept(this);
+		(*m_ostr) << "</idx4>\n";
 	}
 
 	(*m_ostr) << "<expr>\n";

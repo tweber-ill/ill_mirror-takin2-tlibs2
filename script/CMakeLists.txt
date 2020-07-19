@@ -1,7 +1,8 @@
 #
-# @author Tobias Weber
+# @author Tobias Weber <tweber@ill.fr>
 # @date 11-apr-2020
-# @license: see 'LICENSE.GPL' file
+# @license: see 'LICENSE' file
+# @desc Forked on 18/July/2020 from my privatly developed "matrix_calc" project (https://github.com/t-weber/matrix_calc).
 #
 
 project(mcalc)
@@ -10,12 +11,12 @@ cmake_minimum_required(VERSION 3.0)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_VERBOSE_MAKEFILE ON)
 
-
 find_package(FLEX 2 REQUIRED)
 find_package(BISON 3 REQUIRED)
 find_package(Boost REQUIRED COMPONENTS program_options)
 
 
+add_definitions(-Wall -Wextra)
 add_definitions(-std=c++17)
 add_definitions(${Boost_CXX_FLAGS})
 
@@ -53,7 +54,8 @@ message("Bison output header: ${BISON_parser_impl_OUTPUT_HEADER}")
 
 add_executable(mcalc
 	src/parser.cpp src/parser.h src/ast.h src/sym.h
-	src/llasm.cpp src/llasm.h
+	src/llasm.cpp src/llasm_ops.cpp src/llasm_var.cpp
+	src/llasm_arr.cpp src/llasm_func.cpp src/llasm.h
 	src/printast.cpp src/printast.h
 	${FLEX_lexer_impl_OUTPUTS}
 	${BISON_parser_impl_OUTPUT_SOURCE} ${BISON_parser_impl_OUTPUT_HEADER}

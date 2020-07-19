@@ -2,8 +2,8 @@
  * parser entry point
  * @author Tobias Weber <tweber@ill.fr>
  * @date 20-dec-19
- * @desc Forked on 5-July-2020 from the privately developed "matrix_calc" project (https://github.com/t-weber/matrix_calc).
  * @license see 'LICENSE' file
+ * @desc Forked on 18/July/2020 from my privatly developed "matrix_calc" project (https://github.com/t-weber/matrix_calc).
  */
 
 #include "ast.h"
@@ -12,17 +12,9 @@
 #include "printast.h"
 
 #include <fstream>
+#include <locale>
 #include <boost/program_options.hpp>
 namespace args = boost::program_options;
-
-
-/**
- * Lexer error output
- */
-void yy::Lexer::LexerError(const char* err)
-{
-	tl2::log_err("Lexer error in line ", GetCurLine(), ": ", err, ".");
-}
 
 
 /**
@@ -31,6 +23,15 @@ void yy::Lexer::LexerError(const char* err)
 void yy::Lexer::LexerOutput(const char* str, int /*len*/)
 {
 	tl2::log_err("Lexer output (line ", GetCurLine(), "): ", str, ".");
+}
+
+
+/**
+ * Lexer error output
+ */
+void yy::Lexer::LexerError(const char* err)
+{
+	tl2::log_err("Lexer error in line ", GetCurLine(), ": ", err, ".");
 }
 
 
@@ -48,7 +49,7 @@ void yy::Parser::error(const std::string& err)
  */
 extern yy::Parser::symbol_type yylex(yy::ParserContext &context)
 {
-	return context.GetLexer().yylex(context);
+	return context.GetLexer().lex();
 }
 
 
@@ -56,11 +57,16 @@ int main(int argc, char** argv)
 {
 	try
 	{
+		std::ios_base::sync_with_stdio(0);
+		std::locale loc{};
+		std::locale::global(loc);
+
 		tl2::log_info("--------------------------------------------------------------------------------");
 		tl2::log_info("This is the tlibs2 scripting tool.");
 		tl2::log_info("Author: Tobias Weber <tweber@ill.fr>, 2020.");
 		tl2::log_info("Licensed under GPLv3.");
 		tl2::log_info("--------------------------------------------------------------------------------");
+
 
 		// llvm toolchain
 		std::string tool_opt = "opt";
@@ -88,8 +94,8 @@ int main(int argc, char** argv)
 			("out,o", args::value(&outprog), "compiled program output")
 			("optimise,O", args::bool_switch(&optimise), "optimise program")
 			("interpret,i", args::bool_switch(&interpret), "directly run program in interpreter")
-			("symbols,s", args::bool_switch(&show_symbols), "print symbol table")
-			("ast,a", args::bool_switch(&show_ast), "print syntax tree")
+			("symbols,s", args::bool_switch(&show_symbols), "output symbol table")
+			("ast,a", args::bool_switch(&show_ast), "output syntax tree")
 			("program", args::value<decltype(vecProgs)>(&vecProgs), "input program to compile");
 
 		args::positional_options_description posarg_descr;
@@ -119,8 +125,8 @@ int main(int argc, char** argv)
 
 		if(vecProgs.size() == 0)
 		{
-			tl2::log_err("Please specify an input program.");
-			tl2::log_err(arg_descr);
+			tl2::log_info("Please specify an input program.");
+			tl2::log_info(arg_descr);
 			return 0;
 		}
 
@@ -161,25 +167,27 @@ int main(int argc, char** argv)
 		yy::ParserContext ctx{ifstr};
 
 		// register runtime functions
-		ctx.AddFunc("pow", SymbolType::SCALAR, {SymbolType::SCALAR, SymbolType::SCALAR});
-		ctx.AddFunc("sin", SymbolType::SCALAR, {SymbolType::SCALAR});
-		ctx.AddFunc("cos", SymbolType::SCALAR, {SymbolType::SCALAR});
-		ctx.AddFunc("sqrt", SymbolType::SCALAR, {SymbolType::SCALAR});
-		ctx.AddFunc("exp", SymbolType::SCALAR, {SymbolType::SCALAR});
-		ctx.AddFunc("fabs", SymbolType::SCALAR, {SymbolType::SCALAR});
-		ctx.AddFunc("labs", SymbolType::INT, {SymbolType::INT});
+		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "pow", SymbolType::SCALAR, {SymbolType::SCALAR, SymbolType::SCALAR});
+		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "sin", SymbolType::SCALAR, {SymbolType::SCALAR});
+		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "cos", SymbolType::SCALAR, {SymbolType::SCALAR});
+		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "sqrt", SymbolType::SCALAR, {SymbolType::SCALAR});
+		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "exp", SymbolType::SCALAR, {SymbolType::SCALAR});
+		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "fabs", SymbolType::SCALAR, {SymbolType::SCALAR});
+		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "labs", SymbolType::INT, {SymbolType::INT});
 
-		ctx.AddFunc("strlen", SymbolType::INT, {SymbolType::STRING});
+		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "set_eps", SymbolType::VOID, {SymbolType::SCALAR});
+		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "get_eps", SymbolType::SCALAR, {});
 
-		ctx.AddFunc("putstr", SymbolType::VOID, {SymbolType::STRING});
-		ctx.AddFunc("putflt", SymbolType::VOID, {SymbolType::SCALAR});
-		ctx.AddFunc("putint", SymbolType::VOID, {SymbolType::INT});
-		ctx.AddFunc("getflt", SymbolType::SCALAR, {SymbolType::STRING});
-		ctx.AddFunc("getint", SymbolType::INT, {SymbolType::STRING});
+		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "strlen", SymbolType::INT, {SymbolType::STRING});
 
+		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "putstr", SymbolType::VOID, {SymbolType::STRING});
+		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "putflt", SymbolType::VOID, {SymbolType::SCALAR});
+		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "putint", SymbolType::VOID, {SymbolType::INT});
+		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "getflt", SymbolType::SCALAR, {SymbolType::STRING});
+		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "getint", SymbolType::INT, {SymbolType::STRING});
 
-		ctx.AddFunc("flt_to_str", SymbolType::VOID, {SymbolType::SCALAR, SymbolType::STRING, SymbolType::INT});
-		ctx.AddFunc("int_to_str", SymbolType::VOID, {SymbolType::INT, SymbolType::STRING, SymbolType::INT});
+		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "flt_to_str", SymbolType::VOID, {SymbolType::SCALAR, SymbolType::STRING, SymbolType::INT});
+		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "int_to_str", SymbolType::VOID, {SymbolType::INT, SymbolType::STRING, SymbolType::INT});
 
 
 		yy::Parser parser(ctx);
@@ -195,7 +203,6 @@ int main(int argc, char** argv)
 			tl2::log_info("Writing symbol table to \"", outprog_syms, "\"...");
 
 			std::ofstream ostrSyms{outprog_syms};
-			//ostrSyms << "\nSymbol table:\n";
 			ostrSyms << ctx.GetSymbols() << std::endl;
 		}
 
@@ -258,12 +265,13 @@ declare i32 @printf(i8*, ...)
 declare i32 @scanf(i8*, ...)
 declare i8* @memcpy(i8*, i8*, i64)
 declare i8* @malloc(i64)
+declare i8* @calloc(i64, i64)
 declare void @free(i8*)
 ; -----------------------------------------------------------------------------
 
 
 ; -----------------------------------------------------------------------------
-; external runtime functions from runtime.cpp
+; external runtime functions from runtime.c
 declare void @ext_set_eps(double)
 declare double @ext_get_eps()
 
@@ -288,11 +296,40 @@ declare i64 @ext_transpose(double*, double*, i64, i64)
 ; -----------------------------------------------------------------------------
 ; runtime functions
 
+; get the user epsilon
+define double @get_eps()
+{
+	%eps = call double @ext_get_eps()
+	ret double %eps
+}
+
+; set the user epsilon
+define void @set_eps(double %eps)
+{
+	call void (double) @ext_set_eps(double %eps)
+	ret void
+}
+
+; returns 0 if flt <= eps
+define double @zero_eps(double %flt)
+{
+	%eps = call double @get_eps()
+	%fltabs = call double (double) @fabs(double %flt)
+
+	%cond = fcmp ole double %fltabs, %eps
+	br i1 %cond, label %labelIf, label %labelEnd
+labelIf:
+	ret double 0.
+labelEnd:
+	ret double %flt
+}
+
 ; double -> string
 define void @flt_to_str(double %flt, i8* %strptr, i64 %len)
 {
 	%fmtptr = bitcast [4 x i8]* @__strfmt_lg to i8*
-	call i32 (i8*, i64, i8*, ...) @snprintf(i8* %strptr, i64 %len, i8* %fmtptr, double %flt)
+	%theflt = call double (double) @zero_eps(double %flt)
+	call i32 (i8*, i64, i8*, ...) @snprintf(i8* %strptr, i64 %len, i8* %fmtptr, double %theflt)
 	ret void
 }
 
@@ -398,7 +435,7 @@ define i32 @main()
 		// --------------------------------------------------------------------
 		if(optimise)
 		{
-			tl2::log_info("Optimising intermediate code: \"", 
+			tl2::log_info("Optimising intermediate code: \"",
 				outprog_3ac, "\" -> \"", outprog_3ac_opt, "\"...");
 
 			std::string cmd_opt = tool_opt + " -stats -S --strip-debug -o "

@@ -3,7 +3,7 @@
  * @author Tobias Weber <tweber@ill.fr>
  * @date 27-may-18
  * @license see 'LICENSE' file
- * @desc Forked on 5-July-2020 from the privately developed "matrix_calc" project (https://github.com/t-weber/matrix_calc).
+ * @desc Forked on 18/July/2020 from my privatly developed "matrix_calc" project (https://github.com/t-weber/matrix_calc).
  */
 
 #ifndef __PARSER_H__
@@ -23,12 +23,13 @@
 #include "ast.h"
 #include "sym.h"
 #include "parser_defs.h"
-
 #include "libs/log.h"
 
 
 namespace yy
 {
+	class ParserContext;
+
 	/**
 	 * lexer
 	 */
@@ -37,18 +38,25 @@ namespace yy
 	private:
 		std::size_t m_curline = 1;
 
+	protected:
+		ParserContext* m_context = nullptr;
+
 	public:
 		Lexer() : yyFlexLexer{std::cin, std::cerr} {}
-		Lexer(std::istream& istr) : yyFlexLexer{istr, std::cerr} {}
+		Lexer(ParserContext* context, std::istream& istr)
+			: yyFlexLexer{istr, std::cerr}, m_context(context) {}
 		virtual ~Lexer() = default;
 
-		virtual yy::Parser::symbol_type yylex(yy::ParserContext& context) /*override*/;
+		virtual yy::Parser::symbol_type lex();
 
 		virtual void LexerOutput(const char* str, int len) override;
 		virtual void LexerError(const char* err) override;
 
 		void IncCurLine() { ++m_curline; }
 		std::size_t GetCurLine() const { return m_curline; }
+
+	private:
+		virtual int yylex() final { return -1; }
 	};
 
 
@@ -70,10 +78,10 @@ namespace yy
 		// information about currently parsed symbol
 		std::vector<std::string> m_curscope;
 		SymbolType m_symtype = SymbolType::SCALAR;
-		std::array<std::size_t, 2> m_symdims = {0, 0};
+		std::array<std::size_t, 2> m_symdims = {1, 1};
 
 	public:
-		ParserContext(std::istream& istr = std::cin) : m_lex{istr}, m_statements{}
+		ParserContext(std::istream& istr = std::cin) : m_lex{this, istr}, m_statements{}
 		{}
 
 		yy::Lexer& GetLexer() { return m_lex; }
@@ -87,16 +95,24 @@ namespace yy
 
 		// --------------------------------------------------------------------
 		// current function scope
-		const std::vector<std::string>& GetScope() const { return m_curscope; }
-		std::string GetScopeName() const
+		const std::vector<std::string>& GetScope() const
+		{
+			return m_curscope;
+		}
+
+		std::string GetScopeName(std::size_t up=0) const
 		{
 			std::string name;
-			for(const std::string& scope : m_curscope)
-				name += scope + "::";	// scope name separator
+			for(std::size_t i=0; i<m_curscope.size()-up; ++i)
+				name += m_curscope[i] + "::";	// scope name separator
 			return name;
 		}
 
-		void EnterScope(const std::string& name) { m_curscope.push_back(name); }
+		void EnterScope(const std::string& name)
+		{
+			m_curscope.push_back(name);
+		}
+
 		void LeaveScope(const std::string& name)
 		{
 			const std::string& curscope = *m_curscope.rbegin();
@@ -114,24 +130,16 @@ namespace yy
 
 
 		// --------------------------------------------------------------------
-		std::string AddSymbol(const std::string& name, bool bUseScope=true)
+		Symbol* AddScopedSymbol(const std::string& name)
 		{
-			std::string symbol_with_scope = bUseScope ? GetScopeName() + name : name;
-			//std::cout << "symbol " << name << " -> " << symbol_with_scope << std::endl;
-
-			m_symbols.AddSymbol(symbol_with_scope, name, m_symtype, m_symdims);
-			return symbol_with_scope;
+			const std::string& scope = GetScopeName();
+			return m_symbols.AddSymbol(scope, name, m_symtype, m_symdims);
 		}
 
-		std::string AddFunc(const std::string& name, SymbolType rettype,
-			const std::vector<SymbolType>& argtypes,
-			const std::array<std::size_t, 2>* retdims = nullptr,
-			bool bUseScope = true)
+		const Symbol* FindScopedSymbol(const std::string& name) const
 		{
-			std::string symbol_with_scope = bUseScope ? GetScopeName() + name : name;
-
-			m_symbols.AddFunc(symbol_with_scope, name, rettype, argtypes, retdims);
-			return symbol_with_scope;
+			const std::string& scope = GetScopeName();
+			return m_symbols.FindSymbol(scope + name);
 		}
 
 		const SymTab& GetSymbols() const { return m_symbols; }
@@ -141,7 +149,7 @@ namespace yy
 		void SetSymType(SymbolType ty) { m_symtype = ty; }
 
 		// dimensions of vector and matrix symbols
-		void SetSymDims(std::size_t dim1, std::size_t dim2=0)
+		void SetSymDims(std::size_t dim1, std::size_t dim2=1)
 		{
 			m_symdims[0] = dim1;
 			m_symdims[1] = dim2;
@@ -167,7 +175,7 @@ namespace yy
 
 // yylex definition for lexer
 #undef YY_DECL
-#define YY_DECL yy::Parser::symbol_type yy::Lexer::yylex(yy::ParserContext&)
+#define YY_DECL yy::Parser::symbol_type yy::Lexer::lex()
 
 // yylex function which the parser calls
 extern yy::Parser::symbol_type yylex(yy::ParserContext &context);

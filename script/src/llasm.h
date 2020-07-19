@@ -3,12 +3,7 @@
  * @author Tobias Weber <tweber@ill.fr>
  * @date 11-apr-20
  * @license see 'LICENSE' file
- * @desc Forked on 5-July-2020 from the privately developed "matrix_calc" project (https://github.com/t-weber/matrix_calc).
- *
- * References:
- *	* https://llvm.org/docs/tutorial/MyFirstLanguageFrontend/LangImpl03.html
- *	* https://llvm.org/docs/GettingStarted.html
- *	* https://llvm.org/docs/LangRef.html
+ * @desc Forked on 18/July/2020 from my privatly developed "matrix_calc" project (https://github.com/t-weber/matrix_calc).
  */
 
 #ifndef __LLASM_H__
@@ -16,6 +11,28 @@
 
 #include "ast.h"
 #include "sym.h"
+#include <stack>
+
+
+/**
+ * multiply the elements of a container
+ */
+template<class t_cont, std::size_t ...seq>
+constexpr typename t_cont::value_type multiply_elements(
+	const t_cont& cont, const std::index_sequence<seq...>&)
+{
+	return (std::get<seq>(cont) * ...);
+}
+
+
+/**
+ * multiply all dimensions of an array type
+ */
+template<std::size_t NUM_DIMS=2>
+std::size_t get_arraydim(const std::array<std::size_t, NUM_DIMS>& dims)
+{
+	return multiply_elements(dims, std::make_index_sequence<NUM_DIMS>());
+}
 
 
 class LLAsm : public ASTVisitor
@@ -23,7 +40,6 @@ class LLAsm : public ASTVisitor
 public:
 	LLAsm(SymTab* syms, std::ostream* ostr=&std::cout);
 	virtual ~LLAsm() = default;
-
 
 	virtual t_astret visit(const ASTUMinus* ast) override;
 	virtual t_astret visit(const ASTPlus* ast) override;
@@ -50,7 +66,6 @@ public:
 	virtual t_astret visit(const ASTNumConst<double>* ast) override;
 	virtual t_astret visit(const ASTNumConst<std::int64_t>* ast) override;
 
-
 	// ------------------------------------------------------------------------
 	// internally handled dummy nodes
 	// ------------------------------------------------------------------------
@@ -75,6 +90,21 @@ protected:
 	static std::string get_type_name(SymbolType ty);
 
 	/**
+	 * get the element type for an array type
+	 */
+	static SymbolType get_element_type(SymbolType ty);
+
+	/**
+	 * get the (static) byte size of a symbol
+	 */
+	static std::size_t get_bytesize(t_astret sym);
+
+	/**
+	 * get the dimensions of an array type
+	 */
+	static std::size_t get_arraydim(t_astret sym);
+
+	/**
 	 * find the symbol with a specific name in the symbol table
 	 */
 	t_astret get_sym(const std::string& name) const;
@@ -84,6 +114,17 @@ protected:
 	 */
 	t_astret convert_sym(t_astret sym, SymbolType ty_to);
 
+	/**
+	 * check if two symbols can be converted to one another
+	 */
+	static bool check_sym_compat(
+		SymbolType ty1, std::size_t dim1_1, std::size_t dim1_2,
+		SymbolType ty2, std::size_t dim2_1, std::size_t dim2_2);
+
+	/**
+	 * limits the array index to the [0, size[ range
+	 */
+	t_astret safe_array_index(t_astret idx, std::size_t size);
 
 	/**
 	 * generates if-then-else code
@@ -91,19 +132,26 @@ protected:
 	template<class t_funcCond, class t_funcBody, class t_funcElseBody>
 	void generate_cond(t_funcCond funcCond, t_funcBody funcBody, t_funcElseBody funcElseBody, bool hasElse=0);
 
-
 	/**
 	 * generates loop code
 	 */
 	template<class t_funcCond, class t_funcBody>
 	void generate_loop(t_funcCond funcCond, t_funcBody funcBody);
 
-
 	/**
 	 * generates loop code with managed counter
 	 */
 	template<class t_funcBody>
 	void generate_loop(std::int64_t start, std::int64_t end, t_funcBody funcBody);
+
+
+	t_astret cp_comp_mem(t_astret sym, t_astret mem);
+	t_astret cp_vec_mem(t_astret sym, t_astret mem=nullptr);
+	t_astret cp_str_mem(t_astret sym, t_astret mem=nullptr);
+
+	t_astret cp_mem_comp(t_astret mem, t_astret sym);
+	t_astret cp_mem_vec(t_astret mem, t_astret sym, bool alloc_sym=true);
+	t_astret cp_mem_str(t_astret mem, t_astret sym, bool alloc_sym=true);
 
 
 private:
@@ -118,6 +166,9 @@ private:
 
 	// helper functions to reduce code redundancy
 	t_astret scalar_matrix_prod(t_astret scalar, t_astret matrix, bool mul_or_div=1);
+
+	// stack only needed for (future) nested functions
+	std::stack<const ASTFunc*> m_funcstack;
 };
 
 
