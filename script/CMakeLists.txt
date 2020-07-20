@@ -22,7 +22,7 @@ add_definitions(${Boost_CXX_FLAGS})
 
 include_directories(
 	"${PROJECT_SOURCE_DIR}"
-	"${PROJECT_SOURCE_DIR}/src"
+	"${PROJECT_SOURCE_DIR}/src" "${PROJECT_SOURCE_DIR}/libs"
 	"${PROJECT_SOURCE_DIR}/.."
 	"${FLEX_INCLUDE_DIRS}" "${Boost_INCLUDE_DIRS}" "${Boost_INCLUDE_DIRS}/.."
 	"${CMAKE_CURRENT_BINARY_DIR}"
@@ -68,5 +68,5 @@ target_link_libraries(mcalc ${Boost_LIBRARIES})
 
 
 # build runtime
-execute_process(COMMAND clang -O2 -S -emit-llvm -o runtime_opt.asm "${PROJECT_SOURCE_DIR}/src/runtime.cpp")
-execute_process(COMMAND clang -S -emit-llvm -o runtime.asm "${PROJECT_SOURCE_DIR}/src/runtime.cpp")
+execute_process(COMMAND clang -std=c++20 -I "${PROJECT_SOURCE_DIR}/libs" -O2 -S -emit-llvm -o runtime_opt.asm "${PROJECT_SOURCE_DIR}/src/runtime.cpp")
+execute_process(COMMAND clang -std=c++20 -I "${PROJECT_SOURCE_DIR}/libs" -S -emit-llvm -o runtime.asm "${PROJECT_SOURCE_DIR}/src/runtime.cpp")

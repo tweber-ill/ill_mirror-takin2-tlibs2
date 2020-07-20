@@ -74,8 +74,8 @@ int main(int argc, char** argv)
 		std::string tool_bclink = "llvm-link";
 		std::string tool_interp = "lli";
 		std::string tool_s = "llc";
-		std::string tool_o = "clang";
-		std::string tool_exec = "clang";
+		std::string tool_o = "clang++";
+		std::string tool_exec = "clang++";
 		std::string tool_strip = "llvm-strip";
 
 
@@ -538,7 +538,7 @@ define i32 @main()
 				outprog_o, "\" -> \"", outprog, "\"...");
 
 			std::string opt_flag_exec = optimise ? "-O2" : "";
-			std::string cmd_exec = tool_exec + " " + opt_flag_exec + " -o " + outprog + " " + outprog_o + " -lm -lc";
+			std::string cmd_exec = tool_exec + " " + opt_flag_exec + " -o " + outprog + " " + outprog_o;
 			if(std::system(cmd_exec.c_str()) != 0)
 			{
 				tl2::log_err("Failed.");

@@ -1224,7 +1224,13 @@ public:
 	vec() = default;
 	~vec() = default;
 
-	vec(std::size_t SIZE) : t_cont<T>(SIZE) {}
+	vec(std::size_t SIZE, const T* arr = nullptr)
+		: t_cont<T>(SIZE), m_size{SIZE}
+	{
+		if(arr)
+			from_array(arr);
+	}
+
 	vec(const std::initializer_list<T>& lst) : t_cont<T>(lst.size())
 	{
 		for(auto iterLst=lst.begin(); iterLst!=lst.end(); std::advance(iterLst, 1))
@@ -1234,6 +1240,19 @@ public:
 	const value_type& operator()(std::size_t i) const { return this->operator[](i); }
 	value_type& operator()(std::size_t i) { return this->operator[](i); }
 
+	void from_array(const T* arr)
+	{
+		// initialise from given array data
+		for(std::size_t i=0; i<m_size; ++i)
+			this->operator[](i) = arr[i];
+	}
+
+	void to_array(T* arr) const
+	{
+		// write elements to array
+		for(std::size_t i=0; i<m_size; ++i)
+			arr[i] = this->operator[](i);
+	}
 
 	friend vec operator+(const vec& vec1, const vec& vec2) { return tl2_ops::operator+(vec1, vec2); }
 	friend vec operator-(const vec& vec1, const vec& vec2) { return tl2_ops::operator-(vec1, vec2); }
@@ -1251,6 +1270,7 @@ public:
 	vec& operator/=(value_type d) { return tl2_ops::operator/=(*this, d); }
 
 private:
+	std::size_t m_size = 0;
 };
 
 
@@ -1265,13 +1285,33 @@ public:
 	mat() = default;
 	~mat() = default;
 
-	mat(std::size_t ROWS, std::size_t COLS) : m_data(ROWS*COLS), m_rowsize{ROWS}, m_colsize{COLS} {}
+	mat(std::size_t ROWS, std::size_t COLS, const T* arr = nullptr)
+		: m_data(ROWS*COLS), m_rowsize{ROWS}, m_colsize{COLS}
+	{
+		if(arr)
+			from_array(arr);
+	}
 
 	std::size_t size1() const { return m_rowsize; }
 	std::size_t size2() const { return m_colsize; }
 	const T& operator()(std::size_t row, std::size_t col) const { return m_data[row*m_colsize + col]; }
 	T& operator()(std::size_t row, std::size_t col) { return m_data[row*m_colsize + col]; }
 
+	void from_array(const T* arr)
+	{
+		// initialise from given array data
+		for(std::size_t i=0; i<m_rowsize; ++i)
+			for(std::size_t j=0; j<m_colsize; ++j)
+				this->operator()(i,j) = arr[i*m_colsize + j];
+	}
+
+	void to_array(T* arr) const
+	{
+		// write elements to array
+		for(std::size_t i=0; i<m_rowsize; ++i)
+			for(std::size_t j=0; j<m_colsize; ++j)
+				arr[i*m_colsize + j] = this->operator()(i,j);
+	}
 
 	friend mat operator+(const mat& mat1, const mat& mat2) { return tl2_ops::operator+(mat1, mat2); }
 	friend mat operator-(const mat& mat1, const mat& mat2) { return tl2_ops::operator-(mat1, mat2); }
@@ -1294,7 +1334,8 @@ public:
 
 private:
 	container_type m_data;
-	std::size_t m_rowsize, m_colsize;
+	std::size_t m_rowsize = 0;
+	std::size_t m_colsize = 0;
 };
 
 // ----------------------------------------------------------------------------
@@ -5491,6 +5532,31 @@ requires is_mat<t_mat>
 	matInv = matInv / fullDet;
 	return std::make_tuple(matInv, true);
 #endif
+}
+
+
+/**
+ * matrix power
+ */
+template<class t_mat>
+std::tuple<t_mat, bool> pow(const t_mat& mat, int ipow)
+requires is_mat<t_mat>
+{
+	t_mat themat;
+	if(mat.size1() != mat.size2())
+		return std::make_tuple(themat, false);
+
+	bool ok = true;
+	int ipow_pos = ipow<0 ? -ipow : ipow;
+
+	themat = unit<t_mat>(mat.size1());
+	for(int i=0; i<ipow_pos; ++i)
+		themat = themat*mat;
+
+	if(ipow < 0)
+		std::tie(themat, ok) = tl2::inv<t_mat>(themat);
+
+	return std::make_tuple(themat, ok);
 }
 
 
