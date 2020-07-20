@@ -119,4 +119,18 @@ void ext_transpose(const t_real* M, t_real* T, t_int rows, t_int cols)
 	}
 }
 
+
+/**
+ * qr decomposition
+ */
+t_int ext_qr(const t_real* M, t_real* Q, t_real* R, t_int cols, t_int rows)
+{
+	t_mat mat(cols, rows, M);
+	auto [ok, matQ, matR] = tl2::qr<t_mat, t_vec>(mat);
+	matQ.to_array(Q);
+	matR.to_array(R);
+
+	return ok==true;
+}
+
 }
