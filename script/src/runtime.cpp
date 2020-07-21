@@ -124,9 +124,9 @@ void ext_transpose(const t_real* M, t_real* T, t_int rows, t_int cols)
 /**
  * qr decomposition
  */
-t_byte* qr(const t_real* M, t_int cols, t_int rows)
+t_byte* qr(const t_real* M, t_int rows, t_int cols)
 {
-	t_mat mat(cols, rows, M);
+	t_mat mat(rows, cols, M);
 	auto [ok, matQ, matR] = tl2::qr<t_mat, t_vec>(mat);
 
 	t_real* mem = reinterpret_cast<t_real*>(calloc(matQ.size1()*matQ.size2() + matR.size1()*matR.size2(), sizeof(t_real)));
