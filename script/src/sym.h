@@ -54,7 +54,8 @@ struct Symbol
 	std::vector<SymbolPtr> elems{};
 
 	bool tmp = false;		// temporary or declared variable?
-	bool on_heap = false;	// heap or stack variable?
+	bool on_heap = false;		// heap or stack variable?
+	bool is_external = false;
 
 	mutable std::size_t refcnt = 0;	// number of reference to this symbol
 
@@ -93,7 +94,8 @@ public:
 	{
 		Symbol sym{.name = name, .scoped_name = scope+name,
 			.ty = ty, .dims = dims, .elems = {},
-			.tmp = is_temp, .on_heap = on_heap, .refcnt = 0};
+			.tmp = is_temp, .on_heap = on_heap, .is_external = false,
+			.refcnt = 0};
 		auto pair = m_syms.insert_or_assign(scope+name, sym);
 		return &pair.first->second;
 	}
@@ -103,11 +105,13 @@ public:
 		const std::string& name, SymbolType retty,
 		const std::vector<SymbolType>& argtypes,
 		const std::array<std::size_t, 2>* retdims = nullptr,
-		const std::vector<SymbolType>* multirettypes = nullptr)
+		const std::vector<SymbolType>* multirettypes = nullptr,
+		bool externalfunc = false)
 	{
 		Symbol sym{.name = name, .scoped_name = scope+name,
 			.ty = SymbolType::FUNC,
-			.argty = argtypes, .retty = retty, .refcnt = 0};
+			.argty = argtypes, .retty = retty,
+			.is_external = externalfunc, .refcnt = 0};
 		if(retdims)
 			sym.retdims = *retdims;
 		if(multirettypes)

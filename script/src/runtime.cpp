@@ -17,6 +17,7 @@
 
 using t_real =  double;
 using t_int = int64_t;
+using t_byte = int8_t;
 
 using t_vec = tl2::vec<t_real, std::vector>;
 using t_mat = tl2::mat<t_real, std::vector>;
@@ -123,14 +124,16 @@ void ext_transpose(const t_real* M, t_real* T, t_int rows, t_int cols)
 /**
  * qr decomposition
  */
-t_int ext_qr(const t_real* M, t_real* Q, t_real* R, t_int cols, t_int rows)
+t_byte* qr(const t_real* M, t_int cols, t_int rows)
 {
 	t_mat mat(cols, rows, M);
 	auto [ok, matQ, matR] = tl2::qr<t_mat, t_vec>(mat);
-	matQ.to_array(Q);
-	matR.to_array(R);
 
-	return ok==true;
+	t_real* mem = reinterpret_cast<t_real*>(calloc(matQ.size1()*matQ.size2() + matR.size1()*matR.size2(), sizeof(t_real)));
+	matQ.to_array(mem);
+	matR.to_array(mem + matQ.size1()*matQ.size2());
+
+	return reinterpret_cast<t_byte*>(mem);
 }
 
 }

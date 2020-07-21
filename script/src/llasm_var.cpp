@@ -278,12 +278,12 @@ t_astret LLAsm::visit(const ASTNumConst<double>* ast)
 	double val = ast->GetVal();
 
 	t_astret retvar = get_tmp_var(SymbolType::SCALAR);
-	t_astret retvar2 = get_tmp_var(SymbolType::SCALAR);
+	t_astret retval = get_tmp_var(SymbolType::SCALAR);
 	(*m_ostr) << "%" << retvar->name << " = alloca double\n";
 	(*m_ostr) << "store double " << std::scientific << val << ", double* %" << retvar->name << "\n";
-	(*m_ostr) << "%" << retvar2->name << " = load double, double* %" << retvar->name << "\n";
+	(*m_ostr) << "%" << retval->name << " = load double, double* %" << retvar->name << "\n";
 
-	return retvar2;
+	return retval;
 }
 
 
@@ -292,12 +292,12 @@ t_astret LLAsm::visit(const ASTNumConst<std::int64_t>* ast)
 	std::int64_t val = ast->GetVal();
 
 	t_astret retvar = get_tmp_var(SymbolType::INT);
-	t_astret retvar2 = get_tmp_var(SymbolType::INT);
+	t_astret retval = get_tmp_var(SymbolType::INT);
 	(*m_ostr) << "%" << retvar->name << " = alloca i64\n";
 	(*m_ostr) << "store i64 " << val << ", i64* %" << retvar->name << "\n";
-	(*m_ostr) << "%" << retvar2->name << " = load i64, i64* %" << retvar->name << "\n";
+	(*m_ostr) << "%" << retval->name << " = load i64, i64* %" << retvar->name << "\n";
 
-	return retvar2;
+	return retval;
 }
 
 
