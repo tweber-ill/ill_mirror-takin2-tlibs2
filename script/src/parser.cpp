@@ -168,10 +168,33 @@ int main(int argc, char** argv)
 
 		// register runtime functions
 		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "pow", SymbolType::SCALAR, {SymbolType::SCALAR, SymbolType::SCALAR}, nullptr, nullptr, true);
+		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "sqrt", SymbolType::SCALAR, {SymbolType::SCALAR}, nullptr, nullptr, true);
+		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "cbrt", SymbolType::SCALAR, {SymbolType::SCALAR}, nullptr, nullptr, true);
+		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "exp", SymbolType::SCALAR, {SymbolType::SCALAR}, nullptr, nullptr, true);
+		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "exp2", SymbolType::SCALAR, {SymbolType::SCALAR}, nullptr, nullptr, true);
+		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "exp10", SymbolType::SCALAR, {SymbolType::SCALAR}, nullptr, nullptr, true);
+		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "log", SymbolType::SCALAR, {SymbolType::SCALAR}, nullptr, nullptr, true);
+		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "log2", SymbolType::SCALAR, {SymbolType::SCALAR}, nullptr, nullptr, true);
+		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "log10", SymbolType::SCALAR, {SymbolType::SCALAR}, nullptr, nullptr, true);
+
 		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "sin", SymbolType::SCALAR, {SymbolType::SCALAR}, nullptr, nullptr, true);
 		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "cos", SymbolType::SCALAR, {SymbolType::SCALAR}, nullptr, nullptr, true);
-		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "sqrt", SymbolType::SCALAR, {SymbolType::SCALAR}, nullptr, nullptr, true);
-		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "exp", SymbolType::SCALAR, {SymbolType::SCALAR}, nullptr, nullptr, true);
+		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "tan", SymbolType::SCALAR, {SymbolType::SCALAR}, nullptr, nullptr, true);
+		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "asin", SymbolType::SCALAR, {SymbolType::SCALAR}, nullptr, nullptr, true);
+		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "acos", SymbolType::SCALAR, {SymbolType::SCALAR}, nullptr, nullptr, true);
+		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "atan", SymbolType::SCALAR, {SymbolType::SCALAR}, nullptr, nullptr, true);
+		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "atan2", SymbolType::SCALAR, {SymbolType::SCALAR, SymbolType::SCALAR}, nullptr, nullptr, true);
+
+		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "sinh", SymbolType::SCALAR, {SymbolType::SCALAR}, nullptr, nullptr, true);
+		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "cosh", SymbolType::SCALAR, {SymbolType::SCALAR}, nullptr, nullptr, true);
+		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "tanh", SymbolType::SCALAR, {SymbolType::SCALAR}, nullptr, nullptr, true);
+		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "asinh", SymbolType::SCALAR, {SymbolType::SCALAR}, nullptr, nullptr, true);
+		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "acosh", SymbolType::SCALAR, {SymbolType::SCALAR}, nullptr, nullptr, true);
+		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "atanh", SymbolType::SCALAR, {SymbolType::SCALAR}, nullptr, nullptr, true);
+
+		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "round", SymbolType::SCALAR, {SymbolType::SCALAR}, nullptr, nullptr, true);
+		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "ceil", SymbolType::SCALAR, {SymbolType::SCALAR}, nullptr, nullptr, true);
+		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "floor", SymbolType::SCALAR, {SymbolType::SCALAR}, nullptr, nullptr, true);
 		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "fabs", SymbolType::SCALAR, {SymbolType::SCALAR}, nullptr, nullptr, true);
 		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "labs", SymbolType::INT, {SymbolType::INT}, nullptr, nullptr, true);
 
@@ -249,12 +272,37 @@ int main(int argc, char** argv)
 		// additional runtime/startup code
 		(*ostr) << "\n" << R"START(
 ; -----------------------------------------------------------------------------
-; imported libc functions
+; imported libc and libm functions
 declare double @pow(double, double)
+declare double @sqrt(double)
+declare double @cbrt(double)
+declare double @exp(double)
+declare double @exp2(double)
+declare double @exp10(double)
+declare double @log(double)
+declare double @log2(double)
+declare double @log10(double)
+
 declare double @sin(double)
 declare double @cos(double)
-declare double @sqrt(double)
-declare double @exp(double)
+declare double @tan(double)
+
+declare double @asin(double)
+declare double @acos(double)
+declare double @atan(double)
+declare double @atan2(double, double)
+
+declare double @sinh(double)
+declare double @cosh(double)
+declare double @tanh(double)
+
+declare double @asinh(double)
+declare double @acosh(double)
+declare double @atanh(double)
+
+declare double @round(double)
+declare double @ceil(double)
+declare double @floor(double)
 declare double @fabs(double)
 declare i64 @labs(i64)
 
@@ -262,10 +310,12 @@ declare i64 @strlen(i8*)
 declare i8* @strncpy(i8*, i8*, i64)
 declare i8* @strncat(i8*, i8*, i64)
 declare i32 @strncmp(i8*, i8*, i64)
+
 declare i32 @puts(i8*)
 declare i32 @snprintf(i8*, i64, i8*, ...)
 declare i32 @printf(i8*, ...)
 declare i32 @scanf(i8*, ...)
+
 declare i8* @memcpy(i8*, i8*, i64)
 declare i8* @malloc(i64)
 declare i8* @calloc(i64, i64)
