@@ -83,7 +83,6 @@ int main(int argc, char** argv)
 		// get program arguments
 		// --------------------------------------------------------------------
 		std::vector<std::string> vecProgs;
-		bool interpret = false;
 		bool optimise = false;
 		bool show_symbols = false;
 		bool show_ast = false;
@@ -93,7 +92,6 @@ int main(int argc, char** argv)
 		arg_descr.add_options()
 			("out,o", args::value(&outprog), "compiled program output")
 			("optimise,O", args::bool_switch(&optimise), "optimise program")
-			("interpret,i", args::bool_switch(&interpret), "directly run program in interpreter")
 			("symbols,s", args::bool_switch(&show_symbols), "output symbol table")
 			("ast,a", args::bool_switch(&show_ast), "output syntax tree")
 			("program", args::value<decltype(vecProgs)>(&vecProgs), "input program to compile");
@@ -106,7 +104,6 @@ int main(int argc, char** argv)
 			("tool_opt", args::value(&tool_opt), "llvm optimiser")
 			("tool_bc", args::value(&tool_bc), "llvm bitcode assembler")
 			("tool_bclink", args::value(&tool_bclink), "llvm bitcode linker")
-			("tool_interp", args::value(&tool_interp), "llvm bitcode interpreter")
 			("tool_bccomp", args::value(&tool_s), "llvm bitcode compiler")
 			("tool_asm", args::value(&tool_o), "native assembler")
 			("tool_link", args::value(&tool_exec), "native linker")
@@ -550,68 +547,62 @@ define i32 @main()
 		// --------------------------------------------------------------------
 
 
-		// interpret bitcode
-		if(interpret)
-		{
-			tl2::log_info("Interpreting bitcode \"", outprog_linkedbc, "\"...");
 
-			std::string cmd_interp = tool_interp + " " + outprog_linkedbc;
-			if(std::system(cmd_interp.c_str()) != 0)
-			{
-				tl2::log_err("Failed.");
-				return -1;
-			}
+		// --------------------------------------------------------------------
+		// Native compilation
+		// --------------------------------------------------------------------
+		tl2::log_info("Generating native assembly \"",
+			outprog_linkedbc, "\" -> \"", outprog_s, "\"...");
+
+		std::string opt_flag_s = optimise ? "-O2" : "";
+		std::string cmd_s = tool_s + " " + opt_flag_s + " -o " + outprog_s + " " + outprog_linkedbc;
+		if(std::system(cmd_s.c_str()) != 0)
+		{
+			tl2::log_err("Failed.");
+			return -1;
 		}
 
-		// compile bitcode
-		else
+
+		tl2::log_info("Assembling native code \"", outprog_s, "\" -> \"", outprog_o, "\"...");
+
+		std::string opt_flag_o = optimise ? "-O2" : "";
+		std::string cmd_o = tool_o + " " + opt_flag_o + " -c -o " + outprog_o + " " + outprog_s;
+		if(std::system(cmd_o.c_str()) != 0)
 		{
-			tl2::log_info("Generating native assembly \"",
-				outprog_linkedbc, "\" -> \"", outprog_s, "\"...");
+			tl2::log_err("Failed.");
+			return -1;
+		}
+		// --------------------------------------------------------------------
 
-			std::string opt_flag_s = optimise ? "-O2" : "";
-			std::string cmd_s = tool_s + " " + opt_flag_s + " -o " + outprog_s + " " + outprog_linkedbc;
-			if(std::system(cmd_s.c_str()) != 0)
+
+
+		// --------------------------------------------------------------------
+		// Linking
+		// --------------------------------------------------------------------
+		tl2::log_info("Generating native executable \"",
+			outprog_o, "\" -> \"", outprog, "\"...");
+
+		std::string opt_flag_exec = optimise ? "-O2" : "";
+		std::string exec_libs = "-llapacke";
+		std::string cmd_exec = tool_exec + " " + opt_flag_exec + " -o " + outprog + " " + outprog_o + " " + exec_libs;
+		if(std::system(cmd_exec.c_str()) != 0)
+		{
+			tl2::log_err("Failed.");
+			return -1;
+		}
+		// --------------------------------------------------------------------
+
+
+
+		if(optimise)
+		{
+			tl2::log_info("Stripping debug symbols from \"", outprog, "\"...");
+
+			std::string cmd_strip = tool_strip + " " + outprog;
+			if(std::system(cmd_strip.c_str()) != 0)
 			{
 				tl2::log_err("Failed.");
 				return -1;
-			}
-
-
-			tl2::log_info("Assembling native code \"", outprog_s, "\" -> \"", outprog_o, "\"...");
-
-			std::string opt_flag_o = optimise ? "-O2" : "";
-			std::string cmd_o = tool_o + " " + opt_flag_o + " -c -o " + outprog_o + " " + outprog_s;
-			if(std::system(cmd_o.c_str()) != 0)
-			{
-				tl2::log_err("Failed.");
-				return -1;
-			}
-
-
-			tl2::log_info("Generating native executable \"",
-				outprog_o, "\" -> \"", outprog, "\"...");
-
-			std::string opt_flag_exec = optimise ? "-O2" : "";
-			std::string exec_libs = "-llapacke";
-			std::string cmd_exec = tool_exec + " " + opt_flag_exec + " -o " + outprog + " " + outprog_o + " " + exec_libs;
-			if(std::system(cmd_exec.c_str()) != 0)
-			{
-				tl2::log_err("Failed.");
-				return -1;
-			}
-
-
-			if(optimise)
-			{
-				tl2::log_info("Stripping debug symbols from \"", outprog, "\"...");
-
-				std::string cmd_strip = tool_strip + " " + outprog;
-				if(std::system(cmd_strip.c_str()) != 0)
-				{
-					tl2::log_err("Failed.");
-					return -1;
-				}
 			}
 		}
 	}
