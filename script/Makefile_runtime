@@ -1,0 +1,44 @@
+#
+# creates the llvm intermediary code for the runtime library
+# @author Tobias Weber <tweber@ill.fr>
+# @date 23-jul-2020
+# @license: see 'LICENSE' file
+# @desc Forked on 18/July/2020 from my privatly developed "matrix_calc" project (https://github.com/t-weber/matrix_calc).
+#
+
+use_lapacke = 1
+
+
+CLANG = clang++
+
+
+DEFS = -std=c++20
+INCS = -Ilibs
+
+ifeq ($(use_lapacke), 1)
+	DEFS += -DUSE_LAPACK
+	INCS += -I/usr/include/lapacke
+endif
+
+
+# -----------------------------------------------------------------------------
+.PHONY: all clean
+
+all: build/runtime.asm build/runtime_opt.asm
+
+clean:
+	rm -rf build
+# -----------------------------------------------------------------------------
+
+
+
+# debug version
+build/runtime.asm: src/runtime.cpp
+	mkdir -p build
+	$(CLANG) $(DEFS) $(INCS) -S -emit-llvm -o $@ $+
+
+
+# optimised version
+build/runtime_opt.asm: src/runtime.cpp
+	mkdir -p build
+	$(CLANG) -O2 $(DEFS) $(INCS) -S -emit-llvm -o $@ $+

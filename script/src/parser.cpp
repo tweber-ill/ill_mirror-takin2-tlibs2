@@ -593,7 +593,8 @@ define i32 @main()
 				outprog_o, "\" -> \"", outprog, "\"...");
 
 			std::string opt_flag_exec = optimise ? "-O2" : "";
-			std::string cmd_exec = tool_exec + " " + opt_flag_exec + " -o " + outprog + " " + outprog_o;
+			std::string exec_libs = "-llapacke";
+			std::string cmd_exec = tool_exec + " " + opt_flag_exec + " -o " + outprog + " " + outprog_o + " " + exec_libs;
 			if(std::system(cmd_exec.c_str()) != 0)
 			{
 				tl2::log_err("Failed.");

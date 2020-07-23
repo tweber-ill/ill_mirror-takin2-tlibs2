@@ -20,6 +20,7 @@ add_definitions(-Wall -Wextra)
 add_definitions(-std=c++17)
 add_definitions(${Boost_CXX_FLAGS})
 
+
 include_directories(
 	"${PROJECT_SOURCE_DIR}"
 	"${PROJECT_SOURCE_DIR}/src" "${PROJECT_SOURCE_DIR}/libs"
@@ -64,9 +65,3 @@ add_executable(mcalc
 
 #add_dependencies(parser parser_impl lexer_impl)
 target_link_libraries(mcalc ${Boost_LIBRARIES})
-
-
-
-# build runtime
-execute_process(COMMAND clang -std=c++20 -I "${PROJECT_SOURCE_DIR}/libs" -O2 -S -emit-llvm -o runtime_opt.asm "${PROJECT_SOURCE_DIR}/src/runtime.cpp")
-execute_process(COMMAND clang -std=c++20 -I "${PROJECT_SOURCE_DIR}/libs" -S -emit-llvm -o runtime.asm "${PROJECT_SOURCE_DIR}/src/runtime.cpp")
