@@ -137,6 +137,12 @@ public:
 	}
 
 
+    const std::unordered_map<std::string, Symbol>& GetSymbols() const
+    {
+            return m_syms;
+    }
+
+
 	friend std::ostream& operator<<(std::ostream& ostr, const SymTab& tab)
 	{
 		ostr << std::left << std::setw(32) << "full name"

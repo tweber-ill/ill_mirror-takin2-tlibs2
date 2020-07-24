@@ -147,6 +147,49 @@ SymbolType LLAsm::get_element_type(SymbolType ty)
 
 
 /**
+ * output declarations for registered functions
+ */
+std::string LLAsm::get_function_declarations(const SymTab& symtab, bool only_externals)
+{
+	std::ostringstream ostr;
+
+	for(const auto& _sym : symtab.GetSymbols())
+	{
+		const Symbol& sym = std::get<1>(_sym);
+
+		if(sym.ty != SymbolType::FUNC)
+			continue;
+
+		// consider only external runtime functions
+		if(only_externals && !sym.is_external)
+			continue;
+
+		ostr << "declare " << get_type_name(sym.retty)
+			<< " @" << sym.name << "(";
+
+		for(std::size_t arg=0; arg<sym.argty.size(); ++arg)
+		{
+ 			SymbolType ty = sym.argty[arg];
+			ostr << get_type_name(ty);
+
+			// add size arguments for array types
+			if(ty == SymbolType::VECTOR || ty == SymbolType::MATRIX)
+				ostr << ", i64";	// first dim
+			if(ty == SymbolType::MATRIX)
+				ostr << ", i64";	// second dim
+
+			if(arg < sym.argty.size()-1)
+				ostr << ", ";
+		}
+
+		ostr << ")\n";
+	}
+
+	return ostr.str();
+}
+
+
+/**
  * get the (static) byte size of a symbol
  */
 std::size_t LLAsm::get_bytesize(t_astret sym)

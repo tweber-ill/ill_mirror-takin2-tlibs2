@@ -195,19 +195,19 @@ int main(int argc, char** argv)
 		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "fabs", SymbolType::SCALAR, {SymbolType::SCALAR}, nullptr, nullptr, true);
 		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "labs", SymbolType::INT, {SymbolType::INT}, nullptr, nullptr, true);
 
-		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "set_eps", SymbolType::VOID, {SymbolType::SCALAR}, nullptr, nullptr, true);
-		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "get_eps", SymbolType::SCALAR, {}, nullptr, nullptr, true);
+        ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "strlen", SymbolType::INT, {SymbolType::STRING}, nullptr, nullptr, true);
 
-		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "strlen", SymbolType::INT, {SymbolType::STRING}, nullptr, nullptr, true);
+		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "set_eps", SymbolType::VOID, {SymbolType::SCALAR}, nullptr, nullptr, false);
+		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "get_eps", SymbolType::SCALAR, {}, nullptr, nullptr, false);
 
-		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "putstr", SymbolType::VOID, {SymbolType::STRING}, nullptr, nullptr, true);
-		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "putflt", SymbolType::VOID, {SymbolType::SCALAR}, nullptr, nullptr, true);
-		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "putint", SymbolType::VOID, {SymbolType::INT}, nullptr, nullptr, true);
-		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "getflt", SymbolType::SCALAR, {SymbolType::STRING}, nullptr, nullptr, true);
-		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "getint", SymbolType::INT, {SymbolType::STRING}, nullptr, nullptr, true);
+		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "putstr", SymbolType::VOID, {SymbolType::STRING}, nullptr, nullptr, false);
+		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "putflt", SymbolType::VOID, {SymbolType::SCALAR}, nullptr, nullptr, false);
+		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "putint", SymbolType::VOID, {SymbolType::INT}, nullptr, nullptr, false);
+		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "getflt", SymbolType::SCALAR, {SymbolType::STRING}, nullptr, nullptr, false);
+		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "getint", SymbolType::INT, {SymbolType::STRING}, nullptr, nullptr, false);
 
-		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "flt_to_str", SymbolType::VOID, {SymbolType::SCALAR, SymbolType::STRING, SymbolType::INT}, nullptr, nullptr, true);
-		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "int_to_str", SymbolType::VOID, {SymbolType::INT, SymbolType::STRING, SymbolType::INT}, nullptr, nullptr, true);
+		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "flt_to_str", SymbolType::VOID, {SymbolType::SCALAR, SymbolType::STRING, SymbolType::INT}, nullptr, nullptr, false);
+		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "int_to_str", SymbolType::VOID, {SymbolType::INT, SymbolType::STRING, SymbolType::INT}, nullptr, nullptr, false);
 
 		std::vector<SymbolType> qr_rettypes{{ SymbolType::MATRIX, SymbolType::MATRIX }};
 		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "qr", SymbolType::COMP, {SymbolType::MATRIX}, nullptr, &qr_rettypes, true);
@@ -266,44 +266,16 @@ int main(int argc, char** argv)
 		}
 
 
+		(*ostr) << "; -----------------------------------------------------------------------------\n";
+		(*ostr) << "; imported external functions\n";
+		(*ostr) << LLAsm::get_function_declarations(ctx.GetSymbols()) << std::endl;
+		(*ostr) << "; -----------------------------------------------------------------------------\n";
+
+
 		// additional runtime/startup code
 		(*ostr) << "\n" << R"START(
 ; -----------------------------------------------------------------------------
-; imported libc and libm functions
-declare double @pow(double, double)
-declare double @sqrt(double)
-declare double @cbrt(double)
-declare double @exp(double)
-declare double @exp2(double)
-declare double @exp10(double)
-declare double @log(double)
-declare double @log2(double)
-declare double @log10(double)
-
-declare double @sin(double)
-declare double @cos(double)
-declare double @tan(double)
-
-declare double @asin(double)
-declare double @acos(double)
-declare double @atan(double)
-declare double @atan2(double, double)
-
-declare double @sinh(double)
-declare double @cosh(double)
-declare double @tanh(double)
-
-declare double @asinh(double)
-declare double @acosh(double)
-declare double @atanh(double)
-
-declare double @round(double)
-declare double @ceil(double)
-declare double @floor(double)
-declare double @fabs(double)
-declare i64 @labs(i64)
-
-declare i64 @strlen(i8*)
+; further imported external functions
 declare i8* @strncpy(i8*, i8*, i64)
 declare i8* @strncat(i8*, i8*, i64)
 declare i32 @strncmp(i8*, i8*, i64)
@@ -321,15 +293,13 @@ declare void @free(i8*)
 
 
 ; -----------------------------------------------------------------------------
-; external runtime functions from runtime.c
+; functions from runtime.cpp
 declare void @ext_set_eps(double)
 declare double @ext_get_eps()
 
 declare double @ext_determinant(double*, i64)
 declare i64 @ext_power(double*, double*, i64, i64)
 declare i64 @ext_transpose(double*, double*, i64, i64)
-
-declare i8* @qr(double*, i64, i64)
 ; -----------------------------------------------------------------------------
 
 
