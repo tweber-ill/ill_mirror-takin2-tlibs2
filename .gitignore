@@ -52,3 +52,6 @@ tests/py/__pycache__/**
 *.asm
 *.s
 *.bc
+
+ext/**
+

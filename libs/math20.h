@@ -1487,7 +1487,7 @@ t_cont<t_obj> remove_duplicates(const t_cont<t_obj>& objs,
 	for(const auto& elem : objs)
 	{
 		// find obj in container
-		auto iter = std::find_if(newobjs.cbegin(), newobjs.cend(), 
+		auto iter = std::find_if(newobjs.cbegin(), newobjs.cend(),
 		[&elem, eps](const t_obj& elem2) -> bool
 		{
 			return tl2::equals<t_obj>(elem, elem2, eps);
@@ -1659,6 +1659,7 @@ requires is_basic_vec<t_vec>
 	return equals<t_vec>(vec, zero<t_vec>(vec.size()), eps);
 }
 
+
 /**
  * tests for zero matrix
  */
@@ -1668,6 +1669,41 @@ bool equals_0(const t_mat& mat,
 requires is_mat<t_mat>
 {
 	return equals<t_mat>(mat, zero<t_mat>(mat.size1(), mat.size2()), eps);
+}
+
+
+/**
+ * tests for symmetric or hermitian matrix
+ */
+template<class t_mat>
+bool is_symm_or_herm(const t_mat& mat,
+	typename t_mat::value_type eps = std::numeric_limits<typename t_mat::value_type>::epsilon())
+requires is_mat<t_mat>
+{
+	using t_elem = typename t_mat::value_type;
+	if(mat.size1() != mat.size2())
+		return false;
+
+	for(std::size_t i=0; i<mat.size1(); ++i)
+	{
+		for(std::size_t j=i+1; j<mat.size2(); ++j)
+		{
+			if constexpr(is_complex<t_elem>)
+			{
+				// not hermitian?
+				if(!equals<t_elem>(mat(i,j), std::conj(mat(j,i)), eps))
+					return false;
+			}
+			else
+			{
+				// not symmetric?
+				if(!equals<t_elem>(mat(i,j), mat(j,i), eps))
+					return false;
+			}
+		}
+	}
+
+	return true;
 }
 
 
@@ -3834,8 +3870,8 @@ requires is_vec<t_vec>
 
 	t_cont<t_cont<std::size_t>> faces =
 	{
-		{ 0, 16, 18, 4, 8 }, { 0, 8, 10, 2, 12 }, { 0, 12, 13, 1, 16 }, 
-		{ 1, 9, 5, 18, 16 }, { 1, 13, 3, 11, 9 }, { 2, 17, 3, 13, 12 }, 
+		{ 0, 16, 18, 4, 8 }, { 0, 8, 10, 2, 12 }, { 0, 12, 13, 1, 16 },
+		{ 1, 9, 5, 18, 16 }, { 1, 13, 3, 11, 9 }, { 2, 17, 3, 13, 12 },
 		{ 3, 17, 19, 7, 11 }, { 2, 10, 6, 19, 17 }, { 4, 14, 6, 10, 8 },
 		{ 4, 18, 5, 15, 14 }, { 5, 9, 11, 7, 15 }, { 6, 14, 15, 7, 19 },
 	};
@@ -5214,13 +5250,13 @@ eigenvec(const t_mat_cplx& mat, bool only_evals=false, bool is_hermitian=false, 
 		if constexpr(std::is_same_v<t_real, float>)
 		{
 			err = LAPACKE_cgeev(LAPACK_ROW_MAJOR, 'N', only_evals ? 'N' : 'V', N,
-				inmat.data(), N, outevals.data(), nullptr, N, 
+				inmat.data(), N, outevals.data(), nullptr, N,
 				only_evals ? nullptr : outevecs.data(), N);
 		}
 		else if constexpr(std::is_same_v<t_real, double>)
 		{
 			err = LAPACKE_zgeev(LAPACK_ROW_MAJOR, 'N', only_evals ? 'N' : 'V', N,
-				inmat.data(), N, outevals.data(), nullptr, N, 
+				inmat.data(), N, outevals.data(), nullptr, N,
 				only_evals ? nullptr : outevecs.data(), N);
 		}
 	}
@@ -5306,13 +5342,13 @@ eigenvec(const t_mat& mat, bool only_evals=false, bool is_symmetric=false, bool 
 		if constexpr(std::is_same_v<t_real, float>)
 		{
 			err = LAPACKE_sgeev(LAPACK_ROW_MAJOR, 'N', only_evals ? 'N' : 'V', N,
-				inmat.data(), N, outevals_re.data(), outevals_im.data(), nullptr, N, 
+				inmat.data(), N, outevals_re.data(), outevals_im.data(), nullptr, N,
 				only_evals ? nullptr : outevecs.data(), N);
 		}
 		else if constexpr(std::is_same_v<t_real, double>)
 		{
 			err = LAPACKE_dgeev(LAPACK_ROW_MAJOR, 'N', only_evals ? 'N' : 'V', N,
-				inmat.data(), N, outevals_re.data(), outevals_im.data(), nullptr, N, 
+				inmat.data(), N, outevals_re.data(), outevals_im.data(), nullptr, N,
 				only_evals ? nullptr : outevecs.data(), N);
 		}
 	}

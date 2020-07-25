@@ -11,13 +11,12 @@ use_lapacke = 1
 
 CLANG = clang++
 
-
 DEFS = -std=c++20
 INCS = -Ilibs
 
 ifeq ($(use_lapacke), 1)
 	DEFS += -DUSE_LAPACK
-	INCS += -I/usr/include/lapacke
+	INCS += -Iext/lapacke/include -I/usr/include/lapacke
 endif
 
 
@@ -34,11 +33,12 @@ clean:
 
 # debug version
 build/runtime.asm: src/runtime.cpp
-	mkdir -p build
+	if [ ! -d build ]; then mkdir -p build && ln -sf ../ext build/ext; fi
 	$(CLANG) $(DEFS) $(INCS) -S -emit-llvm -o $@ $+
+
 
 
 # optimised version
 build/runtime_opt.asm: src/runtime.cpp
-	mkdir -p build
+	if [ ! -d build ]; then mkdir -p build && ln -sf ../ext build/ext; fi
 	$(CLANG) -O2 $(DEFS) $(INCS) -S -emit-llvm -o $@ $+

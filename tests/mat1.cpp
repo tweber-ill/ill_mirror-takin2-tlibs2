@@ -5,7 +5,6 @@
  * @license GPLv3, see 'LICENSE' file
  *
  * g++ -std=c++20 -o mat1 mat1.cpp
- * g++ -std=c++20 -DUSE_LAPACK -I/usr/include/lapacke -I/usr/local/opt/lapack/include -L/usr/local/opt/lapack/lib -o leastsq leastsq.cpp -llapacke
  */
 
 #define BOOST_TEST_MODULE Mat1

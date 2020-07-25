@@ -195,7 +195,7 @@ int main(int argc, char** argv)
 		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "fabs", SymbolType::SCALAR, {SymbolType::SCALAR}, nullptr, nullptr, true);
 		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "labs", SymbolType::INT, {SymbolType::INT}, nullptr, nullptr, true);
 
-        ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "strlen", SymbolType::INT, {SymbolType::STRING}, nullptr, nullptr, true);
+		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "strlen", SymbolType::INT, {SymbolType::STRING}, nullptr, nullptr, true);
 
 		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "set_eps", SymbolType::VOID, {SymbolType::SCALAR}, nullptr, nullptr, false);
 		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "get_eps", SymbolType::SCALAR, {}, nullptr, nullptr, false);
@@ -211,6 +211,12 @@ int main(int argc, char** argv)
 
 		std::vector<SymbolType> qr_rettypes{{ SymbolType::MATRIX, SymbolType::MATRIX }};
 		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "qr", SymbolType::COMP, {SymbolType::MATRIX}, nullptr, &qr_rettypes, true);
+
+		std::vector<SymbolType> eigenvals_rettypes{{ SymbolType::VECTOR, SymbolType::VECTOR }};
+		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "eigenvals", SymbolType::COMP, {SymbolType::MATRIX}, nullptr, &eigenvals_rettypes, true);
+
+		std::vector<SymbolType> eigenvecs_rettypes{{ SymbolType::VECTOR, SymbolType::VECTOR, SymbolType::MATRIX, SymbolType::MATRIX }};
+		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "eigenvecs", SymbolType::COMP, {SymbolType::MATRIX}, nullptr, &eigenvecs_rettypes, true);
 
 
 		yy::Parser parser(ctx);
@@ -553,7 +559,7 @@ define i32 @main()
 			outprog_o, "\" -> \"", outprog, "\"...");
 
 		std::string opt_flag_exec = optimise ? "-O2" : "";
-		std::string exec_libs = "-llapacke";
+		std::string exec_libs = "-Lext/lapacke/lib -llapacke";
 		std::string cmd_exec = tool_exec + " " + opt_flag_exec + " -o " + outprog + " " + outprog_o + " " + exec_libs;
 		if(std::system(cmd_exec.c_str()) != 0)
 		{

@@ -19,8 +19,8 @@ func mat 3 3 B_matrix(scalar a, scalar b, scalar c, scalar alpha, scalar beta, s
 	scalar rr = sqrt(1. + 2.*ca*cb*cc - (ca*ca + cb*cb + cc*cc));
 
 	mat 3 3 B;
-	B[0,0] = 1./a;						B[0,1] = 0.;						B[0,2] = 0.;
-	B[1,0] = -1./a * cc/sc;				B[1,1] = 1./b * 1./sc;				B[1,2] = 0.;
+	B[0,0] = 1./a;				B[0,1] = 0.;				B[0,2] = 0.;
+	B[1,0] = -1./a * cc/sc;			B[1,1] = 1./b * 1./sc;			B[1,2] = 0.;
 	B[2,0] = (cc*ca - cb)/(a*sc*rr);	B[2,1] = (cb*cc-ca)/(b*sc*rr);		B[2,2] = sc/(c*rr);
 
 	B = B*(2*pi);
@@ -36,7 +36,7 @@ func mat 3 3 rotate_z(scalar phi)
 	mat 3 3 rot;
 	rot[0,0] = +cos_phi;	rot[0,1] = -sin_phi;	rot[0,2]=0;
 	rot[1,0] = +sin_phi;	rot[1,1] = +cos_phi;	rot[1,2]=0;
-	rot[2,0] = 0;			rot[2,1] = 0;			rot[2,2]=1;
+	rot[2,0] = 0;		rot[2,1] = 0;		rot[2,2]=1;
 
 	ret rot;
 }
@@ -110,4 +110,12 @@ func start()
 	# comparison
 	mat 3 3 B2 = B_matrix(a,b,c, alpha,beta,gamma);
 	putstr("B matrix: " + B2);
+
+#	vec 3 ev_re, ev_im;
+#	mat 3 3 evec_re, evec_im;
+#	assign ev_re, ev_im, evec_re, evec_im = eigenvecs(B2);
+#	putstr("eval_re: " + ev_re);
+#	putstr("eval_im: " + ev_im);
+#	putstr("evec_re: " + evec_re);
+#	putstr("evec_im: " + evec_im);
 }

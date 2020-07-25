@@ -122,6 +122,75 @@ void ext_transpose(const t_real* M, t_real* T, t_int rows, t_int cols)
 
 
 /**
+ * eigenvalues
+ */
+t_byte* eigenvals(const t_real* M, t_int rows, t_int cols)
+{
+	t_mat mat(rows, cols, M);
+	set_eps_0(mat, g_eps);
+	bool is_symm = tl2::is_symm_or_herm<t_mat>(mat, g_eps);
+
+	auto [ok, evals_re, evals_im, evecs_re, evecs_im] =
+		tl2_la::eigenvec<t_mat, t_vec, t_real>(mat, true, is_symm, true);
+
+	t_int N = rows;
+	t_real* mem = reinterpret_cast<t_real*>(calloc(2*N, sizeof(t_real)));
+
+	// store eigenvalues
+	for(t_int i=0; i<N; ++i)
+	{
+		mem[i] = evals_re[i];
+		mem[i + N] = evals_im[i];
+	}
+
+	return reinterpret_cast<t_byte*>(mem);
+}
+
+
+/**
+ * eigenvalues and -vectors
+ */
+t_byte* eigenvecs(const t_real* M, t_int rows, t_int cols)
+{
+	t_mat mat(rows, cols, M);
+	set_eps_0(mat, g_eps);
+
+	bool is_symm = tl2::is_symm_or_herm<t_mat>(mat, g_eps);
+	//is_symm = false;
+
+	//using namespace tl2_ops;
+	//std::cout << "mat = " << mat << std::endl;
+	auto [ok, evals_re, evals_im, evecs_re, evecs_im] =
+		tl2_la::eigenvec<t_mat, t_vec, t_real>(mat, false, is_symm, true);
+
+	t_int N = rows;
+	t_real* mem = reinterpret_cast<t_real*>(calloc(2*N + 2*N*N, sizeof(t_real)));
+
+	// store eigenvalues
+	for(t_int i=0; i<N; ++i)
+	{
+		mem[i] = evals_re[i];
+		mem[i + N] = evals_im[i];
+	}
+
+	// store eigenvectors
+	t_int memidx = 2*N;
+	for(t_int i=0; i<N; ++i)
+	{
+		for(t_int j=0; j<N; ++j)
+		{
+			mem[memidx] = evecs_re[i][j];
+			mem[memidx + N*N] = evecs_im[i][j];
+
+			++memidx;
+		}
+	}
+
+	return reinterpret_cast<t_byte*>(mem);
+}
+
+
+/**
  * qr decomposition
  */
 t_byte* qr(const t_real* M, t_int rows, t_int cols)
