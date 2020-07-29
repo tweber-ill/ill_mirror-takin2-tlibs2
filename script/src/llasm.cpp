@@ -585,7 +585,7 @@ t_astret LLAsm::cp_vec_mem(t_astret sym, t_astret mem)
 	if(!mem)
 	{
 		mem = get_tmp_var(sym->ty, &sym->dims, nullptr, true);
-		(*m_ostr) << "%" << mem->name << " = call i8* @calloc(i64 "
+		(*m_ostr) << "%" << mem->name << " = call i8* @ext_heap_alloc(i64 "
 			<< dim << ", i64 " << sizeof(double) << ")\n";
 	}
 
@@ -620,7 +620,7 @@ t_astret LLAsm::cp_str_mem(t_astret sym, t_astret mem)
 	if(!mem)
 	{
 		mem = get_tmp_var(SymbolType::STRING, &sym->dims, nullptr, true);
-		(*m_ostr) << "%" << mem->name << " = call i8* @calloc(i64 %"
+		(*m_ostr) << "%" << mem->name << " = call i8* @ext_heap_alloc(i64 %"
 			<< strretlen_z->name << ", i64 1" << ")\n";
 	}
 

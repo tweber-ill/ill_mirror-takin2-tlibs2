@@ -197,8 +197,9 @@ int main(int argc, char** argv)
 
 		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "strlen", SymbolType::INT, {SymbolType::STRING}, nullptr, nullptr, true);
 
-		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "set_eps", SymbolType::VOID, {SymbolType::SCALAR}, nullptr, nullptr, false);
-		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "get_eps", SymbolType::SCALAR, {}, nullptr, nullptr, false);
+		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "set_eps", SymbolType::VOID, {SymbolType::SCALAR}, nullptr, nullptr, true);
+		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "get_eps", SymbolType::SCALAR, {}, nullptr, nullptr, true);
+        ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "set_debug", SymbolType::VOID, {SymbolType::INT}, nullptr, nullptr, true);
 
 		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "putstr", SymbolType::VOID, {SymbolType::STRING}, nullptr, nullptr, false);
 		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "putflt", SymbolType::VOID, {SymbolType::SCALAR}, nullptr, nullptr, false);
@@ -292,17 +293,17 @@ declare i32 @printf(i8*, ...)
 declare i32 @scanf(i8*, ...)
 
 declare i8* @memcpy(i8*, i8*, i64)
-declare i8* @malloc(i64)
-declare i8* @calloc(i64, i64)
-declare void @free(i8*)
+
+declare i8* @ext_heap_alloc(i64, i64)
+declare void @ext_heap_free(i8*)
+
+declare void @ext_init()
+declare void @ext_deinit()
 ; -----------------------------------------------------------------------------
 
 
 ; -----------------------------------------------------------------------------
 ; functions from runtime.cpp
-declare void @ext_set_eps(double)
-declare double @ext_get_eps()
-
 declare double @ext_determinant(double*, i64)
 declare i64 @ext_power(double*, double*, i64, i64)
 declare i64 @ext_transpose(double*, double*, i64, i64)
@@ -323,20 +324,6 @@ declare i64 @ext_transpose(double*, double*, i64, i64)
 
 ; -----------------------------------------------------------------------------
 ; runtime functions
-
-; get the user epsilon
-define double @get_eps()
-{
-	%eps = call double @ext_get_eps()
-	ret double %eps
-}
-
-; set the user epsilon
-define void @set_eps(double %eps)
-{
-	call void (double) @ext_set_eps(double %eps)
-	ret void
-}
 
 ; returns 0 if flt <= eps
 define double @zero_eps(double %flt)
@@ -445,9 +432,12 @@ define i64 @getint(i8* %str)
 ; main entry point for llvm
 define i32 @main()
 {
+	call void @ext_init()
+    
 	; call entry function
 	call void @start()
 
+	call void @ext_deinit()
 	ret i32 0
 }
 ; -----------------------------------------------------------------------------

@@ -11,6 +11,7 @@
 #include <cstdint>
 #include <cfloat>
 #include <vector>
+#include <unordered_set>
 
 #include "math20.h"
 
@@ -23,14 +24,83 @@ using t_vec = tl2::vec<t_real, std::vector>;
 using t_mat = tl2::mat<t_real, std::vector>;
 
 static t_real g_eps = DBL_EPSILON;
+static int8_t g_debug = 0;
 
 
 extern "C" {
 
+// ----------------------------------------------------------------------------
+// heap management
+// ----------------------------------------------------------------------------
+static std::unordered_set<void*> heap;
+
+
+void* ext_heap_alloc(uint64_t num, uint64_t elemsize)
+{
+	void *mem = calloc(num, elemsize);
+	heap.insert(mem);
+
+	if(g_debug)
+	{
+		printf("%s: count=%ld, elem_size=%ld, mem=%08lx.\n",
+			__func__, num, elemsize, (uint64_t)mem);
+	}
+
+	return mem;
+}
+
+
+void ext_heap_free(void* mem)
+{
+	if(!mem)
+		return;
+
+	free(mem);
+	heap.erase(mem);
+
+	if(g_debug)
+		printf("%s: mem=%08lx.\n", __func__, (uint64_t)mem);
+}
+
+
+void ext_init()
+{
+	heap.clear();
+}
+
+
+void ext_deinit()
+{
+	if(g_debug)
+	{
+		printf("%s: %ld memory leaks detected.\n", __func__, heap.size());
+
+		auto iter = heap.begin();
+		for(std::size_t i=0; i<heap.size(); ++i)
+		{
+			printf("Leak %ld: mem=%08lx.\n", i, (uint64_t)*iter);
+			++iter;
+		}
+	}
+}
+
+
+void set_debug(t_int dbg)
+{
+	g_debug = (dbg!=0);
+}
+// ----------------------------------------------------------------------------
+
+
+
+// ----------------------------------------------------------------------------
+// mathematical functions
+// ----------------------------------------------------------------------------
+
 /**
  * set float epsilon
  */
-void ext_set_eps(t_real eps)
+void set_eps(t_real eps)
 {
 	g_eps = eps;
 }
@@ -39,7 +109,7 @@ void ext_set_eps(t_real eps)
 /**
  * get float epsilon
  */
-t_real ext_get_eps()
+t_real get_eps()
 {
 	return g_eps;
 }
@@ -134,7 +204,7 @@ t_byte* eigenvals(const t_real* M, t_int rows, t_int cols)
 		tl2_la::eigenvec<t_mat, t_vec, t_real>(mat, true, is_symm, true);
 
 	t_int N = rows;
-	t_real* mem = reinterpret_cast<t_real*>(calloc(2*N, sizeof(t_real)));
+	t_real* mem = reinterpret_cast<t_real*>(ext_heap_alloc(2*N, sizeof(t_real)));
 
 	// store eigenvalues
 	for(t_int i=0; i<N; ++i)
@@ -164,7 +234,7 @@ t_byte* eigenvecs(const t_real* M, t_int rows, t_int cols)
 		tl2_la::eigenvec<t_mat, t_vec, t_real>(mat, false, is_symm, true);
 
 	t_int N = rows;
-	t_real* mem = reinterpret_cast<t_real*>(calloc(2*N + 2*N*N, sizeof(t_real)));
+	t_real* mem = reinterpret_cast<t_real*>(ext_heap_alloc(2*N + 2*N*N, sizeof(t_real)));
 
 	// store eigenvalues
 	for(t_int i=0; i<N; ++i)
@@ -198,11 +268,13 @@ t_byte* qr(const t_real* M, t_int rows, t_int cols)
 	t_mat mat(rows, cols, M);
 	auto [ok, matQ, matR] = tl2::qr<t_mat, t_vec>(mat);
 
-	t_real* mem = reinterpret_cast<t_real*>(calloc(matQ.size1()*matQ.size2() + matR.size1()*matR.size2(), sizeof(t_real)));
+	t_real* mem = reinterpret_cast<t_real*>(ext_heap_alloc(matQ.size1()*matQ.size2() + matR.size1()*matR.size2(), sizeof(t_real)));
 	matQ.to_array(mem);
 	matR.to_array(mem + matQ.size1()*matQ.size2());
 
 	return reinterpret_cast<t_byte*>(mem);
 }
+// ----------------------------------------------------------------------------
+
 
 }

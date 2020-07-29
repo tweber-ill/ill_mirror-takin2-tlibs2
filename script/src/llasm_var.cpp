@@ -186,7 +186,7 @@ t_astret LLAsm::visit(const ASTAssign* ast)
 		}
 
 		// free heap return value (TODO: check if it really is on the heap)
-		(*m_ostr) << "call void @free(i8* %" << expr->name << ")\n";
+		(*m_ostr) << "call void @ext_heap_free(i8* %" << expr->name << ")\n";
 	}
 
 	// single assignment

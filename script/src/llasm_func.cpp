@@ -116,7 +116,7 @@ t_astret LLAsm::visit(const ASTCall* ast)
 		retvar = cp_mem_str(retvar, symcpy, true);
 
 		// free heap return value (TODO: check if it really is on the heap)
-		(*m_ostr) << "call void @free(i8* %" << retvar->name << ")\n";
+		(*m_ostr) << "call void @ext_heap_free(i8* %" << retvar->name << ")\n";
 	}
 
 	// allocate memory for local array copy
@@ -130,7 +130,7 @@ t_astret LLAsm::visit(const ASTCall* ast)
 		retvar = cp_mem_vec(memcast, symcpy, true);
 
 		// free heap return value (TODO: check if it really is on the heap)
-		(*m_ostr) << "call void @free(i8* %" << memcast->name << ")\n";
+		(*m_ostr) << "call void @ext_heap_free(i8* %" << memcast->name << ")\n";
 	}
 
 	// multiple return values
@@ -294,7 +294,7 @@ t_astret LLAsm::visit(const ASTReturn* ast)
 
 		std::array<std::size_t, 2> memsize{{retsize, 1}};
 		t_astret memblock = get_tmp_var(SymbolType::STRING, &memsize, nullptr, true);
-		(*m_ostr) << "%" << memblock->name << " = call i8* @calloc(i64 "
+		(*m_ostr) << "%" << memblock->name << " = call i8* @ext_heap_alloc(i64 "
 			<< retsize << ", i64 1" << ")\n";
 
 		// write memory block
