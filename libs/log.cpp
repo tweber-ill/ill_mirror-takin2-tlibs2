@@ -1,8 +1,7 @@
 /**
- * tlibs2
- * logger/debug library
+ * tlibs2, logger/debug library
  * @author Tobias Weber <tobias.weber@tum.de>, <tweber@ill.fr>
- * @date Sep-2014 -- 2018
+ * @date 2014-2020
  * @license GPLv3, see 'LICENSE' file
  * @desc Forked on 7-Nov-2018 from the privately and TUM-PhD-developed "tlibs" project (https://github.com/t-weber/tlibs).
  */

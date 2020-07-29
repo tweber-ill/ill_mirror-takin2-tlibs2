@@ -1,8 +1,8 @@
 /**
+ * tlibs2
  * simple LL(1) expression parser
- *
  * @author Tobias Weber <tweber@ill.fr>
- * @date 28-mar-20
+ * @date 28-mar-2020
  * @license GPLv3, see 'LICENSE' file
  * @desc The present version was forked on 28-Mar-2020 from the privately developed "misc" project (https://github.com/t-weber/misc).
  *

@@ -2,7 +2,7 @@
  * tlibs2
  * algorithm library
  * @author Tobias Weber <tweber@ill.fr>
- * @date Apr-2018
+ * @date 2018-2020
  * @license GPLv3, see 'LICENSE' file
  * @desc Forked on 7-Nov-2018 from the privately and TUM-PhD-developed "tlibs" project (https://github.com/t-weber/tlibs).
  */

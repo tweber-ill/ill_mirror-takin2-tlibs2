@@ -1,7 +1,8 @@
 /**
- * tlibs2 -- type traits library
+ * tlibs2
+ * type traits library
  * @author Tobias Weber <tobias.weber@tum.de>, <tweber@ill.fr>
- * @date Nov-2014 -- 2020
+ * @date 2014-2020
  * @license GPLv3, see 'LICENSE' file
  * @desc The present version was forked on 8-Nov-2018 from the privately developed "magtools" project (https://github.com/t-weber/magtools).
  * @desc Forked on 7-Nov-2018 from the privately and TUM-PhD-developed "tlibs" project (https://github.com/t-weber/tlibs).

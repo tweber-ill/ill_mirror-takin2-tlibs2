@@ -1,7 +1,8 @@
 /**
- * tlibs2 -- math library
+ * tlibs2
+ * old math library
  * @author Tobias Weber <tobias.weber@tum.de>, <tweber@ill.fr>
- * @date 2013 -- 2018
+ * @date 2013-2020
  * @license GPLv3, see 'LICENSE' file
  * @desc Forked on 7-Nov-2018 from the privately and TUM-PhD-developed "tlibs" project (https://github.com/t-weber/tlibs).
  */

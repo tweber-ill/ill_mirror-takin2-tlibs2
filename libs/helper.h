@@ -2,7 +2,7 @@
  * tlibs2
  * helpers
  * @author Tobias Weber <tweber@ill.fr>
- * @date Jan-2019
+ * @date 2019-2020
  * @license GPLv3, see 'LICENSE' file
  */
 

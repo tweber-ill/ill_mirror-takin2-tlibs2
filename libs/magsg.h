@@ -1,8 +1,8 @@
 /**
- * future math library, developed from scratch to eventually replace tlibs(2)
+ * tlibs2
  * magnetic space group library
  * @author Tobias Weber <tweber@ill.fr>
- * @date 7-apr-18
+ * @date 2018-2020
  * @license GPLv3, see 'LICENSE' file
  * @desc The present version was forked on 8-Nov-2018 from the privately developed "magtools" project (https://github.com/t-weber/magtools).
  */
