@@ -1,5 +1,6 @@
 /**
- * tlibs2, logger/debug library
+ * tlibs2
+ * logger/debug library
  * @author Tobias Weber <tobias.weber@tum.de>, <tweber@ill.fr>
  * @date 2014-2020
  * @license GPLv3, see 'LICENSE' file
