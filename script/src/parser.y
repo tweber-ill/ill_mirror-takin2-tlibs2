@@ -170,6 +170,11 @@ statement[res]
 			$res = std::make_shared<ASTReturn>($terms);
 		}
 
+	// simple return
+	| RET ';' {
+			$res = std::make_shared<ASTReturn>(nullptr);
+		}
+
 	// variable declarations
 	// scalar / double
 	| SCALARDECL {

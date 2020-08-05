@@ -107,10 +107,19 @@ func start()
 	putstr("A matrix: " + A);
 	putstr("B matrix: " + B);
 
-
-	# comparison
+	# check
 	mat 3 3 B2 = B_matrix(a,b,c, alpha,beta,gamma);
-	putstr("B matrix: " + B2);
+	if B2 <> B then
+	{
+		putstr("B matrix mismatch!");
+		putstr("B matrix: " + B2);
+		ret;
+	}
+
+
+	mat 3 3 g = B'*B;
+	putstr("Metric tensor: " + g);
+
 
 #	vec 3 ev_re, ev_im;
 #	mat 3 3 evec_re, evec_im;

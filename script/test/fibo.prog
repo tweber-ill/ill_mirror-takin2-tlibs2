@@ -17,7 +17,7 @@ func int fibo(int n)
 
 func int fac(int n)
 {
-	if n<= 1 then
+	if n <= 1 then
 		ret 1;
 
 	ret n*fac(n-1);

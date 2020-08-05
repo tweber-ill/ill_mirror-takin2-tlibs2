@@ -757,7 +757,7 @@ t_astret LLAsm::visit(const ASTComp* ast)
 	{
 		// get epsilon
 		t_astret eps = get_tmp_var(SymbolType::SCALAR);
-		(*m_ostr) << "%" << eps->name << " = call double @ext_get_eps()\n";
+		(*m_ostr) << "%" << eps->name << " = call double @get_eps()\n";
 
 		// diff = term1 - term2
 		t_astret diff = get_tmp_var(SymbolType::SCALAR);

@@ -253,7 +253,15 @@ t_astret LLAsm::visit(const ASTReturn* ast)
 {
 	const ASTFunc* thisfunc = m_funcstack.top();
 
-	const auto& retvals = ast->GetRets()->GetList();
+	const auto& rets = ast->GetRets();
+	if(!rets)
+	{
+		// no defined return value
+		(*m_ostr) << "ret void\n";
+		return nullptr;
+	}
+
+	const auto& retvals = rets->GetList();
 	std::size_t numRets = retvals.size();
 
 	// multiple return values
