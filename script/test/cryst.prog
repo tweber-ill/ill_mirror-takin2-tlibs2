@@ -83,6 +83,22 @@ func mat 3 3 A_matrix(scalar a, scalar b, scalar c, scalar alpha, scalar beta, s
 }
 
 
+func scalar calc_len(mat 3 3 G, vec 3 v)
+{
+	ret sqrt(v * (G * v));
+}
+
+
+func scalar calc_angle(mat 3 3 G, vec 3 v1, vec 3 v2)
+{
+	scalar d = v1 * (G * v2);
+	scalar l1 = calc_len(G, v1);
+	scalar l2 = calc_len(G, v2);
+
+	ret acos(d / (l1*l2));
+}
+
+
 func start()
 {
 	set_debug(0);
@@ -117,8 +133,23 @@ func start()
 	}
 
 
-	mat 3 3 g = B'*B;
-	putstr("Metric tensor: " + g);
+	mat 3 3 G = B'*B;
+	putstr("Metric tensor: " + G);
+
+
+	vec 3 v100 = [1, 0, 0];
+	vec 3 v010 = [0, 1, 0];
+	vec 3 v001 = [0, 0, 1];
+	vec 3 v110 = [1, 1, 0];
+	vec 3 v111 = [1, 1, 1];
+	scalar ang1 = calc_angle(G, v100, v010);
+	scalar ang2 = calc_angle(G, v100, v001);
+	scalar ang3 = calc_angle(G, v100, v110);
+	scalar ang4 = calc_angle(G, v100, v111);
+	putstr("Angle between [100] and [010]: " + (ang1/pi*180) + " deg");
+	putstr("Angle between [100] and [001]: " + (ang2/pi*180) + " deg");
+	putstr("Angle between [100] and [110]: " + (ang3/pi*180) + " deg");
+	putstr("Angle between [100] and [111]: " + (ang4/pi*180) + " deg");
 
 
 #	vec 3 ev_re, ev_im;
