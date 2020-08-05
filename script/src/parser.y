@@ -363,6 +363,7 @@ argumentlist[res]
 			$lst->AddArg($argname, $ty->GetType(), $ty->GetDim(0), $ty->GetDim(1));
 			$res = $lst;
 		}
+
 	| typedecl[ty] IDENT[argname] {
 			$res = std::make_shared<ASTArgNames>();
 			$res->AddArg($argname, $ty->GetType(), $ty->GetDim(0), $ty->GetDim(1));
@@ -378,6 +379,7 @@ identlist[res]
 			$lst->AddArg($argname);
 			$res = $lst;
 		}
+
 	| IDENT[argname] {
 			$res = std::make_shared<ASTArgNames>();
 			$res->AddArg($argname);
@@ -393,6 +395,7 @@ typelist[res]
 			$lst->AddArg("ret", $ty->GetType(), $ty->GetDim(0), $ty->GetDim(1));
 			$res = $lst;
 		}
+
 	| typedecl[ty] {
 			$res = std::make_shared<ASTArgNames>();
 			$res->AddArg("ret", $ty->GetType(), $ty->GetDim(0), $ty->GetDim(1));
@@ -586,30 +589,80 @@ expr[res]
 			}
 		}
 
+	// matrix mixed ranged/non-ranged access and assignment
+	| expr[term] '[' expr[idx1] RANGE expr[idx2] ',' expr[idx3] ']' opt_assign[opt_term] {
+			if(!$opt_term)
+			{	// array access into any matrix expression
+				$res = std::make_shared<ASTArrayAccess>(
+					$term, $idx1, $idx2, $idx3, $idx3, true, true);
+			}
+			else
+			{	// assignment of a matrix element
+				if($term->type() != ASTType::Var)
+				{
+					error("Can only assign to an l-value symbol.");
+					$res = nullptr;
+				}
+				else
+				{
+					auto var = std::static_pointer_cast<ASTVar>($term);
+					$res = std::make_shared<ASTArrayAssign>(
+						var->GetIdent(), $opt_term, $idx1, $idx2, $idx3, $idx3, true, true);
+				}
+			}
+		}
+
+	// matrix mixed non-ranged/ranged access and assignment
+	| expr[term] '[' expr[idx1] ',' expr[idx3] RANGE expr[idx4] ']' opt_assign[opt_term] {
+			if(!$opt_term)
+			{	// array access into any matrix expression
+				$res = std::make_shared<ASTArrayAccess>(
+					$term, $idx1, $idx1, $idx3, $idx4, true, true);
+			}
+			else
+			{	// assignment of a matrix element
+				if($term->type() != ASTType::Var)
+				{
+					error("Can only assign to an l-value symbol.");
+					$res = nullptr;
+				}
+				else
+				{
+					auto var = std::static_pointer_cast<ASTVar>($term);
+					$res = std::make_shared<ASTArrayAssign>(
+						var->GetIdent(), $opt_term, $idx1, $idx1, $idx3, $idx4, true, true);
+				}
+			}
+		}
+
+
 	// function calls
 	| IDENT[ident] '(' ')' {
-		const Symbol* sym = context.GetSymbols().FindSymbol($ident);
-		if(sym && sym->ty == SymbolType::FUNC)
-			++sym->refcnt;
-		else
-			error("Cannot find function \"" + $ident + "\".");
+			const Symbol* sym = context.GetSymbols().FindSymbol($ident);
+			if(sym && sym->ty == SymbolType::FUNC)
+				++sym->refcnt;
+			else
+				error("Cannot find function \"" + $ident + "\".");
 
-		$res = std::make_shared<ASTCall>($ident);
-	}
+			$res = std::make_shared<ASTCall>($ident);
+		}
+
 	| IDENT[ident] '(' exprlist[args] ')' {
-		const Symbol* sym = context.GetSymbols().FindSymbol($ident);
-		if(sym && sym->ty == SymbolType::FUNC)
-			++sym->refcnt;
-		else
-			error("Cannot find function \"" + $ident + "\".");
+			const Symbol* sym = context.GetSymbols().FindSymbol($ident);
+			if(sym && sym->ty == SymbolType::FUNC)
+				++sym->refcnt;
+			else
+				error("Cannot find function \"" + $ident + "\".");
 
-		$res = std::make_shared<ASTCall>($ident, $args);
-	}
+			$res = std::make_shared<ASTCall>($ident, $args);
+		}
+
 
 	// (multiple) assignments
 	| IDENT[ident] '=' expr[term] %prec '=' {
 			$res = std::make_shared<ASTAssign>($ident, $term);
 		}
+
 	| ASSIGN identlist[idents] '=' expr[term] %prec '=' {
 			$res = std::make_shared<ASTAssign>($idents->GetArgIdents(), $term);
 		}

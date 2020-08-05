@@ -1,7 +1,7 @@
 #
 # crystallographic A & B matrices, B = 2pi * A^(-T)
 # @author Tobias Weber <tweber@ill.fr>
-# @date 2020
+# @date jul-2020
 # @license see 'LICENSE' file
 # @desc Forked on 18/July/2020 from my privatly developed "matrix_calc" project (https://github.com/t-weber/matrix_calc).
 #
@@ -75,9 +75,9 @@ func mat 3 3 A_matrix(scalar a, scalar b, scalar c, scalar alpha, scalar beta, s
 	vc[2] = sqrt(fabs(c^2 - vc[0]^2 - vc[1]^2));
 
 	mat 3 3 A;
-	A[0~2, 0~0] = va;
-	A[0~2, 1~1] = vb;
-	A[0~2, 2~2] = vc;
+	A[0~2, 0] = va;
+	A[0~2, 1] = vb;
+	A[0~2, 2] = vc;
 
 	ret A;
 }
@@ -96,6 +96,17 @@ func scalar calc_angle(mat 3 3 G, vec 3 v1, vec 3 v2)
 	scalar l2 = calc_len(G, v2);
 
 	ret acos(d / (l1*l2));
+}
+
+
+func scalar calc_levi(mat 3 3 B, int i, int j, int k)
+{
+	mat 3 3 M;
+	M[0~2, 0] = B[0~2, i];
+	M[0~2, 1] = B[0~2, j];
+	M[0~2, 2] = B[0~2, k];
+
+	ret |M|;
 }
 
 

@@ -830,7 +830,6 @@ t_astret LLAsm::visit(const ASTArrayAssign* ast)
 	}
 
 	// ranged matrix assignment
-	// TODO: allow mixed forms of the type mat[1, 2~3] = ...
 	else if(sym->ty == SymbolType::MATRIX && (ast->IsRanged12() && ast->IsRanged34()))
 	{
 		std::size_t dim1 = std::get<0>(sym->dims);
