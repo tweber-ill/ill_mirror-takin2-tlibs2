@@ -64,7 +64,7 @@ int main(int argc, char** argv)
 		std::locale::global(loc);
 
 		tl2::log_info("--------------------------------------------------------------------------------");
-		tl2::log_info("This is the tlibs2 scripting tool.");
+		tl2::log_info("This is the tlibs2 script compiler.");
 		tl2::log_info("Author: Tobias Weber <tweber@ill.fr>, 2020.");
 		tl2::log_info("Licensed under GPLv3.");
 		tl2::log_info("--------------------------------------------------------------------------------");
@@ -75,8 +75,8 @@ int main(int argc, char** argv)
 		std::string tool_bc = "llvm-as";
 		std::string tool_interp = "lli";
 		std::string tool_s = "llc";
-		std::string tool_o = "clang++";
-		std::string tool_exec = "clang++";
+		std::string tool_o = "clang";
+		std::string tool_exec = "clang";
 		std::string tool_strip = "llvm-strip";
 
 
@@ -536,7 +536,7 @@ define i32 @main()
 		// --------------------------------------------------------------------
 		tl2::log_info("Adjusting linkage of runtime library...");
 
-		std::string cmd_rtlink = "install_name_tool -change @rpath/libmcalc_rt.dylib ./libmcalc_rt.dylib out";
+		std::string cmd_rtlink = "install_name_tool -change @rpath/libmcalc_rt.dylib ./libmcalc_rt.dylib " + outprog;
 		if(std::system(cmd_rtlink.c_str()) != 0)
 		{
 			tl2::log_err("Failed.");
