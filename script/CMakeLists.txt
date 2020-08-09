@@ -8,17 +8,21 @@
 project(mcalc)
 cmake_minimum_required(VERSION 3.0)
 
-set(CMAKE_CXX_STANDARD 17)
+list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}" "${PROJECT_SOURCE_DIR}/../cmake")
+
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_VERBOSE_MAKEFILE ON)
 
 find_package(FLEX 2 REQUIRED)
 find_package(BISON 3 REQUIRED)
 find_package(Boost REQUIRED COMPONENTS program_options)
+find_package(Lapacke REQUIRED)
 
 
 add_definitions(-Wall -Wextra)
-add_definitions(-std=c++17)
+add_definitions(-std=c++20)
 add_definitions(${Boost_CXX_FLAGS})
+add_definitions(-DUSE_LAPACK)
 
 
 include_directories(
@@ -27,8 +31,8 @@ include_directories(
 	"${PROJECT_SOURCE_DIR}/.."
 	"${FLEX_INCLUDE_DIRS}" "${Boost_INCLUDE_DIRS}" "${Boost_INCLUDE_DIRS}/.."
 	"${CMAKE_CURRENT_BINARY_DIR}"
+	"${Lapacke_INCLUDE_DIRS}"
 )
-
 
 
 BISON_TARGET(parser_impl
@@ -65,3 +69,12 @@ add_executable(mcalc
 
 #add_dependencies(parser parser_impl lexer_impl)
 target_link_libraries(mcalc ${Boost_LIBRARIES})
+
+
+
+
+add_library(mcalc_rt SHARED
+	src/runtime.cpp
+)
+
+target_link_libraries(mcalc_rt ${Lapacke_LIBRARIES})

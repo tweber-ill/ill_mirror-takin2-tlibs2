@@ -110,6 +110,47 @@ func scalar calc_levi(mat 3 3 B, int i, int j, int k)
 }
 
 
+#
+# v3_l = v1_j v2_k Ginv_li eps_ijk
+#
+func vec 3 calc_cross(mat 3 3 B, vec 3 v1, vec 3 v2)
+{
+	mat 3 3 G = B'*B;
+	mat 3 3 G_inv = G^(-1);
+	vec 3 v3;
+
+	int l = 0;
+	loop l<3 do
+	{
+		v3[l] = 0;
+
+		int j = 0;
+		loop j<3 do
+		{
+			int k = 0;
+			loop k<3 do
+			{
+				int i = 0;
+				loop i<3 do
+				{
+					v3[l] = v3[l] + v1[j]*v2[k]*G_inv[l,i]*calc_levi(B, i,j,k);
+
+					i = i+1;
+				}
+
+				k = k+1;
+			}
+
+			j = j+1;
+		}
+
+		l = l+1;
+	}
+
+	ret v3;
+}
+
+
 func start()
 {
 	set_debug(0);
@@ -153,14 +194,25 @@ func start()
 	vec 3 v001 = [0, 0, 1];
 	vec 3 v110 = [1, 1, 0];
 	vec 3 v111 = [1, 1, 1];
-	scalar ang1 = calc_angle(G, v100, v010);
-	scalar ang2 = calc_angle(G, v100, v001);
-	scalar ang3 = calc_angle(G, v100, v110);
-	scalar ang4 = calc_angle(G, v100, v111);
-	putstr("Angle between [100] and [010]: " + (ang1/pi*180) + " deg");
-	putstr("Angle between [100] and [001]: " + (ang2/pi*180) + " deg");
-	putstr("Angle between [100] and [110]: " + (ang3/pi*180) + " deg");
-	putstr("Angle between [100] and [111]: " + (ang4/pi*180) + " deg");
+
+	scalar ang_100_010 = calc_angle(G, v100, v010);
+	scalar ang_100_001 = calc_angle(G, v100, v001);
+	scalar ang_010_001 = calc_angle(G, v010, v001);
+	scalar ang_100_110 = calc_angle(G, v100, v110);
+	scalar ang_100_101 = calc_angle(G, v100, v110);
+	scalar ang_100_011 = calc_angle(G, v100, v110);
+	scalar ang_100_111 = calc_angle(G, v100, v111);
+
+	putstr("Angle between [100] and [010]: " + (ang_100_010/pi*180) + " deg");
+	putstr("Angle between [100] and [001]: " + (ang_100_001/pi*180) + " deg");
+	putstr("Angle between [010] and [001]: " + (ang_010_001/pi*180) + " deg");
+	putstr("Angle between [100] and [110]: " + (ang_100_110/pi*180) + " deg");
+	putstr("Angle between [100] and [101]: " + (ang_100_101/pi*180) + " deg");
+	putstr("Angle between [100] and [011]: " + (ang_100_011/pi*180) + " deg");
+	putstr("Angle between [100] and [111]: " + (ang_100_111/pi*180) + " deg");
+
+
+#	putstr(calc_cross(B, v100, v010));
 
 
 #	vec 3 ev_re, ev_im;

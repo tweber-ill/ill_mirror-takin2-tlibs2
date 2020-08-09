@@ -172,7 +172,7 @@ protected:
 	// alternative: int constants
 	template<class t_val,
 		typename std::enable_if<std::is_integral<t_val>::value>::type* =nullptr>
-	t_val get_const(const std::string& strName)
+	t_val get_const(const std::string& /*strName*/)
 	{
 		/*static const std::unordered_map<std::string, t_val> s_consts =
 		{

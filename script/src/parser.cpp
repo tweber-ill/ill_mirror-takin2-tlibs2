@@ -13,6 +13,8 @@
 
 #include <fstream>
 #include <locale>
+
+#include <boost/predef/os.h>
 #include <boost/program_options.hpp>
 namespace args = boost::program_options;
 
@@ -71,7 +73,6 @@ int main(int argc, char** argv)
 		// llvm toolchain
 		std::string tool_opt = "opt";
 		std::string tool_bc = "llvm-as";
-		std::string tool_bclink = "llvm-link";
 		std::string tool_interp = "lli";
 		std::string tool_s = "llc";
 		std::string tool_o = "clang++";
@@ -103,7 +104,6 @@ int main(int argc, char** argv)
 		arg_descr_toolchain.add_options()
 			("tool_opt", args::value(&tool_opt), "llvm optimiser")
 			("tool_bc", args::value(&tool_bc), "llvm bitcode assembler")
-			("tool_bclink", args::value(&tool_bclink), "llvm bitcode linker")
 			("tool_bccomp", args::value(&tool_s), "llvm bitcode compiler")
 			("tool_asm", args::value(&tool_o), "native assembler")
 			("tool_link", args::value(&tool_exec), "native linker")
@@ -139,12 +139,8 @@ int main(int argc, char** argv)
 		std::string outprog_3ac = outprog + ".asm";
 		std::string outprog_3ac_opt = outprog + "_opt.asm";
 		std::string outprog_bc = outprog + ".bc";
-		std::string outprog_linkedbc = outprog + "_linked.bc";
 		std::string outprog_s = outprog + ".s";
 		std::string outprog_o = outprog + ".o";
-
-		std::string runtime_3ac = optimise ? "runtime_opt.asm" : "runtime.asm";
-		std::string runtime_bc = "runtime.bc";
 		// --------------------------------------------------------------------
 
 
@@ -199,7 +195,7 @@ int main(int argc, char** argv)
 
 		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "set_eps", SymbolType::VOID, {SymbolType::SCALAR}, nullptr, nullptr, true);
 		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "get_eps", SymbolType::SCALAR, {}, nullptr, nullptr, true);
-        ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "set_debug", SymbolType::VOID, {SymbolType::INT}, nullptr, nullptr, true);
+		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "set_debug", SymbolType::VOID, {SymbolType::INT}, nullptr, nullptr, true);
 
 		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "putstr", SymbolType::VOID, {SymbolType::STRING}, nullptr, nullptr, false);
 		ctx.GetSymbols().AddFunc(ctx.GetScopeName(), "putflt", SymbolType::VOID, {SymbolType::SCALAR}, nullptr, nullptr, false);
@@ -482,34 +478,6 @@ define i32 @main()
 			tl2::log_err("Failed.");
 			return -1;
 		}
-
-
-		tl2::log_info("Assembling runtime bitcode: \"",
-			runtime_3ac, "\" -> \"", runtime_bc, "\"...");
-
-		cmd_bc = tool_bc + " -o " + runtime_bc + " " + runtime_3ac;
-		if(std::system(cmd_bc.c_str()) != 0)
-		{
-			tl2::log_err("Failed.");
-			return -1;
-		}
-		// --------------------------------------------------------------------
-
-
-
-		// --------------------------------------------------------------------
-		// Bitcode linking
-		// --------------------------------------------------------------------
-		tl2::log_info("Linking bitcode to runtime: \"",
-			outprog_bc, "\" + \"", runtime_bc, "\" -> \"",
-			outprog_linkedbc, "\"...");
-
-		std::string cmd_bclink = tool_bclink + " -o " + outprog_linkedbc + " " + outprog_bc + " " + runtime_bc;
-		if(std::system(cmd_bclink.c_str()) != 0)
-		{
-			tl2::log_err("Failed.");
-			return -1;
-		}
 		// --------------------------------------------------------------------
 
 
@@ -518,10 +486,10 @@ define i32 @main()
 		// Native compilation
 		// --------------------------------------------------------------------
 		tl2::log_info("Generating native assembly \"",
-			outprog_linkedbc, "\" -> \"", outprog_s, "\"...");
+			outprog_bc, "\" -> \"", outprog_s, "\"...");
 
 		std::string opt_flag_s = optimise ? "-O2" : "";
-		std::string cmd_s = tool_s + " " + opt_flag_s + " -o " + outprog_s + " " + outprog_linkedbc;
+		std::string cmd_s = tool_s + " " + opt_flag_s + " -o " + outprog_s + " " + outprog_bc;
 		if(std::system(cmd_s.c_str()) != 0)
 		{
 			tl2::log_err("Failed.");
@@ -549,7 +517,7 @@ define i32 @main()
 			outprog_o, "\" -> \"", outprog, "\"...");
 
 		std::string opt_flag_exec = optimise ? "-O2" : "";
-		std::string exec_libs = "-Lext/lapacke/lib -llapacke";
+		std::string exec_libs = "-lmcalc_rt";
 		std::string cmd_exec = tool_exec + " " + opt_flag_exec + " -o " + outprog + " " + outprog_o + " " + exec_libs;
 		if(std::system(cmd_exec.c_str()) != 0)
 		{
@@ -558,6 +526,22 @@ define i32 @main()
 		}
 		// --------------------------------------------------------------------
 
+
+
+#if defined(BOOST_OS_MACOS_AVAILABLE)
+		// --------------------------------------------------------------------
+		// Change linkage of runtime
+		// --------------------------------------------------------------------
+		tl2::log_info("Adjusting linkage of runtime library...");
+
+		std::string cmd_rtlink = "install_name_tool -change @rpath/libmcalc_rt.dylib ./libmcalc_rt.dylib out";
+		if(std::system(cmd_rtlink.c_str()) != 0)
+		{
+			tl2::log_err("Failed.");
+			return -1;
+		}		
+		// --------------------------------------------------------------------
+#endif
 
 
 		if(optimise)

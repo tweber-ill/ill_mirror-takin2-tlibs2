@@ -798,8 +798,6 @@ std::pair<bool, t_val> eval_expr(const t_str& str) noexcept
 
 	try
 	{
-		using t_iter = typename t_str::const_iterator;
-
 		ExprParser<t_val> parser;
 		t_val valRes = parser.parse(wstr_to_str(str));
 		return std::make_pair(true, valRes);

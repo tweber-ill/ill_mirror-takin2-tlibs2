@@ -2335,7 +2335,6 @@ template<class t_vec>
 t_vec ortho_project(const t_vec& vec, const t_vec& vecNorm, bool bIsNormalised = true)
 requires is_vec<t_vec>
 {
-	const std::size_t iSize = vec.size();
 	return vec - project<t_vec>(vec, vecNorm, bIsNormalised);
 }
 
@@ -2384,7 +2383,6 @@ requires is_vec<t_vec>
 {
 	t_cont_out<t_vec> newsys;
 
-	const std::size_t N = sys.size();
 	for(const t_vec& vecSys : sys)
 	{
 		t_vec vecOrthoProj = vecSys;
@@ -2803,7 +2801,6 @@ intersect_line_line(
 requires is_vec<t_vec>
 {
 	using T = typename t_vec::value_type;
-	const std::size_t N = line1Dir.size();
 
 	const t_vec orgdiff = line1Org - line2Org;
 
@@ -2849,7 +2846,6 @@ std::tuple<t_vec, t_vec, int>
 requires is_vec<t_vec>
 {
 	using T = typename t_vec::value_type;
-	const std::size_t dim = plane1Norm.size();
 
 	t_vec lineDir = cross<t_vec>({plane1Norm, plane2Norm});
 	const T lenCross = norm<t_vec>(lineDir);
@@ -2932,8 +2928,6 @@ t_vec poly_uv(const t_vec& vert1, const t_vec& vert2, const t_vec& vert3,
 	const t_vec& _pt)
 requires is_mat<t_mat> && is_vec<t_vec>
 {
-	using T = typename t_vec::value_type;
-
 	t_vec vec12 = vert2 - vert1;
 	t_vec vec13 = vert3 - vert1;
 	t_vec vecnorm = cross<t_vec>({vec12, vec13});
@@ -3253,8 +3247,6 @@ std::tuple<t_cont<t_vec>, t_cont<t_vec>, t_cont<t_vec>>
 subdivide_triangles(const std::tuple<t_cont<t_vec>, t_cont<t_vec>, t_cont<t_vec>>& tup)
 requires is_vec<t_vec>
 {
-	using T = typename t_vec::value_type;
-
 	const t_cont<t_vec>& vertices = std::get<0>(tup);
 	const t_cont<t_vec>& normals = std::get<1>(tup);
 	const t_cont<t_vec>& uvs = std::get<2>(tup);
@@ -3384,8 +3376,6 @@ spherify(const std::tuple<t_cont<t_vec>, t_cont<t_vec>, t_cont<t_vec>>& tup,
 	typename t_vec::value_type rad = 1)
 requires is_vec<t_vec>
 {
-	using T = typename t_vec::value_type;
-
 	const t_cont<t_vec>& vertices = std::get<0>(tup);
 	const t_cont<t_vec>& normals = std::get<1>(tup);
 	const t_cont<t_vec>& uvs = std::get<2>(tup);
@@ -3440,8 +3430,6 @@ std::tuple<t_cont<t_vec>, t_cont<t_cont<std::size_t>>, t_cont<t_vec>, t_cont<t_c
 create_plane(const t_vec& norm, typename t_vec::value_type l=1)
 requires is_vec<t_vec>
 {
-	using t_real = typename t_vec::value_type;
-
 	t_vec norm_old = create<t_vec>({ 0, 0, -1 });
 	t_mat rot = rotation<t_mat, t_vec>(norm_old, norm);
 
@@ -3853,20 +3841,20 @@ requires is_vec<t_vec>
 
 	t_cont<t_vec> vertices =
 	{
-		create<t_vec>({ 1, 1, 1 }), create<t_vec>({ 1, 1, -1 }),
-		create<t_vec>({ 1, -1, 1 }), create<t_vec>({ 1, -1, -1 }),
+		create<t_vec>({ l, l, l }), create<t_vec>({ l, l, -l }),
+		create<t_vec>({ l, -l, l }), create<t_vec>({ l, -l, -l }),
 
-		create<t_vec>({ -1, 1, 1 }), create<t_vec>({ -1, 1, -1 }),
-		create<t_vec>({ -1, -1, 1 }), create<t_vec>({ -1, -1, -1 }),
+		create<t_vec>({ -l, l, l }), create<t_vec>({ -l, l, -l }),
+		create<t_vec>({ -l, -l, l }), create<t_vec>({ -l, -l, -l }),
 
-		create<t_vec>({ 0, T{1}/g, g }), create<t_vec>({ 0, T{1}/g, -g }),
-		create<t_vec>({ 0, -T{1}/g, g }), create<t_vec>({ 0, -T{1}/g, -g }),
+		create<t_vec>({ 0, T{l}/g, g }), create<t_vec>({ 0, T{l}/g, -g }),
+		create<t_vec>({ 0, -T{l}/g, g }), create<t_vec>({ 0, -T{l}/g, -g }),
 
-		create<t_vec>({ g, 0, T{1}/g }), create<t_vec>({ g, 0, -T{1}/g }),
-		create<t_vec>({ -g, 0, T{1}/g }), create<t_vec>({ -g, 0, -T{1}/g }),
+		create<t_vec>({ g, 0, T{l}/g }), create<t_vec>({ g, 0, -T{l}/g }),
+		create<t_vec>({ -g, 0, T{l}/g }), create<t_vec>({ -g, 0, -T{l}/g }),
 
-		create<t_vec>({ T{1}/g, g, 0 }), create<t_vec>({ T{1}/g, -g, 0 }),
-		create<t_vec>({ -T{1}/g, g, 0 }), create<t_vec>({ -T{1}/g, -g, 0 }),
+		create<t_vec>({ T{l}/g, g, 0 }), create<t_vec>({ T{l}/g, -g, 0 }),
+		create<t_vec>({ -T{l}/g, g, 0 }), create<t_vec>({ -T{l}/g, -g, 0 }),
 	};
 
 	t_cont<t_cont<std::size_t>> faces =
@@ -4410,7 +4398,6 @@ template<class t_vec_cplx, class t_vec_real>
 std::tuple<t_vec_real, t_vec_real> split_cplx(const t_vec_cplx& vec)
 requires is_complex<typename t_vec_cplx::value_type> && is_vec<t_vec_cplx> && is_vec<t_vec_real>
 {
-	using t_cplx = typename t_vec_cplx::value_type;
 	using t_real = typename t_vec_real::value_type;
 
 	t_vec_real vecRe = zero<t_vec_real>(vec.size());
@@ -5037,8 +5024,6 @@ std::tuple<bool, t_mat, t_mat, t_mat> lu(const t_mat& mat)
 requires tl2::is_mat<t_mat>
 {
 	using namespace tl2_ops;
-	using t_scalar = typename t_mat::value_type;
-	using t_real = tl2::underlying_value_type<t_scalar>;
 
 	const std::size_t rows = mat.size1();
 	const std::size_t cols = mat.size2();
@@ -6044,7 +6029,6 @@ template<class t_mat, class t_mat_cplx, class t_quat>
 t_mat_cplx quat_to_cmat(const t_quat& quat)
 requires is_quat<t_quat> && is_mat<t_mat> && is_mat<t_mat_cplx>
 {
-	using t_real = typename t_mat::value_type;
 	using t_cplx = typename t_mat_cplx::value_type;
 
 	const auto matI = unit<t_mat_cplx>(2);
