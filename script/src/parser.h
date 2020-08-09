@@ -30,6 +30,7 @@ namespace yy
 {
 	class ParserContext;
 
+
 	/**
 	 * lexer
 	 */
@@ -60,6 +61,7 @@ namespace yy
 	};
 
 
+
 	/**
  	* holds parser state
  	*/
@@ -67,6 +69,8 @@ namespace yy
 	{
 	private:
 		yy::Lexer m_lex;
+		yy::Parser* m_parser = nullptr;
+
 		std::shared_ptr<ASTStmts> m_statements;
 
 		SymTab m_symbols;
@@ -84,7 +88,11 @@ namespace yy
 		ParserContext(std::istream& istr = std::cin) : m_lex{this, istr}, m_statements{}
 		{}
 
+
 		yy::Lexer& GetLexer() { return m_lex; }
+		yy::Parser* GetParser() { return m_parser; }
+
+		void SetParser(yy::Parser* parser) { m_parser = parser; }
 
 
 		// --------------------------------------------------------------------
@@ -171,6 +179,7 @@ namespace yy
 		std::size_t GetCurLine() const { return m_lex.GetCurLine(); }
 	};
 }
+
 
 
 // yylex definition for lexer

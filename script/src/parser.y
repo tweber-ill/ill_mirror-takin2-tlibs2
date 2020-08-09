@@ -33,6 +33,18 @@
 	#include <cstdint>
 
 	#define DEFAULT_STRING_SIZE 128
+
+
+	std::shared_ptr<ASTVar> get_var(yy::ParserContext& context, const std::string& ident)
+	{
+		const Symbol* sym = context.FindScopedSymbol(ident);
+		if(sym)
+			++sym->refcnt;
+		else
+			context.GetParser()->error("Cannot find symbol \"" + ident + "\".");
+
+		return std::make_shared<ASTVar>(ident);
+	}
 }
 
 
@@ -64,6 +76,7 @@
 %token LOOP DO
 %token EQU NEQ GT LT GEQ LEQ
 %token AND XOR OR NOT
+%token PLUSASSIGN MINUSASSIGN MULTASSIGN DIVASSIGN MODASSIGN POWASSIGN
 %token RANGE
 
 
@@ -88,6 +101,7 @@
 %nonassoc RET
 %left ','
 %right '='
+%right PLUSASSIGN MINUSASSIGN MULTASSIGN DIVASSIGN MODASSIGN POWASSIGN
 %left XOR
 %left OR
 %left AND
@@ -462,6 +476,43 @@ expr[res]
 	| expr[term1] GEQ expr[term2]	{ $res = std::make_shared<ASTComp>($term1, $term2, ASTComp::GEQ); }
 	| expr[term1] LEQ expr[term2]	{ $res = std::make_shared<ASTComp>($term1, $term2, ASTComp::LEQ); }
 
+	// binary expressions followed by assignment
+	| IDENT[ident] PLUSASSIGN expr[term] {
+			auto var = get_var(context, $ident);
+			auto opres = std::make_shared<ASTPlus>(var, $term, 0);
+			$res = std::make_shared<ASTAssign>($ident, opres);
+		}
+
+	| IDENT[ident] MINUSASSIGN expr[term] {
+			auto var = get_var(context, $ident);
+			auto opres = std::make_shared<ASTPlus>(var, $term, 1);
+			$res = std::make_shared<ASTAssign>($ident, opres);
+		}
+
+	| IDENT[ident] MULTASSIGN expr[term] {
+			auto var = get_var(context, $ident);
+			auto opres = std::make_shared<ASTMult>(var, $term, 0);
+			$res = std::make_shared<ASTAssign>($ident, opres);
+		}
+
+	| IDENT[ident] DIVASSIGN expr[term] {
+			auto var = get_var(context, $ident);
+			auto opres = std::make_shared<ASTMult>(var, $term, 1);
+			$res = std::make_shared<ASTAssign>($ident, opres);
+		}
+
+	| IDENT[ident] MODASSIGN expr[term] {
+			auto var = get_var(context, $ident);
+			auto opres = std::make_shared<ASTMod>(var, $term);
+			$res = std::make_shared<ASTAssign>($ident, opres);
+		}
+
+	| IDENT[ident] POWASSIGN expr[term] {
+			auto var = get_var(context, $ident);
+			auto opres = std::make_shared<ASTPow>(var, $term);
+			$res = std::make_shared<ASTAssign>($ident, opres);
+		}
+
 	// constants
 	| REAL[num]		{ $res = std::make_shared<ASTNumConst<double>>($num); }
 	| INT[num]		{ $res = std::make_shared<ASTNumConst<std::int64_t>>($num); }
@@ -489,12 +540,7 @@ expr[res]
 			// identifier names a variable
 			else
 			{
-				const Symbol* sym = context.FindScopedSymbol($ident);
-				if(sym)
-					++sym->refcnt;
-				else
-					error("Cannot find symbol \"" + $ident + "\".");
-
+				auto var = get_var(context, $ident);
 				$res = std::make_shared<ASTVar>($ident);
 			}
 		}
@@ -658,11 +704,12 @@ expr[res]
 		}
 
 
-	// (multiple) assignments
+	// single assignment
 	| IDENT[ident] '=' expr[term] %prec '=' {
 			$res = std::make_shared<ASTAssign>($ident, $term);
 		}
 
+	// multiple assignments
 	| ASSIGN identlist[idents] '=' expr[term] %prec '=' {
 			$res = std::make_shared<ASTAssign>($idents->GetArgIdents(), $term);
 		}

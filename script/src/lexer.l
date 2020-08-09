@@ -44,6 +44,13 @@ ident	[A-Za-z_]+[A-Za-z0-9_]*
 {white}+	/* whitespace */
 "#".*		/* comment */
 
+"+="		{ return yy::Parser::make_PLUSASSIGN(); }
+"-="		{ return yy::Parser::make_MINUSASSIGN(); }
+"*="		{ return yy::Parser::make_MULTASSIGN(); }
+"/="		{ return yy::Parser::make_DIVASSIGN(); }
+"%="		{ return yy::Parser::make_MODASSIGN(); }
+"^="		{ return yy::Parser::make_POWASSIGN(); }
+
 ";"		{ return yytext[0]; }
 "+"|"-"		{ return yytext[0]; }
 "*"|"/"|"%"	{ return yytext[0]; }

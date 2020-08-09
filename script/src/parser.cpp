@@ -217,6 +217,8 @@ int main(int argc, char** argv)
 
 
 		yy::Parser parser(ctx);
+		ctx.SetParser(&parser);
+
 		int res = parser.parse();
 		if(res != 0)
 		{

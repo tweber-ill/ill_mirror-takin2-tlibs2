@@ -135,16 +135,16 @@ func vec 3 calc_cross(mat 3 3 B, vec 3 v1, vec 3 v2)
 				{
 					v3[l] = v3[l] + v1[j]*v2[k]*G_inv[l,i]*calc_levi(B, i,j,k);
 
-					i = i+1;
+					i += 1;
 				}
 
-				k = k+1;
+				k += 1;
 			}
 
-			j = j+1;
+			j += 1;
 		}
 
-		l = l+1;
+		l += 1;
 	}
 
 	ret v3;
