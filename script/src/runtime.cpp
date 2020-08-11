@@ -42,7 +42,7 @@ void* ext_heap_alloc(uint64_t num, uint64_t elemsize)
 
 	if(g_debug)
 	{
-		printf("%s: count=%llu, elem_size=%llu, mem=%08llx.\n",
+		printf("%s: count=%lu, elem_size=%lu, mem=%08lx.\n",
 			__func__, num, elemsize, (uint64_t)mem);
 	}
 
@@ -59,7 +59,7 @@ void ext_heap_free(void* mem)
 	heap.erase(mem);
 
 	if(g_debug)
-		printf("%s: mem=%08llx.\n", __func__, (uint64_t)mem);
+		printf("%s: mem=%08lx.\n", __func__, (uint64_t)mem);
 }
 
 
@@ -78,7 +78,7 @@ void ext_deinit()
 		auto iter = heap.begin();
 		for(std::size_t i=0; i<heap.size(); ++i)
 		{
-			printf("Leak %lu: mem=%08llx.\n", i, (uint64_t)*iter);
+			printf("Leak %lu: mem=%08lx.\n", i, (uint64_t)*iter);
 			++iter;
 		}
 	}
