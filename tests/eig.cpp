@@ -24,12 +24,12 @@ using namespace tl2_ops;
 
 int main()
 {
-	using t_real = double;
-	using t_cplx = std::complex<t_real>;
-	using t_vec = tl2::vec<t_real, std::vector>;
-	using t_mat = tl2::mat<t_real, std::vector>;
-	using t_vec_cplx = tl2::vec<t_cplx, std::vector>;
-	using t_mat_cplx = tl2::mat<t_cplx, std::vector>;
+    using t_real = double;
+    using t_cplx = std::complex<t_real>;
+    using t_vec = tl2::vec<t_real, std::vector>;
+    using t_mat = tl2::mat<t_real, std::vector>;
+    using t_vec_cplx = tl2::vec<t_cplx, std::vector>;
+    using t_mat_cplx = tl2::mat<t_cplx, std::vector>;
 
     bool sym_or_herm = 1;
 
@@ -40,7 +40,7 @@ int main()
             1.5, 0.,   0.,
             0.,  1.0,  0.01,
             0.,  0.01, 0.5 });
-        
+
         std::cout << mat << std::endl;
 
         auto [ok, evals_re, evals_im, evecs_re, evecs_im] =
@@ -65,17 +65,17 @@ int main()
         //BOOST_TEST(params[1] == 1.036, testtools::tolerance(1e-3));
     }
 
-    
+
     std::cout << std::endl;
 
-    
+
     // complex version
     {
         auto mat = tl2::create<t_mat_cplx>({
             1.5, 0.,   0.,
             0.,  1.0,  0.01,
             0.,  0.01, 0.5 });
-        
+
         std::cout << mat << std::endl;
 
         auto [ok, evals, evecs] =

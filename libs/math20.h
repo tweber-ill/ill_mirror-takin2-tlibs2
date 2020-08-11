@@ -5198,7 +5198,7 @@ eigenvec(const t_mat_cplx& mat, bool only_evals=false, bool is_hermitian=false, 
 	if(!only_evals)
 		evecs.resize(N, tl2::zero<t_vec_cplx>(N));
 
-	std::vector<t_cplx> inmat(N*N, t_cplx{0,0}), 
+	std::vector<t_cplx> inmat(N*N, t_cplx{0,0}),
 		outevecs(only_evals ? 0 : N*N, t_cplx{0,0});
 
 	for(std::size_t i=0; i<N; ++i)
@@ -5206,9 +5206,9 @@ eigenvec(const t_mat_cplx& mat, bool only_evals=false, bool is_hermitian=false, 
 		for(std::size_t j=0; j<N; ++j)
 		{
 			if(is_hermitian)
-				inmat[i*N + j] = (j>=i ? mat(i,j) : t_real{0});
+				inmat[i*N + j] = (j>=i ? mat(j,i) : t_real{0});
 			else
-				inmat[i*N + j] = mat(i, j);
+				inmat[i*N + j] = mat(j,i);
 		}
 	}
 
@@ -5220,9 +5220,9 @@ eigenvec(const t_mat_cplx& mat, bool only_evals=false, bool is_hermitian=false, 
 		std::vector<t_real> outevals_real(N, t_real{0});
 
 		if constexpr(std::is_same_v<t_real, float>)
-			err = LAPACKE_cheev(LAPACK_ROW_MAJOR, only_evals ? 'N' : 'V', 'U', N, inmat.data(), N, outevals_real.data());
+			err = LAPACKE_cheev(LAPACK_COL_MAJOR, only_evals ? 'N' : 'V', 'L', N, inmat.data(), N, outevals_real.data());
 		else if constexpr(std::is_same_v<t_real, double>)
-			err = LAPACKE_zheev(LAPACK_ROW_MAJOR, only_evals ? 'N' : 'V', 'U', N, inmat.data(), N, outevals_real.data());
+			err = LAPACKE_zheev(LAPACK_COL_MAJOR, only_evals ? 'N' : 'V', 'L', N, inmat.data(), N, outevals_real.data());
 		else
 			throw std::domain_error("Invalid real type.");
 
@@ -5234,13 +5234,13 @@ eigenvec(const t_mat_cplx& mat, bool only_evals=false, bool is_hermitian=false, 
 	{
 		if constexpr(std::is_same_v<t_real, float>)
 		{
-			err = LAPACKE_cgeev(LAPACK_ROW_MAJOR, 'N', only_evals ? 'N' : 'V', N,
+			err = LAPACKE_cgeev(LAPACK_COL_MAJOR, 'N', only_evals ? 'N' : 'V', N,
 				inmat.data(), N, evals.data(), nullptr, N,
 				only_evals ? nullptr : outevecs.data(), N);
 		}
 		else if constexpr(std::is_same_v<t_real, double>)
 		{
-			err = LAPACKE_zgeev(LAPACK_ROW_MAJOR, 'N', only_evals ? 'N' : 'V', N,
+			err = LAPACKE_zgeev(LAPACK_COL_MAJOR, 'N', only_evals ? 'N' : 'V', N,
 				inmat.data(), N, evals.data(), nullptr, N,
 				only_evals ? nullptr : outevecs.data(), N);
 		}
@@ -5305,9 +5305,9 @@ eigenvec(const t_mat& mat, bool only_evals=false, bool is_symmetric=false, bool 
 		for(std::size_t j=0; j<N; ++j)
 		{
 			if(is_symmetric)
-				inmat[i*N + j] = (j>=i ? mat(i,j) : t_real{0});
+				inmat[i*N + j] = (j>=i ? mat(j,i) : t_real{0});
 			else
-				inmat[i*N + j] = mat(i, j);
+				inmat[i*N + j] = mat(j,i);
 		}
 	}
 
@@ -5317,9 +5317,9 @@ eigenvec(const t_mat& mat, bool only_evals=false, bool is_symmetric=false, bool 
 	{
 		// evals of symmetric matrix are purely real
 		if constexpr(std::is_same_v<t_real, float>)
-			err = LAPACKE_ssyev(LAPACK_ROW_MAJOR, (only_evals ? 'N' : 'V'), 'U', N, inmat.data(), N, evals_re.data());
+			err = LAPACKE_ssyev(LAPACK_COL_MAJOR, (only_evals ? 'N' : 'V'), 'L', N, inmat.data(), N, evals_re.data());
 		else if constexpr(std::is_same_v<t_real, double>)
-			err = LAPACKE_dsyev(LAPACK_ROW_MAJOR, (only_evals ? 'N' : 'V'), 'U', N, inmat.data(), N, evals_re.data());
+			err = LAPACKE_dsyev(LAPACK_COL_MAJOR, (only_evals ? 'N' : 'V'), 'L', N, inmat.data(), N, evals_re.data());
 		else
 			throw std::domain_error("Invalid real type.");
 
@@ -5331,13 +5331,13 @@ eigenvec(const t_mat& mat, bool only_evals=false, bool is_symmetric=false, bool 
 	{
 		if constexpr(std::is_same_v<t_real, float>)
 		{
-			err = LAPACKE_sgeev(LAPACK_ROW_MAJOR, 'N', (only_evals ? 'N' : 'V'), N,
+			err = LAPACKE_sgeev(LAPACK_COL_MAJOR, 'N', (only_evals ? 'N' : 'V'), N,
 				inmat.data(), N, evals_re.data(), evals_im.data(), nullptr, N,
 				only_evals ? nullptr : outevecs.data(), N);
 		}
 		else if constexpr(std::is_same_v<t_real, double>)
 		{
-			err = LAPACKE_dgeev(LAPACK_ROW_MAJOR, 'N', (only_evals ? 'N' : 'V'), N,
+			err = LAPACKE_dgeev(LAPACK_COL_MAJOR, 'N', (only_evals ? 'N' : 'V'), N,
 				inmat.data(), N, evals_re.data(), evals_im.data(), nullptr, N,
 				only_evals ? nullptr : outevecs.data(), N);
 		}
