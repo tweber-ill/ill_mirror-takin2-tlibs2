@@ -44,6 +44,7 @@ add_executable(mat1 mat1.cpp)
 add_executable(quat1 quat1.cpp)
 add_executable(leastsq leastsq.cpp)
 add_executable(expr expr.cpp ../libs/log.cpp)
+#add_executable(eig eig.cpp)
 # -----------------------------------------------------------------------------
 
 
@@ -54,4 +55,5 @@ add_test(mat1 mat1)
 add_test(quat1 quat1)
 add_test(lestsq leastsq)
 add_test(expr expr)
+#add_test(eig eig)
 # -----------------------------------------------------------------------------

@@ -12,8 +12,10 @@
 #include <cfloat>
 #include <vector>
 #include <unordered_set>
+#include <iostream>
 
 #include "math20.h"
+using namespace tl2_ops;
 
 
 using t_real =  double;
@@ -227,11 +229,12 @@ t_byte* eigenvecs(const t_real* M, t_int rows, t_int cols)
 
 	bool is_symm = tl2::is_symm_or_herm<t_mat>(mat, g_eps);
 	//is_symm = false;
+	bool normalise = true;
 
 	//using namespace tl2_ops;
-	//std::cout << "mat = " << mat << std::endl;
+	//std::cout << std::scientific << "mat = " << mat << ", symm: " << std::boolalpha << is_symm << std::endl;
 	auto [ok, evals_re, evals_im, evecs_re, evecs_im] =
-		tl2_la::eigenvec<t_mat, t_vec, t_real>(mat, false, is_symm, true);
+		tl2_la::eigenvec<t_mat, t_vec, t_real>(mat, false, is_symm, normalise);
 
 	t_int N = rows;
 	t_real* mem = reinterpret_cast<t_real*>(ext_heap_alloc(2*N + 2*N*N, sizeof(t_real)));

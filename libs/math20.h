@@ -5196,13 +5196,10 @@ eigenvec(const t_mat_cplx& mat, bool only_evals=false, bool is_hermitian=false, 
 	evals.resize(N);
 
 	if(!only_evals)
-	{
-		evecs.resize(N);
-		for(std::size_t i=0; i<N; ++i)
-			evecs[i] = tl2::zero<t_vec_cplx>(N);
-	}
+		evecs.resize(N, tl2::zero<t_vec_cplx>(N));
 
-	std::vector<t_cplx> inmat(N*N), outevals(N), outevecs(only_evals ? 0 : N*N);
+	std::vector<t_cplx> inmat(N*N, t_cplx{0,0}), 
+		outevecs(only_evals ? 0 : N*N, t_cplx{0,0});
 
 	for(std::size_t i=0; i<N; ++i)
 	{
@@ -5220,47 +5217,55 @@ eigenvec(const t_mat_cplx& mat, bool only_evals=false, bool is_hermitian=false, 
 	if(is_hermitian)
 	{
 		// evals of hermitian matrix are purely real
-		std::vector<t_real> outevals_real(N);
+		std::vector<t_real> outevals_real(N, t_real{0});
 
 		if constexpr(std::is_same_v<t_real, float>)
 			err = LAPACKE_cheev(LAPACK_ROW_MAJOR, only_evals ? 'N' : 'V', 'U', N, inmat.data(), N, outevals_real.data());
 		else if constexpr(std::is_same_v<t_real, double>)
 			err = LAPACKE_zheev(LAPACK_ROW_MAJOR, only_evals ? 'N' : 'V', 'U', N, inmat.data(), N, outevals_real.data());
+		else
+			throw std::domain_error("Invalid real type.");
 
 		// copy to complex output vector
 		for(std::size_t i=0; i<N; ++i)
-			outevals[i] = outevals_real[i];
+			evals[i] = outevals_real[i];
 	}
 	else
 	{
 		if constexpr(std::is_same_v<t_real, float>)
 		{
 			err = LAPACKE_cgeev(LAPACK_ROW_MAJOR, 'N', only_evals ? 'N' : 'V', N,
-				inmat.data(), N, outevals.data(), nullptr, N,
+				inmat.data(), N, evals.data(), nullptr, N,
 				only_evals ? nullptr : outevecs.data(), N);
 		}
 		else if constexpr(std::is_same_v<t_real, double>)
 		{
 			err = LAPACKE_zgeev(LAPACK_ROW_MAJOR, 'N', only_evals ? 'N' : 'V', N,
-				inmat.data(), N, outevals.data(), nullptr, N,
+				inmat.data(), N, evals.data(), nullptr, N,
 				only_evals ? nullptr : outevecs.data(), N);
+		}
+		else
+		{
+			throw std::domain_error("Invalid real type.");
 		}
 	}
 
 
-	for(std::size_t i=0; i<N; ++i)
+	if(!only_evals)
 	{
-		evals[i] = outevals[i];
-
-		if(!only_evals)
+		for(std::size_t i=0; i<N; ++i)
 		{
 			// hermitian algo overwrites original matrix!
 			for(std::size_t j=0; j<N; ++j)
 				evecs[i][j] = is_hermitian ? inmat[j*N + i] : outevecs[j*N + i];
 
 			if(normalise && (err == 0))
-				evecs[i] /= tl2::norm(evecs[i]);
-		}
+			{
+				t_cplx n = tl2::norm(evecs[i]);
+				if(!tl2::equals<t_cplx>(n, t_cplx{0,0}))
+					evecs[i] /= n;
+			}
+        }
 	}
 
 	return std::make_tuple(err == 0, evals, evecs);
@@ -5280,24 +5285,20 @@ eigenvec(const t_mat& mat, bool only_evals=false, bool is_symmetric=false, bool 
 	std::vector<t_vec> evecs_re, evecs_im;
 
 	if(mat.size1() != mat.size2() || mat.size1() == 0)
-		return std::make_tuple(0, evals_re, evals_im, evecs_re, evecs_im);
+		return std::make_tuple(false, evals_re, evals_im, evecs_re, evecs_im);
 
 	const std::size_t N = mat.size1();
-	evals_re.resize(N);
-	evals_im.resize(N);
+	evals_re.resize(N, t_real{0});
+	evals_im.resize(N, t_real{0});
 
 	if(!only_evals)
 	{
-		evecs_re.resize(N);
-		evecs_im.resize(N);
-		for(std::size_t i=0; i<N; ++i)
-		{
-			evecs_re[i] = tl2::zero<t_vec>(N);
-			evecs_im[i] = tl2::zero<t_vec>(N);
-		}
+		evecs_re.resize(N, tl2::zero<t_vec>(N));
+		evecs_im.resize(N, tl2::zero<t_vec>(N));
 	}
 
-	std::vector<t_real> inmat(N*N), outevals_re(N), outevals_im(N), outevecs(only_evals ? 0 : N*N);
+	std::vector<t_real> inmat(N*N, t_real{0}),
+		outevecs(only_evals ? 0 : N*N, t_real{0});
 
 	for(std::size_t i=0; i<N; ++i)
 	{
@@ -5316,36 +5317,36 @@ eigenvec(const t_mat& mat, bool only_evals=false, bool is_symmetric=false, bool 
 	{
 		// evals of symmetric matrix are purely real
 		if constexpr(std::is_same_v<t_real, float>)
-			err = LAPACKE_ssyev(LAPACK_ROW_MAJOR, only_evals ? 'N' : 'V', 'U', N, inmat.data(), N, outevals_re.data());
+			err = LAPACKE_ssyev(LAPACK_ROW_MAJOR, (only_evals ? 'N' : 'V'), 'U', N, inmat.data(), N, evals_re.data());
 		else if constexpr(std::is_same_v<t_real, double>)
-			err = LAPACKE_dsyev(LAPACK_ROW_MAJOR, only_evals ? 'N' : 'V', 'U', N, inmat.data(), N, outevals_re.data());
+			err = LAPACKE_dsyev(LAPACK_ROW_MAJOR, (only_evals ? 'N' : 'V'), 'U', N, inmat.data(), N, evals_re.data());
+		else
+			throw std::domain_error("Invalid real type.");
 
-		for(std::size_t i=0; i<N; ++i)
-			outevals_im[i] = t_real{0};
+		//for(std::size_t i=0; i<N*N; ++i)
+		//	std::cout << inmat[i] << " ";
+		//std::cout << std::endl;
 	}
 	else
 	{
 		if constexpr(std::is_same_v<t_real, float>)
 		{
-			err = LAPACKE_sgeev(LAPACK_ROW_MAJOR, 'N', only_evals ? 'N' : 'V', N,
-				inmat.data(), N, outevals_re.data(), outevals_im.data(), nullptr, N,
+			err = LAPACKE_sgeev(LAPACK_ROW_MAJOR, 'N', (only_evals ? 'N' : 'V'), N,
+				inmat.data(), N, evals_re.data(), evals_im.data(), nullptr, N,
 				only_evals ? nullptr : outevecs.data(), N);
 		}
 		else if constexpr(std::is_same_v<t_real, double>)
 		{
-			err = LAPACKE_dgeev(LAPACK_ROW_MAJOR, 'N', only_evals ? 'N' : 'V', N,
-				inmat.data(), N, outevals_re.data(), outevals_im.data(), nullptr, N,
+			err = LAPACKE_dgeev(LAPACK_ROW_MAJOR, 'N', (only_evals ? 'N' : 'V'), N,
+				inmat.data(), N, evals_re.data(), evals_im.data(), nullptr, N,
 				only_evals ? nullptr : outevecs.data(), N);
+		}
+		else
+		{
+			throw std::domain_error("Invalid real type.");
 		}
 	}
 
-
-	// evals
-	for(std::size_t i=0; i<N; ++i)
-	{
-		evals_re[i] = outevals_re[i];
-		evals_im[i] = outevals_im[i];
-	}
 
 	// evecs
 	if(!only_evals)
@@ -5360,9 +5361,9 @@ eigenvec(const t_mat& mat, bool only_evals=false, bool is_symmetric=false, bool 
 			{
 				for(std::size_t j=0; j<N; ++j)
 				{
-					evecs_re[i+1][j] = evecs_re[i][j];		// next eval is the same
 					evecs_im[i][j] = outevecs[j*N + i+1];	// imag part of evec follows next in array
-					evecs_im[i+1][j] = -evecs_im[i][j];		// next evec is the conjugated one
+					evecs_re[i+1][j] = evecs_re[i][j];		// next evec is the conjugated one
+					evecs_im[i+1][j] = -evecs_im[i][j];
 				}
 				++i;	// already used two values in array
 			}
@@ -5376,8 +5377,12 @@ eigenvec(const t_mat& mat, bool only_evals=false, bool is_symmetric=false, bool 
 				for(std::size_t j=0; j<N; ++j)
 					sum += std::norm(std::complex(evecs_re[i][j], evecs_im[i][j]));
 				sum = std::sqrt(sum);
-				evecs_re[i] /= sum;
-				evecs_im[i] /= sum;
+
+				if(!tl2::equals<t_real>(sum, 0))
+				{
+					evecs_re[i] /= sum;
+					evecs_im[i] /= sum;
+				}
 			}
 		}
 	}
