@@ -188,6 +188,13 @@ func start()
 	mat 3 3 G = B'*B;
 	putstr("Metric tensor: " + G);
 
+	vec 3 eval_re, eval_im;
+	mat 3 3 evec_re, evec_im;
+	assign eval_re, eval_im, evec_re, evec_im = eigenvecs(G);
+	putstr("Metric tensor eigenvals: " + eval_re);
+	putstr("Metric tensor eigenvecs (in columns): " + evec_re);
+	#putstr(evec_re[0~2, 0]);
+
 
 	vec 3 v100 = [1, 0, 0];
 	vec 3 v010 = [0, 1, 0];
@@ -212,13 +219,4 @@ func start()
 	putstr("Angle between [100] and [111]: " + (ang_100_111/pi*180) + " deg");
 
 #	putstr(calc_cross(B, v100, v010));
-
-
-	vec 3 ev_re, ev_im;
-	mat 3 3 evec_re, evec_im;
-	assign ev_re, ev_im, evec_re, evec_im = eigenvecs(G);
-	putstr("Metric eval_re: " + ev_re);
-	putstr("Metric eval_im: " + ev_im);
-	putstr("Metric evec_re: " + evec_re);
-	putstr("Metric evec_im: " + evec_im);
 }

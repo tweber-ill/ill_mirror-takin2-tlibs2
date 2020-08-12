@@ -185,7 +185,14 @@ t_astret ASTPrinter::visit(const ASTFunc* ast)
 
 t_astret ASTPrinter::visit(const ASTReturn* ast)
 {
-	const auto& retvals = ast->GetRets()->GetList();
+	const auto& rets = ast->GetRets();
+	if(!rets)
+	{
+		(*m_ostr) << "<Return />\n";
+		return nullptr;
+	}
+
+	const auto& retvals = rets->GetList();
 	std::size_t numRets = retvals.size();
 
 	if(numRets == 0)
