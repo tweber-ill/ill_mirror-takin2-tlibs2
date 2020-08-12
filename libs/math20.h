@@ -5179,13 +5179,17 @@ requires tl2::is_mat<t_mat>
  * eigenvectors and -values of a complex matrix
  * returns [ok, evals, evecs]
  */
-template<class t_mat_cplx, class t_vec_cplx, class t_cplx = typename t_mat_cplx::value_type>
+template<class t_mat_cplx, class t_vec_cplx, class t_cplx = typename t_mat_cplx::value_type,
+    class t_real = typename t_cplx::value_type>
 std::tuple<bool, std::vector<t_cplx>, std::vector<t_vec_cplx>>
-eigenvec(const t_mat_cplx& mat, bool only_evals=false, bool is_hermitian=false, bool normalise=false)
+eigenvec(const t_mat_cplx& mat, bool only_evals=false, bool is_hermitian=false, bool normalise=false,
+	t_real mineval=-1, t_real maxeval=-2, t_real eps=-1)
 	requires tl2::is_mat<t_mat_cplx> && tl2::is_vec<t_vec_cplx> && tl2::is_complex<t_cplx>
 {
-	using t_real = typename t_cplx::value_type;
-
+    bool only_selected_evals = (mineval <= maxeval);
+	bool use_selective_func = only_selected_evals;
+	//use_selective_func = true;
+    
 	std::vector<t_cplx> evals;
 	std::vector<t_vec_cplx> evecs;
 
@@ -5212,6 +5216,7 @@ eigenvec(const t_mat_cplx& mat, bool only_evals=false, bool is_hermitian=false, 
 		}
 	}
 
+
 	int err = -1;
 
 	if(is_hermitian)
@@ -5219,15 +5224,58 @@ eigenvec(const t_mat_cplx& mat, bool only_evals=false, bool is_hermitian=false, 
 		// evals of hermitian matrix are purely real
 		std::vector<t_real> outevals_real(N, t_real{0});
 
-		if constexpr(std::is_same_v<t_real, float>)
-			err = LAPACKE_cheev(LAPACK_COL_MAJOR, only_evals ? 'N' : 'V', 'L', N, inmat.data(), N, outevals_real.data());
-		else if constexpr(std::is_same_v<t_real, double>)
-			err = LAPACKE_zheev(LAPACK_COL_MAJOR, only_evals ? 'N' : 'V', 'L', N, inmat.data(), N, outevals_real.data());
+		// all eigenvalues
+		if(!use_selective_func)
+		{
+			if constexpr(std::is_same_v<t_real, float>)
+				err = LAPACKE_cheev(LAPACK_COL_MAJOR, only_evals ? 'N' : 'V', 'L', N, inmat.data(), N, outevals_real.data());
+			else if constexpr(std::is_same_v<t_real, double>)
+				err = LAPACKE_zheev(LAPACK_COL_MAJOR, only_evals ? 'N' : 'V', 'L', N, inmat.data(), N, outevals_real.data());
+			else
+				throw std::domain_error("Invalid real type.");
+		}
+		
+		// only selected eigenvalues
 		else
-			throw std::domain_error("Invalid real type.");
+		{
+			int minidx = 1, maxidx = N;
+			int iNumFound = 0;
 
+			std::unique_ptr<int, std::default_delete<int[]>>
+			uptrIdxArr(new int[2*N]);
+
+			// use maximum precision if none given
+			if(eps < t_real{0})
+			{
+				if constexpr(std::is_same_v<t_real, float>)
+					eps = LAPACKE_slamch('S');
+				else if constexpr(std::is_same_v<t_real, double>)
+					eps = LAPACKE_dlamch('S');
+				else
+					throw std::domain_error("Invalid real type.");
+			}
+
+			if constexpr(std::is_same_v<t_real, float>)
+				err = LAPACKE_cheevr(LAPACK_COL_MAJOR, (only_evals ? 'N' : 'V'), (only_selected_evals?'V':'A'), 'L',
+					N, inmat.data(), N, mineval, maxeval, minidx, maxidx,
+					eps, &iNumFound, outevals_real.data(), outevecs.data(), N, uptrIdxArr.get());
+			else if constexpr(std::is_same_v<t_real, double>)
+				err = LAPACKE_zheevr(LAPACK_COL_MAJOR, (only_evals ? 'N' : 'V'), (only_selected_evals?'V':'A'), 'L',
+					N, inmat.data(), N, mineval, maxeval, minidx, maxidx,
+					eps, &iNumFound, outevals_real.data(), outevecs.data(), N, uptrIdxArr.get());
+			else
+				throw std::domain_error("Invalid real type.");
+
+			// resize to actual number of eigenvalues and -vectors
+			if(iNumFound != N)
+			{
+				evals.resize(iNumFound, t_real{0});
+				evecs.resize(iNumFound, tl2::zero<t_vec_cplx>(N));
+			}
+		}
+		
 		// copy to complex output vector
-		for(std::size_t i=0; i<N; ++i)
+		for(std::size_t i=0; i<evals.size(); ++i)
 			evals[i] = outevals_real[i];
 	}
 	else
@@ -5253,11 +5301,11 @@ eigenvec(const t_mat_cplx& mat, bool only_evals=false, bool is_hermitian=false, 
 
 	if(!only_evals)
 	{
-		for(std::size_t i=0; i<N; ++i)
+		for(std::size_t i=0; i<evecs.size(); ++i)
 		{
 			// hermitian algo overwrites original matrix!
 			for(std::size_t j=0; j<N; ++j)
-				evecs[i][j] = is_hermitian ? inmat[j*N + i] : outevecs[j*N + i];
+				evecs[i][j] = (is_hermitian && !use_selective_func) ? inmat[j*N + i] : outevecs[j*N + i];
 
 			if(normalise && (err == 0))
 			{
@@ -5278,9 +5326,14 @@ eigenvec(const t_mat_cplx& mat, bool only_evals=false, bool is_hermitian=false, 
  */
 template<class t_mat, class t_vec, class t_real = typename t_mat::value_type>
 std::tuple<bool, std::vector<t_real>, std::vector<t_real>, std::vector<t_vec>, std::vector<t_vec>>
-eigenvec(const t_mat& mat, bool only_evals=false, bool is_symmetric=false, bool normalise=false)
+eigenvec(const t_mat& mat, bool only_evals=false, bool is_symmetric=false, bool normalise=false,
+	t_real mineval=-1, t_real maxeval=-2, t_real eps=-1)
 	requires (tl2::is_mat<t_mat> && tl2::is_vec<t_vec> && !tl2::is_complex<t_real>)
 {
+	bool only_selected_evals = (mineval <= maxeval);
+	bool use_selective_func = only_selected_evals;
+	//use_selective_func = true;
+	
 	std::vector<t_real> evals_re, evals_im;
 	std::vector<t_vec> evecs_re, evecs_im;
 
@@ -5315,17 +5368,58 @@ eigenvec(const t_mat& mat, bool only_evals=false, bool is_symmetric=false, bool 
 
 	if(is_symmetric)
 	{
-		// evals of symmetric matrix are purely real
-		if constexpr(std::is_same_v<t_real, float>)
-			err = LAPACKE_ssyev(LAPACK_COL_MAJOR, (only_evals ? 'N' : 'V'), 'L', N, inmat.data(), N, evals_re.data());
-		else if constexpr(std::is_same_v<t_real, double>)
-			err = LAPACKE_dsyev(LAPACK_COL_MAJOR, (only_evals ? 'N' : 'V'), 'L', N, inmat.data(), N, evals_re.data());
+		// all eigenvalues
+		if(!use_selective_func)
+		{
+			// evals of symmetric matrix are purely real
+			if constexpr(std::is_same_v<t_real, float>)
+				err = LAPACKE_ssyev(LAPACK_COL_MAJOR, (only_evals ? 'N' : 'V'), 'L', N, inmat.data(), N, evals_re.data());
+			else if constexpr(std::is_same_v<t_real, double>)
+				err = LAPACKE_dsyev(LAPACK_COL_MAJOR, (only_evals ? 'N' : 'V'), 'L', N, inmat.data(), N, evals_re.data());
+			else
+				throw std::domain_error("Invalid real type.");
+		}
+		
+		// only selected eigenvalues
 		else
-			throw std::domain_error("Invalid real type.");
-
-		//for(std::size_t i=0; i<N*N; ++i)
-		//	std::cout << inmat[i] << " ";
-		//std::cout << std::endl;
+		{
+			int minidx = 1, maxidx = N;
+			int iNumFound = 0;
+			
+			std::unique_ptr<int, std::default_delete<int[]>>
+			uptrIdxArr(new int[2*N]);
+			
+			// use maximum precision if none given
+			if(eps < t_real{0})
+			{
+				if constexpr(std::is_same_v<t_real, float>)
+					eps = LAPACKE_slamch('S');
+				else if constexpr(std::is_same_v<t_real, double>)
+					eps = LAPACKE_dlamch('S');
+				else
+					throw std::domain_error("Invalid real type.");
+			}
+			
+			if constexpr(std::is_same_v<t_real, float>)
+				err = LAPACKE_ssyevr(LAPACK_COL_MAJOR, (only_evals?'N':'V'), (only_selected_evals?'V':'A'), 'L',
+					N, inmat.data(), N, mineval, maxeval, minidx, maxidx,
+					eps, &iNumFound, evals_re.data(), outevecs.data(), N, uptrIdxArr.get());
+			else if constexpr(std::is_same_v<t_real, double>)
+				err = LAPACKE_dsyevr(LAPACK_COL_MAJOR, (only_evals?'N':'V'), (only_selected_evals?'V':'A'), 'L',
+					N, inmat.data(), N, mineval, maxeval, minidx, maxidx,
+					eps, &iNumFound, evals_re.data(), outevecs.data(), N, uptrIdxArr.get());
+			else
+				throw std::domain_error("Invalid real type.");
+					
+			// resize to actual number of eigenvalues and -vectors
+			if(iNumFound != N)
+			{
+				evals_re.resize(iNumFound, t_real{0});
+				evals_im.resize(iNumFound, t_real{0});
+				evecs_re.resize(iNumFound, tl2::zero<t_vec>(N));
+				evecs_im.resize(iNumFound, tl2::zero<t_vec>(N));
+			}
+		}
 	}
 	else
 	{
@@ -5351,11 +5445,11 @@ eigenvec(const t_mat& mat, bool only_evals=false, bool is_symmetric=false, bool 
 	// evecs
 	if(!only_evals)
 	{
-		for(std::size_t i=0; i<N; ++i)
+		for(std::size_t i=0; i<evals_re.size(); ++i)
 		{
 			// symmetric algo overwrites original matrix!
 			for(std::size_t j=0; j<N; ++j)
-				evecs_re[i][j] = is_symmetric ? inmat[j*N + i] : outevecs[j*N + i];
+				evecs_re[i][j] = (is_symmetric && !use_selective_func) ? inmat[j*N + i] : outevecs[j*N + i];
 
 			if(!is_symmetric && !tl2::equals<t_real>(evals_im[i], 0))
 			{
@@ -5371,7 +5465,7 @@ eigenvec(const t_mat& mat, bool only_evals=false, bool is_symmetric=false, bool 
 
 		if(normalise && (err == 0))
 		{
-			for(std::size_t i=0; i<N; ++i)
+			for(std::size_t i=0; i<evecs_re.size(); ++i)
 			{
 				t_real sum{0};
 				for(std::size_t j=0; j<N; ++j)
@@ -5389,7 +5483,6 @@ eigenvec(const t_mat& mat, bool only_evals=false, bool is_symmetric=false, bool 
 
 	return std::make_tuple(err == 0, evals_re, evals_im, evecs_re, evecs_im);
 }
-
 
 
 /**

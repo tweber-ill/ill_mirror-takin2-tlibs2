@@ -4,7 +4,7 @@
  * @date 11-aug-20
  * @license GPLv3, see 'LICENSE' file
  *
- * g++ -std=c++17 -DUSE_LAPACK -I.. -I/usr/include/lapacke -Iext/lapacke/include -Lext/lapacke/lib -o eig17 eig17.cpp -llapacke
+ * g++ -std=c++17 -DUSE_LAPACK -I.. -I/usr/include/lapacke -Iext/lapacke/include -Lext/lapacke/lib -o eig17 eig17.cpp ../libs/log.cpp -llapacke
  */
 
 #include <iostream>
