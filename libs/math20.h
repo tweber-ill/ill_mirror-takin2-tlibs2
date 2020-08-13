@@ -5189,7 +5189,7 @@ eigenvec(const t_mat_cplx& mat, bool only_evals=false, bool is_hermitian=false, 
     bool only_selected_evals = (mineval <= maxeval);
 	bool use_selective_func = only_selected_evals;
 	//use_selective_func = true;
-    
+
 	std::vector<t_cplx> evals;
 	std::vector<t_vec_cplx> evecs;
 
@@ -5234,7 +5234,7 @@ eigenvec(const t_mat_cplx& mat, bool only_evals=false, bool is_hermitian=false, 
 			else
 				throw std::domain_error("Invalid real type.");
 		}
-		
+
 		// only selected eigenvalues
 		else
 		{
@@ -5273,7 +5273,7 @@ eigenvec(const t_mat_cplx& mat, bool only_evals=false, bool is_hermitian=false, 
 				evecs.resize(iNumFound, tl2::zero<t_vec_cplx>(N));
 			}
 		}
-		
+
 		// copy to complex output vector
 		for(std::size_t i=0; i<evals.size(); ++i)
 			evals[i] = outevals_real[i];
@@ -5333,7 +5333,7 @@ eigenvec(const t_mat& mat, bool only_evals=false, bool is_symmetric=false, bool 
 	bool only_selected_evals = (mineval <= maxeval);
 	bool use_selective_func = only_selected_evals;
 	//use_selective_func = true;
-	
+
 	std::vector<t_real> evals_re, evals_im;
 	std::vector<t_vec> evecs_re, evecs_im;
 
@@ -5379,16 +5379,16 @@ eigenvec(const t_mat& mat, bool only_evals=false, bool is_symmetric=false, bool 
 			else
 				throw std::domain_error("Invalid real type.");
 		}
-		
+
 		// only selected eigenvalues
 		else
 		{
 			int minidx = 1, maxidx = N;
 			int iNumFound = 0;
-			
+
 			std::unique_ptr<int, std::default_delete<int[]>>
 			uptrIdxArr(new int[2*N]);
-			
+
 			// use maximum precision if none given
 			if(eps < t_real{0})
 			{
@@ -5399,7 +5399,7 @@ eigenvec(const t_mat& mat, bool only_evals=false, bool is_symmetric=false, bool 
 				else
 					throw std::domain_error("Invalid real type.");
 			}
-			
+
 			if constexpr(std::is_same_v<t_real, float>)
 				err = LAPACKE_ssyevr(LAPACK_COL_MAJOR, (only_evals?'N':'V'), (only_selected_evals?'V':'A'), 'L',
 					N, inmat.data(), N, mineval, maxeval, minidx, maxidx,
@@ -5410,7 +5410,7 @@ eigenvec(const t_mat& mat, bool only_evals=false, bool is_symmetric=false, bool 
 					eps, &iNumFound, evals_re.data(), outevecs.data(), N, uptrIdxArr.get());
 			else
 				throw std::domain_error("Invalid real type.");
-					
+
 			// resize to actual number of eigenvalues and -vectors
 			if(iNumFound != N)
 			{
