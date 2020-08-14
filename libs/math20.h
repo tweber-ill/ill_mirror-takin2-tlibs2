@@ -4359,9 +4359,9 @@ t_mat hom_translation(t_real x, t_real y, t_real z)
 requires is_mat<t_mat>
 {
 	return create<t_mat>({
-		1., 	0., 	0., 	x,
-		0., 	1., 	0., 	y,
-		0.,		0.,		1., 	z,
+		1., 	0., 	0., 	static_cast<typename t_mat::value_type>(x),
+		0., 	1., 	0., 	static_cast<typename t_mat::value_type>(y),
+		0.,		0.,		1., 	static_cast<typename t_mat::value_type>(z),
 		0.,		0.,		0.,		1.
 	});
 }
@@ -5804,6 +5804,43 @@ requires is_vec<t_vec>
 
 
 /**
+ * get the normal vector to a polygon
+ */
+template<class t_vec, template<class...> class t_cont = std::vector>
+t_vec get_poly_normal(t_cont<t_vec>& vecPoly)
+requires is_vec<t_vec>
+{
+	using namespace tl2_ops;
+	using t_real = typename t_vec::value_type;
+
+	// line from centre to vertex
+	const t_vec vecCentre = mean(vecPoly);
+	// face normal
+	t_vec vecNormBest = zero<t_vec>(vecCentre.size());
+	t_real tBestCross = t_real(0);
+
+	// find non-collinear vectors
+	for(std::size_t iVecPoly=1; iVecPoly<vecPoly.size(); ++iVecPoly)
+	{
+		t_vec vecNorm = cross<t_vec>({vecPoly[0]-vecCentre, vecPoly[1]-vecCentre});
+		t_real tCross = norm(vecNorm);
+		if(tCross > tBestCross)
+		{
+			tBestCross = tCross;
+			vecNormBest = vecNorm;
+		}
+	}
+
+	// nothing found
+	if(vecNormBest.size() < vecCentre.size())
+		return t_vec{};
+
+	return vecNormBest;
+}
+
+
+
+/**
  * sort vertices in a convex polygon
  */
 template<class t_vec, template<class...> class t_cont = std::vector>
@@ -5834,15 +5871,16 @@ requires is_vec<t_vec>
 
 /**
  * sort vertices in a convex polygon using an absolute centre for determining the normal
+ * @return normal
  */
 template<class t_vec, template<class...> class t_cont = std::vector>
-void sort_poly_verts(t_cont<t_vec>& vecPoly, const t_vec& vecAbsCentre)
+t_vec sort_poly_verts(t_cont<t_vec>& vecPoly, const t_vec& vecAbsCentre, bool make_norm_perp_to_poly=false)
 requires is_vec<t_vec>
 {
 	using namespace tl2_ops;
 
 	if(vecPoly.size() <= 1)
-		return;
+		return t_vec{};
 
 	// line from centre to vertex
 	const t_vec vecCentre = mean(vecPoly);
@@ -5850,14 +5888,28 @@ requires is_vec<t_vec>
 	t_vec vecNorm = vecCentre - vecAbsCentre;
 
 	sort_poly_verts_norm<t_vec, t_cont>(vecPoly, vecNorm);
+
+	if(make_norm_perp_to_poly)
+	{
+		t_vec normal = get_poly_normal<t_vec, t_cont>(vecPoly);
+
+		// do they point in the same direction?
+		if(inner(normal, vecNorm) < 0.)
+			normal = -normal;
+		vecNorm = normal;
+	}
+
+	vecNorm /= norm(vecNorm);
+	return vecNorm;
 }
 
 
 /**
  * sort vertices in a convex polygon determining normal
+ * @return normal
  */
 template<class t_vec, template<class...> class t_cont = std::vector>
-void sort_poly_verts(t_cont<t_vec>& vecPoly)
+t_vec sort_poly_verts(t_cont<t_vec>& vecPoly)
 requires is_vec<t_vec>
 {
 	using namespace tl2_ops;
@@ -5866,29 +5918,11 @@ requires is_vec<t_vec>
 	if(vecPoly.size() <= 1)
 		return;
 
-	// line from centre to vertex
-	const t_vec vecCentre = mean(vecPoly);
-	// face normal
-	t_vec vecNormBest = zero<t_vec>(vecCentre.size());
-	t_real tBestCross = t_real(0);
+	t_vec vecNorm = get_poly_normal<t_vec, t_cont>(vecPoly);
+	sort_poly_verts_norm<t_vec, t_cont>(vecPoly, vecNorm, true);
 
-	// find non-collinear vectors
-	for(std::size_t iVecPoly=1; iVecPoly<vecPoly.size(); ++iVecPoly)
-	{
-		t_vec vecNorm = cross<t_vec>({vecPoly[0]-vecCentre, vecPoly[1]-vecCentre});
-		t_real tCross = norm(vecNorm);
-		if(tCross > tBestCross)
-		{
-			tBestCross = tCross;
-			vecNormBest = vecNorm;
-		}
-	}
-
-	// nothing found
-	if(vecNormBest.size() < vecCentre.size())
-		return;
-
-	sort_poly_verts_norm<t_vec, t_cont>(vecPoly, vecNormBest);
+	vecNorm /= norm(vecNorm);
+	return vecNorm;
 }
 
 }
@@ -5908,7 +5942,8 @@ namespace tl2_qh {
  * https://github.com/t-weber/misc/blob/master/geo/qhulltst.cpp
  */
 template<class t_vec, template<class...> class t_cont = std::vector>
-t_cont<t_cont<t_vec>> get_convexhull(const t_cont<t_vec>& vecVerts)
+std::tuple<t_cont<t_cont<t_vec>>, t_cont<t_vec>>
+get_convexhull(const t_cont<t_vec>& vecVerts)
 requires tl2::is_vec<t_vec>
 {
 	using namespace tl2_ops;
@@ -5919,6 +5954,7 @@ requires tl2::is_vec<t_vec>
 	using t_vertexset_iter = typename orgQhull::QhullSet<orgQhull::QhullVertex>::iterator;
 
 	t_cont<t_cont<t_vec>> vecPolys;
+	t_cont<t_vec> vecNormals;
 	const t_vec vecCentre = tl2::mean(vecVerts);
 
 	// copy vertices
@@ -5958,15 +5994,16 @@ requires tl2::is_vec<t_vec>
 			vecPoly.emplace_back(std::move(vecPoint));
 		}
 
-		tl2::sort_poly_verts<t_vec, t_cont>(vecPoly, vecCentre);
+		t_vec vecNormal =tl2::sort_poly_verts<t_vec, t_cont>(vecPoly, vecCentre);
 		vecPolys.emplace_back(std::move(vecPoly));
+		vecNormals.emplace_back(std::move(vecNormal));
 	}
 
 	// too few polygons => remove polyhedron
 	if(vecPolys.size() < 3)
 		vecPolys = decltype(vecPolys){};
 
-	return vecPolys;
+	return std::make_tuple(vecPolys, vecNormals);
 }
 }
 #endif

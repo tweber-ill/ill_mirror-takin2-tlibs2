@@ -277,6 +277,9 @@ public:
 	std::size_t AddArrow(t_real_gl rad=1, t_real_gl h=1,
 		t_real_gl x=0, t_real_gl y=0, t_real_gl z=0,
 		t_real_gl r=0, t_real_gl g=0, t_real_gl b=0, t_real_gl a=1);
+	std::size_t AddSolidObject(const std::vector<t_vec3_gl>& triag_verts,
+		const std::vector<t_vec3_gl>& triag_norms,
+		t_real_gl r=0, t_real_gl g=0, t_real_gl b=0, t_real_gl a=1);
 	std::size_t AddCoordinateCross(t_real_gl min, t_real_gl max);
 
 	void SetObjectMatrix(std::size_t idx, const t_mat_gl& mat);

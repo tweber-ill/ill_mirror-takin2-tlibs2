@@ -497,6 +497,25 @@ std::size_t GlPlot_impl::AddArrow(t_real_gl rad, t_real_gl h,
 }
 
 
+std::size_t GlPlot_impl::AddSolidObject(const std::vector<t_vec3_gl>& triag_verts,
+	const std::vector<t_vec3_gl>& triag_norms,
+	t_real_gl r, t_real_gl g, t_real_gl b, t_real_gl a)
+{
+	auto [boundingSpherePos, boundingSphereRad] = tl2::bounding_sphere<t_vec3_gl>(triag_verts);
+
+	QMutexLocker _locker{&m_mutexObj};
+
+	auto obj = CreateTriangleObject(triag_verts, triag_verts, triag_norms, tl2::create<t_vec_gl>({r,g,b,a}), false);
+	obj.m_mat = tl2::hom_translation<t_mat_gl>(0., 0., 0.);
+	obj.m_boundingSpherePos = std::move(boundingSpherePos);
+	obj.m_boundingSphereRad = boundingSphereRad;
+	obj.m_labelPos = tl2::create<t_vec3_gl>({0., 0., 0.75});
+	m_objs.emplace_back(std::move(obj));
+
+	return m_objs.size()-1;		// object handle
+}
+
+
 std::size_t GlPlot_impl::AddCoordinateCross(t_real_gl min, t_real_gl max)
 {
 	auto col = tl2::create<t_vec_gl>({0,0,0,1});
@@ -672,9 +691,8 @@ void main()
 	gl_Position = proj * cam * objPos;
 
 	float I = lighting(objPos, objNorm);
-	fragcol = vertexcol * I;
+	fragcol.rgb = vertexcol.rgb * I;
 	fragcol *= constcol;
-	fragcol[3] = 1;
 })RAW";
 // --------------------------------------------------------------------
 
@@ -755,6 +773,9 @@ void main()
 	// options
 	pGl->glCullFace(GL_BACK);
 	pGl->glEnable(GL_CULL_FACE);
+
+	pGl->glEnable(GL_BLEND);
+	pGl->glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	pGl->glEnable(GL_MULTISAMPLE);
 	pGl->glEnable(GL_LINE_SMOOTH);
