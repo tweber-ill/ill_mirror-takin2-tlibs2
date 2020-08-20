@@ -40,9 +40,9 @@ message("Using Boost version ${Boost_MAJOR_VERSION}.${Boost_MINOR_VERSION}.${Boo
 
 # -----------------------------------------------------------------------------
 # Python
-find_package(PythonLibs)
+find_package(Python3 REQUIRED COMPONENTS Interpreter Development REQUIRED)
 
-message("Using Python version ${PYTHONLIBS_VERSION_STRING}.")
+message("Using Python version ${Python3_VERSION}. Dist packages: ${Python3_SITEARCH}")
 # -----------------------------------------------------------------------------
 
 
@@ -50,7 +50,7 @@ message("Using Python version ${PYTHONLIBS_VERSION_STRING}.")
 include_directories(
 	"${PROJECT_SOURCE_DIR}" "${PROJECT_SOURCE_DIR}/libs"
 	"${Boost_INCLUDE_DIRS}" "${Boost_INCLUDE_DIRS}/.."
-	"${PYTHON_INCLUDE_DIRS}"
+	"${Python3_INCLUDE_DIRS}"
 )
 
 
@@ -66,11 +66,12 @@ set_source_files_properties(swig_mod/tl2.i PROPERTIES SWIG_FLAGS "-I ${PROJECT_S
 
 swig_add_library(tl2_py LANGUAGE python SOURCES swig_mod/tl2.i libs/log.cpp)
 
-target_link_libraries(tl2_py "${PYTHON_LIBRARIES}")
+target_link_libraries(tl2_py "${Python3_LIBRARIES}")
 
 
 # installation
-install(TARGETS tl2_py LIBRARY DESTINATION lib64)
+install(TARGETS tl2_py LIBRARY DESTINATION "${Python3_SITEARCH}")
+install(FILES FILES "${CMAKE_BINARY_DIR}/tl2.py" DESTINATION "${Python3_SITEARCH}")
 # -----------------------------------------------------------------------------
 
 
