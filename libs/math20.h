@@ -50,10 +50,6 @@
 
 
 
-namespace math = boost::math;
-namespace ublas = boost::numeric::ublas;
-
-
 #ifdef USE_FADDEEVA
 	#include <Faddeeva.hh>
 	using t_real_fadd = double;
@@ -80,7 +76,7 @@ requires tl2::is_basic_mat<t_mat> && tl2::is_dyn_mat<t_mat>;
 // ----------------------------------------------------------------------------
 
 // constants
-template<typename T=double> constexpr T pi = math::constants::pi<T>();
+template<typename T=double> constexpr T pi = boost::math::constants::pi<T>();
 template<typename T> T golden = T(0.5) + std::sqrt(T(5))/T(2);
 
 
@@ -896,6 +892,7 @@ requires tl2::is_basic_vec<t_vec> && tl2::is_dyn_vec<t_vec>
 	return vec1;
 }
 
+
 /**
  * vector -= vector
  */
@@ -1071,6 +1068,7 @@ requires tl2::is_basic_mat<t_mat> && tl2::is_dyn_mat<t_mat>
 	return mat * d;
 }
 
+
 /**
  * matrix / scalar
  */
@@ -1102,6 +1100,18 @@ t_mat& operator*=(t_mat& mat1, typename t_mat::value_type d)
 requires tl2::is_basic_mat<t_mat> && tl2::is_dyn_mat<t_mat>
 {
 	mat1 = mat1 * d;
+	return mat1;
+}
+
+
+/**
+ * matrix += matrix
+ */
+template<class t_mat>
+t_mat& operator+=(t_mat& mat1, const t_mat& mat2)
+requires tl2::is_basic_mat<t_mat> && tl2::is_dyn_mat<t_mat>
+{
+	mat1 = mat1 + mat2;
 	return mat1;
 }
 
@@ -2047,6 +2057,31 @@ requires tl2::is_basic_mat<t_mat> && tl2::is_dyn_mat<t_mat>
 	return matRet;
 }
 
+
+/**
+ * element-wise division
+ */
+template<class t_mat>
+t_mat div_perelem(const t_mat& mat1, const t_mat& mat2, bool assert_sizes=true)
+requires tl2::is_basic_mat<t_mat>
+{
+	if(assert_sizes)
+	{
+		if constexpr(tl2::is_dyn_mat<t_mat>)
+			assert(mat1.size1() == mat2.size1() && mat1.size2() == mat2.size2());
+		else
+			static_assert(mat1.size1() == mat2.size1() && mat1.size2() == mat2.size2());
+	}
+
+
+	t_mat matRet = zero<t_mat>(mat1.size1(), mat1.size2());
+
+	for(std::size_t row=0; row<matRet.size1(); ++row)
+		for(std::size_t col=0; col<matRet.size2(); ++col)
+			matRet(row, col) = mat1(row, col) / mat2(row,col);
+
+	return matRet;
+}
 
 
 /**
@@ -6408,7 +6443,7 @@ requires is_mat<t_mat> && is_vec<t_vec>
 	if(pProb)
 		vecMean = mean<std::vector<T>, t_vecvec>(*pProb, vecVals);
 	else
-		vecMean = mean<t_vecvec>(vecVals);
+		vecMean = mean<t_vec>(vecVals);
 
 	t_mat matCov = zero<t_mat>(vecVals[0].size(), vecVals[0].size());
 	T tSum = T{0};
@@ -6441,15 +6476,15 @@ requires is_mat<t_mat> && is_vec<t_vec>
 
 	// --------------------------------------------------------------------------------
 	// correlation matrix
-	t_innervec vecVar = diag_vec(matCov);
+	t_innervec vecVar = diag_vec<t_vec, t_mat>(matCov);
 	t_innervec vecStdDev(vecVar.size());
 
 	std::transform(vecVar.begin(), vecVar.end(), vecStdDev.begin(),
 		[](typename t_innervec::value_type d) -> typename t_innervec::value_type
 		{ return std::sqrt(d); });
 
-	t_mat matStdDev = outer(vecStdDev, vecStdDev);
-	t_mat matCorr = ublas::element_div(matCov, matStdDev);
+	t_mat matStdDev = outer<t_mat, t_vec>(vecStdDev, vecStdDev);
+	t_mat matCorr = div_perelem<t_mat>(matCov, matStdDev);
 	// --------------------------------------------------------------------------------
 
 	return std::make_tuple(matCov, matCorr);

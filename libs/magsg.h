@@ -211,6 +211,7 @@ public:
 
 
 template<class t_mat, class t_vec>
+requires tl2::is_mat<t_mat> && tl2::is_vec<t_vec>
 bool Spacegroups<t_mat, t_vec>::Load(const std::string& strFile)
 {
 	using t_real = typename t_mat::value_type;
