@@ -66,7 +66,7 @@ set_source_files_properties(swig_mod/tl2.i PROPERTIES SWIG_FLAGS "-I ${PROJECT_S
 
 swig_add_library(tl2_py LANGUAGE python SOURCES swig_mod/tl2.i libs/log.cpp)
 
-target_link_libraries(tl2_py "${Python3_LIBRARIES}")
+target_link_libraries(tl2_py Python3::Python)
 
 
 # installation
