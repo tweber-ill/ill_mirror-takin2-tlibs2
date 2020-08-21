@@ -6008,7 +6008,7 @@ requires tl2::is_vec<t_vec>
 	}
 
 
-	orgQhull::Qhull qhull{"tlibs2", dim, int(vecVerts.size()), mem.get(), ""};
+	orgQhull::Qhull qhull{"tlibs2", dim, int(vecVerts.size()), mem.get(), "Qt"};
 	orgQhull::QhullFacetList facets = qhull.facetList();
 
 	for(t_facetlist_iter iter=facets.begin(); iter!=facets.end(); ++iter)
@@ -6029,7 +6029,7 @@ requires tl2::is_vec<t_vec>
 			vecPoly.emplace_back(std::move(vecPoint));
 		}
 
-		t_vec vecNormal =tl2::sort_poly_verts<t_vec, t_cont>(vecPoly, vecCentre);
+		t_vec vecNormal = tl2::sort_poly_verts<t_vec, t_cont>(vecPoly, vecCentre);
 		vecPolys.emplace_back(std::move(vecPoly));
 		vecNormals.emplace_back(std::move(vecNormal));
 	}

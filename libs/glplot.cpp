@@ -392,6 +392,13 @@ void GlPlot_impl::RemoveObject(std::size_t idx)
 {
 	m_objs[idx].m_valid = false;
 
+	m_objs[idx].m_pvertexbuf.reset();
+	m_objs[idx].m_pnormalsbuf.reset();
+	m_objs[idx].m_pcolorbuf.reset();
+	
+	m_objs[idx].m_vertices.clear();
+	m_objs[idx].m_triangles.clear();
+
 	// TODO: remove if object has no follow-up indices
 }
 
@@ -497,7 +504,7 @@ std::size_t GlPlot_impl::AddArrow(t_real_gl rad, t_real_gl h,
 }
 
 
-std::size_t GlPlot_impl::AddSolidObject(const std::vector<t_vec3_gl>& triag_verts,
+std::size_t GlPlot_impl::AddTriangleObject(const std::vector<t_vec3_gl>& triag_verts,
 	const std::vector<t_vec3_gl>& triag_norms,
 	t_real_gl r, t_real_gl g, t_real_gl b, t_real_gl a)
 {
