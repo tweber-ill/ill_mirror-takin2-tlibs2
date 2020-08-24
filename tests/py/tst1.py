@@ -19,7 +19,7 @@ def get_E(ki, kf):
 
 
 def load_data(datfile):
-	print("Loading \"%s\"." % (datfile))
+	#print("Loading \"%s\"." % (datfile))
 	dat = tl2.FileInstrBaseD.LoadInstr(datfile)
 	if dat == None:
 		return
@@ -39,9 +39,11 @@ def load_data(datfile):
 		intensity = counts/mon_counts
 		intensity_err = counts_err / mon_counts
 
-		print("Q = (%.4f %.4f %.4f), E = %.4f: Monitor: %d, Counts: %d +- %d, Counts/Monitor: %.5g +- %.5g" \
-			% (h, k, l, E, mon_counts, counts, counts_err, intensity, intensity_err))
-	print()
+		print("{0:12.4g} {1:12.4g} {2:12.4g} {3:12.4g} {4:12.4g} {5:12.4g}".format(h, k, l, E, intensity, intensity_err))
+
+		#print("Q = (%.4f %.4f %.4f), E = %.4f: Monitor: %d, Counts: %d +- %d, Counts/Monitor: %.5g +- %.5g" \
+		#	% (h, k, l, E, mon_counts, counts, counts_err, intensity, intensity_err))
+	#print()
 
 
 def load_all(dir):
@@ -49,7 +51,5 @@ def load_all(dir):
 		load_data(dir + "/" + datfile)
 
 
-#datfile = "/home/tw/Projects/repos/skx/exp/data1/elast_1.dat"
-#load_data(datfile)
-
-load_all("/home/tw/tmp/mvo_phonon")
+print("#          h            k            l            E            S        S_err")
+load_all("/users/tw/tmp/mvo_phonon")
