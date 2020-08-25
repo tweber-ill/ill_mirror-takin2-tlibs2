@@ -15,9 +15,9 @@ set border lw 4
 #set yrange [0 : 1]
 #set cbrange [0 : 1]
 
-#set xtics 0.05 offset screen 0, screen 0
-#set ytics 0.2 offset screen -0.005, screen 0
-#set cbtics 1
+set xtics 0.05 offset screen 0, screen 0
+set ytics 0.2 offset screen -0.005, screen 0
+#set cbtics 0.05
 #set mxtics 2
 #set mytics 2
 
@@ -29,11 +29,11 @@ set cblabel "{/Helvetica-Italic S(q, E)}"
 
 set palette defined \
 (\
-    0 '#ffffff', \
-    1 '#000000' \
+    0 '#0000ff', \
+    1 '#ff0000' \
 )
 
-point_size(w) = 1e4*w
+point_size(w) = abs(log10(5e4*w))
 weight(w) = w
 
 plot \
