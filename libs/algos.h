@@ -37,7 +37,8 @@ void copy_interleave(T1 inIter, T1 inEnd, T2 outIter, std::size_t interleave, st
 /**
  * count number of ocurrences of a sub-string in a string
  */
-static std::size_t count_occurrences(const std::string &str, const std::string &tok)
+template<class t_str=std::string>
+std::size_t count_occurrences(const t_str &str, const t_str &tok)
 {
 	std::size_t num = 0;
 	std::size_t start = 0;
@@ -46,7 +47,7 @@ static std::size_t count_occurrences(const std::string &str, const std::string &
 	while(true)
 	{
 		std::size_t idx = str.find(tok, start);
-		if(idx == std::string::npos)
+		if(idx == t_str::npos)
 			break;
 
 		++num;

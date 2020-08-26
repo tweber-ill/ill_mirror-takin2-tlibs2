@@ -603,12 +603,12 @@ struct _var_to_str_impl
 template<class t_str>
 struct _var_to_str_impl<t_str, t_str>
 {
-	const t_str& operator()(const t_str& tstr, std::streamsize iPrec=10, int iGroup=-1)
+	const t_str& operator()(const t_str& tstr, std::streamsize /*iPrec=10*/, int /*iGroup=-1*/)
 	{
 		return tstr;
 	}
 
-	t_str operator()(const typename t_str::value_type* pc, std::streamsize iPrec=10, int iGroup=-1)
+	t_str operator()(const typename t_str::value_type* pc, std::streamsize /*iPrec=10*/, int /*iGroup=-1*/)
 	{
 		return t_str(pc);
 	}

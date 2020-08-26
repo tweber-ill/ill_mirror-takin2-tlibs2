@@ -5618,7 +5618,6 @@ requires is_mat<t_mat> && is_vec<t_vec>
 #ifdef USE_LAPACK
 	return tl2_la::qr<t_mat, t_vec>(mat);
 #else
-	using T = typename t_mat::value_type;
 	const std::size_t rows = mat.size1();
 	const std::size_t cols = mat.size2();
 	const std::size_t N = std::min(cols, rows);
@@ -5948,7 +5947,6 @@ t_vec sort_poly_verts(t_cont<t_vec>& vecPoly)
 requires is_vec<t_vec>
 {
 	using namespace tl2_ops;
-	using t_real = typename t_vec::value_type;
 
 	if(vecPoly.size() <= 1)
 		return;

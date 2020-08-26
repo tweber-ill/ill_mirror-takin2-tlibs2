@@ -923,8 +923,8 @@ void FileInstrBase<t_real>::ParsePolData()
 {}
 
 template<class t_real>
-void FileInstrBase<t_real>::SetPolNames(const char* pVec1, const char* pVec2,
-	const char* pCur1, const char* pCur2)
+void FileInstrBase<t_real>::SetPolNames(const char* /*pVec1*/, const char* /*pVec2*/,
+	const char* /*pCur1*/, const char* /*pCur2*/)
 {}
 
 template<class t_real>
