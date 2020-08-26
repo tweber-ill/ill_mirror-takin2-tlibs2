@@ -137,7 +137,7 @@ program
  * a list of statements
  */
 statements[res]
-	: statement[stmt] statements[lst]	{ $lst->AddStatement($stmt); $res = $lst; }
+	: statement[stmt] statements[lst]	{ $lst->AddStatement($stmt, true); $res = $lst; }
 	| /* epsilon */			{ $res = std::make_shared<ASTStmts>(); }
 	;
 
@@ -243,6 +243,40 @@ statement[res]
 	// loop
 	| LOOP expr[cond] DO statement[stmt] {
 		$res = std::make_shared<ASTLoop>($cond, $stmt); }
+	;
+
+	// simple loop with automatic counter variable
+	| LOOP IDENT[name] '=' expr[idx1] RANGE {
+			auto stmts = std::make_shared<ASTStmts>();
+			context.PushCachedAST(stmts);
+
+			// int idx = idx1;
+			std::string ctrname = context.AddScopedSymbol($name, SymbolType::INT)->scoped_name;
+			auto vardecl = std::make_shared<ASTVarDecl>(std::make_shared<ASTAssign>($name, $idx1));
+			vardecl->AddVariable(ctrname);
+			stmts->AddStatement(vardecl);
+		} 
+		expr[idx2] DO statement[stmt] {
+			auto stmts = std::static_pointer_cast<ASTStmts>(context.PopCachedAST());
+
+			// idx <= idx2
+			auto ctrvar = get_var(context, $name);
+			auto cond = std::make_shared<ASTComp>(ctrvar, $idx2, ASTComp::LEQ);
+
+			// ++idx
+			auto one = std::make_shared<ASTNumConst<std::int64_t>>(1);
+			auto opres = std::make_shared<ASTPlus>(ctrvar, one, 0);
+			auto inc_ctr = std::make_shared<ASTAssign>($name, opres);
+
+			// the actual loop
+			auto loopstmts = std::make_shared<ASTStmts>();
+			loopstmts->AddStatement($stmt);
+			loopstmts->AddStatement(inc_ctr);
+			auto loop = std::make_shared<ASTLoop>(cond, loopstmts);
+			stmts->AddStatement(loop);
+
+			$res = stmts;
+		}
 	;
 
 

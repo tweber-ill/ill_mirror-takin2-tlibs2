@@ -18,9 +18,9 @@ find_package(BISON 3 REQUIRED)
 find_package(Boost REQUIRED COMPONENTS program_options)
 find_package(Lapacke REQUIRED)
 
+add_compile_options(-Wall -Wextra)
+add_compile_options(-std=c++20)
 
-add_definitions(-Wall -Wextra)
-add_definitions(-std=c++20)
 add_definitions(${Boost_CXX_FLAGS})
 add_definitions(-DUSE_LAPACK)
 

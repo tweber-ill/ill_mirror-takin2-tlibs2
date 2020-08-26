@@ -119,32 +119,18 @@ func vec 3 calc_cross(mat 3 3 B, vec 3 v1, vec 3 v2)
 	mat 3 3 G_inv = G^(-1);
 	vec 3 v3;
 
-	int l = 0;
-	loop l<3 do
+	loop l = 0~2 do
 	{
 		v3[l] = 0;
 
-		int j = 0;
-		loop j<3 do
+		loop j = 0~2 do
 		{
-			int k = 0;
-			loop k<3 do
+			loop k = 0~2 do
 			{
-				int i = 0;
-				loop i<3 do
-				{
+				loop i = 0~2 do
 					v3[l] = v3[l] + v1[j]*v2[k]*G_inv[l,i]*calc_levi(B, i,j,k);
-
-					i += 1;
-				}
-
-				k += 1;
 			}
-
-			j += 1;
 		}
-
-		l += 1;
 	}
 
 	ret v3;

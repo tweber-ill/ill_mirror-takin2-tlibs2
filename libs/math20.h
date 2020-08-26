@@ -5447,7 +5447,7 @@ eigenvec(const t_mat& mat, bool only_evals=false, bool is_symmetric=false, bool 
 				throw std::domain_error("Invalid real type.");
 
 			// resize to actual number of eigenvalues and -vectors
-			if(iNumFound != N)
+			if(std::size_t(iNumFound) != N)
 			{
 				evals_re.resize(iNumFound, t_real{0});
 				evals_im.resize(iNumFound, t_real{0});

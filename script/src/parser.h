@@ -14,6 +14,7 @@
 #include <iostream>
 #include <string>
 #include <array>
+#include <stack>
 #include <variant>
 #include <unordered_map>
 #include <cmath>
@@ -72,6 +73,7 @@ namespace yy
 		yy::Parser* m_parser = nullptr;
 
 		std::shared_ptr<ASTStmts> m_statements;
+		std::stack<std::shared_ptr<AST>> m_cachedast;
 
 		SymTab m_symbols;
 		std::unordered_map<std::string, std::variant<double, std::int64_t, std::string>> m_consts
@@ -98,6 +100,12 @@ namespace yy
 		// --------------------------------------------------------------------
 		void SetStatements(std::shared_ptr<ASTStmts> stmts) { m_statements = stmts; }
 		const std::shared_ptr<ASTStmts> GetStatements() const { return m_statements; }
+		// --------------------------------------------------------------------
+
+
+		// --------------------------------------------------------------------
+		void PushCachedAST(std::shared_ptr<AST> stmts) { m_cachedast.push(stmts); }
+		std::shared_ptr<AST> PopCachedAST() { auto elem = m_cachedast.top(); m_cachedast.pop(); return elem; }
 		// --------------------------------------------------------------------
 
 
@@ -138,10 +146,22 @@ namespace yy
 
 
 		// --------------------------------------------------------------------
+		/**
+		 * add a symbol with the type and dimensions given by the respective members
+		 */
 		Symbol* AddScopedSymbol(const std::string& name)
 		{
 			const std::string& scope = GetScopeName();
 			return m_symbols.AddSymbol(scope, name, m_symtype, m_symdims);
+		}
+
+		/**
+		 * add a symbol with the type and dimensions given by the parameters
+		 */
+		Symbol* AddScopedSymbol(const std::string& name, SymbolType symtype, const std::array<std::size_t, 2>& symdims = {1, 1})
+		{
+			const std::string& scope = GetScopeName();
+			return m_symbols.AddSymbol(scope, name, symtype, symdims);
 		}
 
 		const Symbol* FindScopedSymbol(const std::string& name) const

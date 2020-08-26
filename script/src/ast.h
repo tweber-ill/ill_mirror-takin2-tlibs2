@@ -285,9 +285,12 @@ public:
 	ASTStmts() : stmts{}
 	{}
 
-	void AddStatement(ASTPtr stmt)
+	void AddStatement(ASTPtr stmt, bool front=false)
 	{
-		stmts.push_front(stmt);
+		if(front)
+			stmts.push_front(stmt);
+		else
+			stmts.push_back(stmt);
 	}
 
 	const std::list<ASTPtr>& GetStatementList() const
