@@ -192,47 +192,65 @@ statement[res]
 	// variable declarations
 	// scalar / double
 	| SCALARDECL {
-			context.SetSymType(SymbolType::SCALAR);
+			context.PushSymType(SymbolType::SCALAR);
 		}
-		variables[vars] ';'	{ $res = $vars; }
+		variables[vars] ';'	{ 
+			$res = $vars;
+			context.PopSymType();
+		}
 
 	// vector
 	| VECTORDECL INT[dim] {
-			context.SetSymType(SymbolType::VECTOR);
-			context.SetSymDims(std::size_t($dim));
+			context.PushSymType(SymbolType::VECTOR);
+			context.PushSymDims(std::size_t($dim));
 		}
 		variables[vars] ';' {
 			$res = $vars;
+			context.PopSymType();
+			context.PopSymDims();
 		}
 
 	// matrix
 	| MATRIXDECL INT[dim1] INT[dim2] {
-			context.SetSymType(SymbolType::MATRIX);
-			context.SetSymDims(std::size_t($dim1), std::size_t($dim2));
+			context.PushSymType(SymbolType::MATRIX);
+			context.PushSymDims(std::size_t($dim1), std::size_t($dim2));
 		}
 		variables[vars] ';' {
 			$res = $vars;
+			context.PopSymType();
+			context.PopSymDims();
 		}
 
 	// string with default size
 	| STRINGDECL {
-			context.SetSymType(SymbolType::STRING);
-			context.SetSymDims(std::size_t(DEFAULT_STRING_SIZE));
+			context.PushSymType(SymbolType::STRING);
+			context.PushSymDims(std::size_t(DEFAULT_STRING_SIZE));
 		}
-		variables[vars] ';'	{ $res = $vars; }
+		variables[vars] ';'	{
+			$res = $vars;
+			context.PopSymType();
+			context.PopSymDims();
+		}
 
 	// string with a given (static) size
 	| STRINGDECL INT[dim] {
-			context.SetSymType(SymbolType::STRING);
-			context.SetSymDims(std::size_t(std::size_t($dim)));
+			context.PushSymType(SymbolType::STRING);
+			context.PushSymDims(std::size_t(std::size_t($dim)));
 		}
-		variables[vars] ';'	{ $res = $vars; }
+		variables[vars] ';'	{ 
+			$res = $vars; 
+			context.PopSymType();
+			context.PopSymDims();
+		}
 
 	// int
 	| INTDECL {
-			context.SetSymType(SymbolType::INT);
+			context.PushSymType(SymbolType::INT);
 		}
-		variables[vars] ';'	{ $res = $vars; }
+		variables[vars] ';'	{ 
+			$res = $vars; 
+			context.PopSymType();
+		}
 
 	// conditional
 	| IF expr[cond] THEN statement[if_stmt] {

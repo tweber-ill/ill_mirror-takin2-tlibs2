@@ -83,12 +83,16 @@ namespace yy
 
 		// information about currently parsed symbol
 		std::vector<std::string> m_curscope;
-		SymbolType m_symtype = SymbolType::SCALAR;
-		std::array<std::size_t, 2> m_symdims = {1, 1};
+		std::stack<SymbolType> m_symtype;
+		std::stack<std::array<std::size_t, 2>> m_symdims;
 
 	public:
 		ParserContext(std::istream& istr = std::cin) : m_lex{this, istr}, m_statements{}
-		{}
+		{
+			// defaults
+			m_symtype.push(SymbolType::SCALAR);
+			m_symdims.push(std::array<std::size_t, 2>{1, 1});
+		}
 
 
 		yy::Lexer& GetLexer() { return m_lex; }
@@ -152,7 +156,7 @@ namespace yy
 		Symbol* AddScopedSymbol(const std::string& name)
 		{
 			const std::string& scope = GetScopeName();
-			return m_symbols.AddSymbol(scope, name, m_symtype, m_symdims);
+			return m_symbols.AddSymbol(scope, name, m_symtype.top(), m_symdims.top());
 		}
 
 		/**
@@ -173,14 +177,26 @@ namespace yy
 		const SymTab& GetSymbols() const { return m_symbols; }
 		SymTab& GetSymbols() { return m_symbols; }
 
-		// type of current symbol
-		void SetSymType(SymbolType ty) { m_symtype = ty; }
+		/**
+		  * type of current symbol
+		  */
+		void PushSymType(SymbolType ty) { m_symtype.push(ty); }
+		SymbolType PopSymType() { SymbolType ty = m_symtype.top(); m_symtype.pop(); return ty; }
 
-		// dimensions of vector and matrix symbols
-		void SetSymDims(std::size_t dim1, std::size_t dim2=1)
+
+		/**
+		  * dimensions of vector and matrix symbols
+		  */
+		void PushSymDims(std::size_t dim1, std::size_t dim2=1)
 		{
-			m_symdims[0] = dim1;
-			m_symdims[1] = dim2;
+			m_symdims.push(std::array<std::size_t, 2>{dim1, dim2});
+		}
+
+		std::array<std::size_t, 2> PopSymDims()
+		{
+			auto dims = m_symdims.top();
+			m_symdims.pop();
+			return dims;
 		}
 
 
