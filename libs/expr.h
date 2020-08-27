@@ -21,7 +21,11 @@
 #include <vector>
 #include <memory>
 #include <cmath>
-#include <boost/math/special_functions/erf.hpp>
+
+#if __has_include(<boost/math/special_functions/erf.hpp>)
+	#include <boost/math/special_functions/erf.hpp>
+	#define HAS_ERFINV
+#endif
 
 #include "units.h"
 
@@ -110,10 +114,12 @@ protected:
 			register_func1("log10", std::log10);
 			register_func1("erf", std::erf);
 			register_func1("erfc", std::erfc);
-			register_func1("erf_inv", boost::math::erf_inv);
 			register_func1("round", std::round);
 			register_func1("ceil", std::ceil);
 			register_func1("floor", std::floor);
+#ifdef HAS_ERFINV
+			register_func1("erf_inv", boost::math::erf_inv);
+#endif
 
 			register_func2("pow", std::pow);
 			register_func2("atan2", std::atan2);
