@@ -65,27 +65,6 @@ protected:
 	// tables / functions
 	// ------------------------------------------------------------------------
 
-	// register a function with no parameters
-	void register_func0(const std::string& name, t_num(*fkt)())
-	{
-		m_funcs0.emplace(std::make_pair(name, static_cast<t_num(*)()>(fkt)));
-	}
-
-
-	// register a function with one parameter
-	void register_func1(const std::string& name, t_num(*fkt)(t_num))
-	{
-		m_funcs1.emplace(std::make_pair(name, static_cast<t_num(*)(t_num)>(fkt)));
-	}
-
-
-	// register a function with two parameters
-	void register_func2(const std::string& name, t_num(*fkt)(t_num, t_num))
-	{
-		m_funcs2.emplace(std::make_pair(name, static_cast<t_num(*)(t_num, t_num)>(fkt)));
-	}
-
-
 	void register_funcs()
 	{
 		// common functions
@@ -153,15 +132,6 @@ protected:
 	t_num call_func2(const std::string& strName, t_num t1, t_num t2)
 	{
 		return m_funcs2.at(strName)(t1, t2);
-	}
-
-
-	// register a constant
-	void register_const(const std::string& name, t_num val)
-	{
-		// overwrite value if key already exists
-		if(auto [iter, ok] = m_consts.emplace(std::make_pair(name, val)); !ok)
-			iter->second = val;
 	}
 
 
@@ -642,6 +612,37 @@ protected:
 		return 0.;
 	}
 	// ----------------------------------------------------------------------------
+
+
+public:
+	// register a function with no parameters
+	void register_func0(const std::string& name, t_num(*fkt)())
+	{
+		m_funcs0.emplace(std::make_pair(name, static_cast<t_num(*)()>(fkt)));
+	}
+
+
+	// register a function with one parameter
+	void register_func1(const std::string& name, t_num(*fkt)(t_num))
+	{
+		m_funcs1.emplace(std::make_pair(name, static_cast<t_num(*)(t_num)>(fkt)));
+	}
+
+
+	// register a function with two parameters
+	void register_func2(const std::string& name, t_num(*fkt)(t_num, t_num))
+	{
+		m_funcs2.emplace(std::make_pair(name, static_cast<t_num(*)(t_num, t_num)>(fkt)));
+	}
+
+
+	// register a constant
+	void register_const(const std::string& name, t_num val)
+	{
+		// overwrite value if key already exists
+		if(auto [iter, ok] = m_consts.emplace(std::make_pair(name, val)); !ok)
+			iter->second = val;
+	}
 
 
 private:

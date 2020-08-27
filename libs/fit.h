@@ -24,6 +24,7 @@
 #include <limits>
 
 #include "log.h"
+#include "expr.h"
 
 #if defined(__cpp_concepts) && __cplusplus >= 201709L
 	#include "math20.h"
@@ -67,7 +68,7 @@ protected:
 
 public:
 	FitterLamFuncModel(t_func func, bool bSeparateX=1)
-		: m_func(func), m_bSeparateFreeParam(bSeparateX)
+		: m_func{func}, m_bSeparateFreeParam{bSeparateX}
 	{
 		m_vecVals.resize(m_bSeparateFreeParam ? iNumArgs-1 : iNumArgs);
 	}
@@ -105,6 +106,57 @@ public:
 		pMod->m_bSeparateFreeParam = this->m_bSeparateFreeParam;
 
 		return pMod;
+	}
+};
+
+
+/**
+ * interface using supplied functions
+ * iNumArgs also includes the "x" parameter to the function, m_vecVals does not
+ */
+template<class t_real>
+class FitterParsedFuncModel : public FitterFuncModel<t_real>
+{
+protected:
+	std::string m_func;
+
+	std::string m_xName = "x";
+	const std::vector<std::string>& m_vecNames;
+	std::vector<t_real> m_vecVals;
+
+public:
+	FitterParsedFuncModel(const std::string& func, const std::string& xName, const std::vector<std::string>& vecNames)
+		: m_func{func}, m_xName{xName}, m_vecNames{vecNames}
+	{}
+
+
+	virtual bool SetParams(const std::vector<t_real>& vecParams) override
+	{
+		m_vecVals.resize(vecParams.size());
+		for(std::size_t i=0; i<std::min(vecParams.size(), m_vecVals.size()); ++i)
+			m_vecVals[i] = vecParams[i];
+		return true;
+	}
+
+
+	virtual t_real operator()(t_real x = t_real(0)) const override
+	{
+		ExprParser<t_real> expr;
+
+		// x is not used for minimiser
+		if(m_xName != "")
+			expr.register_const(m_xName, x);
+
+		for(std::size_t i=0; i<m_vecVals.size(); ++i)
+			expr.register_const(m_vecNames[i], m_vecVals[i]);
+
+		return expr.parse(m_func);
+	}
+
+
+	virtual FitterParsedFuncModel* copy() const override
+	{
+		return new FitterParsedFuncModel<t_real>(m_func, m_xName, m_vecNames);
 	}
 };
 
@@ -225,8 +277,6 @@ bool fit(t_func&& func,
 {
 	try
 	{
-		//for(auto x : vecYErr) std::cout << x << ", "; std::cout << std::endl;
-
 		if(!vecX.size() || !vecY.size() || !vecYErr.size())
 		{
 			log_err("No data given to fitter.");
@@ -327,6 +377,58 @@ bool minimise(t_func&& func, const std::vector<std::string>& vecParamNames,
 
 	return false;
 }
+
+
+/**
+ * find function minimum for an expression
+ */
+bool minimise_expr(const std::string& func, const std::vector<std::string>& vecParamNames,
+	std::vector<t_real_min>& vecVals, std::vector<t_real_min>& vecErrs,
+	const std::vector<bool>* pVecFixed = nullptr, bool bDebug=1) noexcept
+{
+	try
+	{
+		// check if all params are fixed
+		if(pVecFixed && std::all_of(pVecFixed->begin(), pVecFixed->end(),
+			[](bool b)->bool { return b; }))
+			{
+				log_err("All parameters are fixed.");
+				return false;
+			}
+
+		FitterParsedFuncModel<t_real_min> mod(func, "", vecParamNames);
+		MiniFunction<t_real_min> chi2(&mod);
+
+		ROOT::Minuit2::MnUserParameters params;
+		for(std::size_t iParam=0; iParam<vecParamNames.size(); ++iParam)
+		{
+			params.Add(vecParamNames[iParam], vecVals[iParam], vecErrs[iParam]);
+			if(pVecFixed && (*pVecFixed)[iParam])
+				params.Fix(vecParamNames[iParam]);
+		}
+
+		ROOT::Minuit2::MnMigrad migrad(chi2, params, 2);
+		ROOT::Minuit2::FunctionMinimum mini = migrad();
+		bool bMinimumValid = mini.IsValid() && mini.HasValidParameters() && mini.UserState().IsValid();
+
+		for(std::size_t iParam=0; iParam<vecParamNames.size(); ++iParam)
+		{
+			vecVals[iParam] = mini.UserState().Value(vecParamNames[iParam]);
+			vecErrs[iParam] = std::fabs(mini.UserState().Error(vecParamNames[iParam]));
+		}
+
+		if(bDebug)
+			log_debug(mini);
+
+		return bMinimumValid;
+	}
+	catch(const std::exception& ex)
+	{
+		log_err(ex.what());
+	}
+
+	return false;
+}
 // ----------------------------------------------------------------------------
 
 
@@ -346,13 +448,13 @@ template<typename T> T bernstein(int i, int n, T t)
 /**
  * see: http://mathworld.wolfram.com/BezierCurve.html
  */
-template<typename T>
-ublas::vector<T> bezier(const ublas::vector<T>* P, std::size_t N, T t)
+template<class t_vec, typename T=typename t_vec::value_type>
+t_vec bezier(const t_vec* P, std::size_t N, T t)
 {
-	if(N==0) return ublas::vector<T>(0);
+	if(N==0) return t_vec{};
 	const int n = N-1;
 
-	ublas::vector<T> vec(P[0].size());
+	t_vec vec(P[0].size());
 	for(std::size_t i=0; i<vec.size(); ++i) vec[i] = T(0);
 
 	for(int i=0; i<=n; ++i)
@@ -391,15 +493,15 @@ T bspline_base(int i, int j, T t, const std::vector<T>& knots)
 /**
  * see: http://mathworld.wolfram.com/B-Spline.html
  */
-template<typename T>
-ublas::vector<T> bspline(const ublas::vector<T>* P, std::size_t N, T t, const std::vector<T>& knots)
+template<class t_vec, typename T=typename t_vec::value_type>
+t_vec bspline(const t_vec* P, std::size_t N, T t, const std::vector<T>& knots)
 {
-	if(N==0) return ublas::vector<T>(0);
+	if(N==0) return t_vec{};
 	const int n = N-1;
 	const int m = knots.size()-1;
 	const int degree = m-n-1;
 
-	ublas::vector<T> vec(P[0].size());
+	t_vec vec(P[0].size());
 	for(std::size_t i=0; i<vec.size(); ++i)
 		vec[i] = T(0);
 
@@ -412,17 +514,17 @@ ublas::vector<T> bspline(const ublas::vector<T>* P, std::size_t N, T t, const st
 
 // ----------------------------------------------------------------------------
 
-template<typename T=double>
+template<class t_vec, typename T=typename t_vec::value_type>
 class Bezier
 {
 	protected:
-		std::unique_ptr<ublas::vector<T>[]> m_pvecs;
+		std::unique_ptr<t_vec[]> m_pvecs;
 		std::size_t m_iN;
 
 	public:
 		Bezier(std::size_t N, const T *px, const T *py) : m_iN(N)
 		{
-			m_pvecs.reset(new ublas::vector<T>[m_iN]);
+			m_pvecs.reset(new t_vec[m_iN]);
 
 			for(std::size_t i=0; i<m_iN; ++i)
 			{
@@ -433,25 +535,25 @@ class Bezier
 		}
 
 
-		ublas::vector<T> operator()(T t) const
+		t_vec operator()(T t) const
 		{
-			return bezier<T>(m_pvecs.get(), m_iN, t);
+			return bezier<t_vec, T>(m_pvecs.get(), m_iN, t);
 		}
 };
 
 
-template<typename T=double>
+template<class t_vec, typename T=typename t_vec::value_type>
 class BSpline
 {
 	protected:
-		std::unique_ptr<ublas::vector<T>[]> m_pvecs;
+		std::unique_ptr<t_vec[]> m_pvecs;
 		std::size_t m_iN, m_iDegree;
 		std::vector<T> m_vecKnots;
 
 	public:
 		BSpline(std::size_t N, const T *px, const T *py, unsigned int iDegree=3) : m_iN(N), m_iDegree(iDegree)
 		{
-			m_pvecs.reset(new ublas::vector<T>[m_iN]);
+			m_pvecs.reset(new t_vec[m_iN]);
 
 			for(std::size_t i=0; i<m_iN; ++i)
 			{
@@ -475,16 +577,16 @@ class BSpline
 		}
 
 
-		ublas::vector<T> operator()(T t) const
+		t_vec operator()(T t) const
 		{
 			if(m_iN==0)
 			{
-				ublas::vector<T> vecNull(2);
+				t_vec vecNull(2);
 				vecNull[0] = vecNull[1] = 0.;
 				return vecNull;
 			}
 
-			ublas::vector<T> vec = bspline<T>(m_pvecs.get(), m_iN, t, m_vecKnots);
+			t_vec vec = bspline<t_vec, T>(m_pvecs.get(), m_iN, t, m_vecKnots);
 
 			// remove epsilon dependence
 			if(t<=0.) vec = m_pvecs[0];
@@ -495,17 +597,17 @@ class BSpline
 };
 
 
-template<typename T=double>
+template<class t_vec, typename T=typename t_vec::value_type>
 class LinInterp
 {
 protected:
-	std::unique_ptr<ublas::vector<T>[]> m_pvecs;
+	std::unique_ptr<t_vec[]> m_pvecs;
 	std::size_t m_iN;
 
 public:
 	LinInterp(std::size_t N, const T *px, const T *py) : m_iN(N)
 	{
-		m_pvecs.reset(new ublas::vector<T>[m_iN]);
+		m_pvecs.reset(new t_vec[m_iN]);
 
 		for(std::size_t i=0; i<m_iN; ++i)
 		{
@@ -516,7 +618,7 @@ public:
 
 		// ensure that vector is sorted by x values
 		std::stable_sort(m_pvecs.get(), m_pvecs.get()+m_iN,
-			[](const ublas::vector<T>& vec1, const ublas::vector<T>& vec2) -> bool
+			[](const t_vec& vec1, const t_vec& vec2) -> bool
 			{ return vec1[0] < vec2[0]; });
 	}
 
@@ -530,7 +632,7 @@ public:
 		if(m_iN == 1) return (*iterBegin)[1];
 
 		const auto* iterLower = std::lower_bound(iterBegin, iterEnd, x,
-			[](const ublas::vector<T>& vec, const T& x) -> bool
+			[](const t_vec& vec, const T& x) -> bool
 			{ return vec[0] < x; });
 
 		// lower bound at end of range?

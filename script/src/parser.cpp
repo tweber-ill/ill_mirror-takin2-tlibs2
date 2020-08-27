@@ -431,7 +431,7 @@ define i64 @getint(i8* %str)
 define i32 @main()
 {
 	call void @ext_init()
-    
+
 	; call entry function
 	call void @start()
 
