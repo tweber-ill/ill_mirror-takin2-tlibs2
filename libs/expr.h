@@ -1,6 +1,5 @@
 /**
- * tlibs2
- * simple LL(1) expression parser
+ * tlibs2 -- simple LL(1) expression parser
  * @author Tobias Weber <tweber@ill.fr>
  * @date 28-mar-2020
  * @license GPLv3, see 'LICENSE' file
@@ -12,7 +11,6 @@
 
 #ifndef __TLIBS2_EXPR_PARSER_H__
 #define __TLIBS2_EXPR_PARSER_H__
-
 
 #include <iostream>
 #include <fstream>
@@ -35,6 +33,13 @@ template<typename t_num=double>
 class ExprParser
 {
 public:
+	ExprParser() : m_consts{}, m_funcs0{}, m_funcs1{}, m_funcs2{}, m_istr{}, m_lookahead_text{}
+	{
+		register_funcs();
+		register_consts();
+	}
+
+
 	t_num parse(const std::string& str)
 	{
 		m_istr = std::make_shared<std::istringstream>(str);
@@ -56,132 +61,126 @@ protected:
 	// tables / functions
 	// ------------------------------------------------------------------------
 
-	// real functions with zero parameters
-	template<class t_val,
-		typename std::enable_if<std::is_floating_point<t_val>::value>::type* =nullptr>
-	t_val call_func0(const std::string& strName)
+	// register a function with no parameters
+	void register_func0(const std::string& name, t_num(*fkt)())
 	{
-		static const std::unordered_map<std::string, t_val(*)()> s_funcs =
-		{
-		};
-
-		return s_funcs.at(strName)();
+		m_funcs0.emplace(std::make_pair(name, static_cast<t_num(*)()>(fkt)));
 	}
 
 
-	// real functions with one parameter
-	template<class t_val,
-		typename std::enable_if<std::is_floating_point<t_val>::value>::type* =nullptr>
-	t_val call_func1(const std::string& strName, t_val t)
+	// register a function with one parameter
+	void register_func1(const std::string& name, t_num(*fkt)(t_num))
 	{
-		static const std::unordered_map<std::string, t_val(*)(t_val)> s_funcs =
-		{
-			{ "sin", std::sin }, { "cos", std::cos }, { "tan", std::tan },
-			{ "asin", std::asin }, { "acos", std::acos }, { "atan", std::atan },
-			{ "sinh", std::sinh }, { "cosh", std::cosh }, { "tanh", std::tanh },
-			{ "asinh", std::asinh }, { "acosh", std::acosh }, { "atanh", std::atanh },
-
-			{ "sqrt", std::sqrt }, { "cbrt", std::cbrt },
-			{ "exp", std::exp },
-			{ "log", std::log }, { "log2", std::log2 }, { "log10", std::log10 },
-
-			{ "erf", std::erf }, { "erfc", std::erfc }, { "erf_inv", boost::math::erf_inv },
-
-			{ "round", std::round }, { "ceil", std::ceil }, { "floor", std::floor },
-			{ "abs", std::abs },
-		};
-
-		return s_funcs.at(strName)(t);
+		m_funcs1.emplace(std::make_pair(name, static_cast<t_num(*)(t_num)>(fkt)));
 	}
 
 
-	// real functions with two parameters
-	template<class t_val,
-		typename std::enable_if<std::is_floating_point<t_val>::value>::type* =nullptr>
-	t_val call_func2(const std::string& strName, t_val t1, t_val t2)
+	// register a function with two parameters
+	void register_func2(const std::string& name, t_num(*fkt)(t_num, t_num))
 	{
-		static const std::unordered_map<std::string, t_val(*)(t_val, t_val)> s_funcs =
-		{
-			{ "pow", std::pow }, { "atan2", std::atan2 },
-			{ "mod", std::fmod },
-		};
-
-		return s_funcs.at(strName)(t1, t2);
+		m_funcs2.emplace(std::make_pair(name, static_cast<t_num(*)(t_num, t_num)>(fkt)));
 	}
 
 
-	// real constants
-	template<class t_val,
-		typename std::enable_if<std::is_floating_point<t_val>::value>::type* =nullptr>
-	t_val get_const(const std::string& strName)
+	void register_funcs()
 	{
-		static const std::unordered_map<std::string, t_val> s_consts =
-		{
-			{ "pi", __pi<t_val> },
-			{ "hbar",  t_val(hbar<t_val>/meV<t_val>/sec<t_val>) },	// hbar in [meV s]
-			{ "kB",  t_val(kB<t_val>/meV<t_val>*kelvin<t_val>) },	// kB in [meV / K]
-		};
+		// common functions
+		register_func1("abs", std::abs);
 
-		return s_consts.at(strName);
+		// real functions
+		if constexpr(std::is_floating_point_v<t_num>)
+		{
+			register_func1("sin", std::sin);
+			register_func1("cos", std::cos);
+			register_func1("tan", std::tan);
+			register_func1("asin", std::asin);
+			register_func1("acos", std::acos);
+			register_func1("atan", std::atan);
+			register_func1("sinh", std::sinh);
+			register_func1("cosh", std::cosh);
+			register_func1("tanh", std::tanh);
+			register_func1("asinh", std::asinh);
+			register_func1("acosh", std::acosh);
+			register_func1("atanh", std::atanh);
+			register_func1("sqrt", std::sqrt);
+			register_func1("cbrt", std::cbrt);
+			register_func1("exp", std::exp);
+			register_func1("log", std::log);
+			register_func1("log2", std::log2);
+			register_func1("log10", std::log10);
+			register_func1("erf", std::erf);
+			register_func1("erfc", std::erfc);
+			register_func1("erf_inv", boost::math::erf_inv);
+			register_func1("round", std::round);
+			register_func1("ceil", std::ceil);
+			register_func1("floor", std::floor);
+
+			register_func2("pow", std::pow);
+			register_func2("atan2", std::atan2);
+			register_func2("mod", std::fmod);
+		}
+
+		// integer functions
+		else if constexpr(std::is_integral_v<t_num>)
+		{
+			register_func2("pow", [](t_num t1, t_num t2) -> t_num { return t_num(std::pow(t1, t2)); } );
+			register_func2("mod", [](t_num t1, t_num t2) -> t_num { return t1%t2; } );
+		}
 	}
 
 
-
-	// alternative: int functions with zero parameters
-	template<class t_val,
-		typename std::enable_if<std::is_integral<t_val>::value>::type* =nullptr>
-	t_val call_func0(const std::string& strName)
+	// call function with zero parameters
+	t_num call_func0(const std::string& strName)
 	{
-		static const std::unordered_map<std::string, t_val(*)()> s_funcs =
-		{
-		};
-
-		return s_funcs.at(strName)();
+		return m_funcs0.at(strName)();
 	}
 
 
-	// alternative: int functions with one parameter
-	template<class t_val,
-		typename std::enable_if<std::is_integral<t_val>::value>::type* =nullptr>
-	t_val call_func1(const std::string& strName, t_val t)
+	// call function with one parameter
+	t_num call_func1(const std::string& strName, t_num t)
 	{
-		static const std::unordered_map<std::string, t_val(*)(t_val)> s_funcs =
-		{
-			{ "abs", std::abs },
-		};
-
-		return s_funcs.at(strName)(t);
+		return m_funcs1.at(strName)(t);
 	}
 
 
-	// alternative: int functions with two parameters
-	template<class t_val,
-		typename std::enable_if<std::is_integral<t_val>::value>::type* =nullptr>
-	t_val call_func2(const std::string& strName, t_val t1, t_val t2)
+	// call function with two parameters
+	t_num call_func2(const std::string& strName, t_num t1, t_num t2)
 	{
-		static const std::unordered_map<std::string, std::function<t_val(t_val, t_val)>> s_funcs =
-		{
-			{ "pow", [](t_val t1, t_val t2) -> t_val { return t_val(std::pow(t1, t2)); } },
-			{ "mod", [](t_val t1, t_val t2) -> t_val { return t1%t2; } },
-		};
-
-		return s_funcs.at(strName)(t1, t2);
+		return m_funcs2.at(strName)(t1, t2);
 	}
 
 
-	// alternative: int constants
-	template<class t_val,
-		typename std::enable_if<std::is_integral<t_val>::value>::type* =nullptr>
-	t_val get_const(const std::string& /*strName*/)
+	// register a constant
+	void register_const(const std::string& name, t_num val)
 	{
-		/*static const std::unordered_map<std::string, t_val> s_consts =
+		// overwrite value if key already exists
+		if(auto [iter, ok] = m_consts.emplace(std::make_pair(name, val)); !ok)
+			iter->second = val;
+	}
+
+
+	// register constants
+	void register_consts()
+	{
+		// real constants
+		if constexpr(std::is_floating_point_v<t_num>)
 		{
-			{ "pi", 3 },
-		};
+			register_const("pi", __pi<t_num>);
+			register_const("hbar",  t_num(hbar<t_num>/meV<t_num>/sec<t_num>));	// hbar in [meV s]
+			register_const("kB",  t_num(kB<t_num>/meV<t_num>*kelvin<t_num>));	// kB in [meV / K]
+		}
 
-		return s_consts.at(strName);*/
+		// integer constants
+		else if constexpr(std::is_integral_v<t_num>)
+		{
+		}
+	}
 
-		throw std::out_of_range("Undefined constant.");
+
+	// get constant
+	t_num get_const(const std::string& strName) const
+	{
+		return m_consts.at(strName);
 	}
 	// ------------------------------------------------------------------------
 
@@ -586,7 +585,7 @@ protected:
 				{
 					next_lookahead();
 
-					return call_func0<t_num>(ident);
+					return call_func0(ident);
 				}
 
 				// function with arguments
@@ -601,7 +600,7 @@ protected:
 					{
 						next_lookahead();
 
-						return call_func1<t_num>(ident, expr_val1);
+						return call_func1(ident, expr_val1);
 					}
 
 					// two-argument-function
@@ -613,7 +612,7 @@ protected:
 						match(')');
 						next_lookahead();
 
-						return call_func2<t_num>(ident, expr_val1, expr_val2);
+						return call_func2(ident, expr_val1, expr_val2);
 					}
 					else
 					{
@@ -627,7 +626,7 @@ protected:
 			// variable lookup
 			else
 			{
-				return get_const<t_num>(ident);
+				return get_const(ident);
 			}
 		}
 
@@ -640,11 +639,21 @@ protected:
 
 
 private:
-	std::shared_ptr<std::istream> m_istr;
+	// constants
+	std::unordered_map<std::string, t_num> m_consts{};
+
+	// functions
+	std::unordered_map<std::string, t_num(*)()> m_funcs0{};
+	std::unordered_map<std::string, t_num(*)(t_num)> m_funcs1{};
+	std::unordered_map<std::string, t_num(*)(t_num, t_num)> m_funcs2{};
+
+
+private:
+	std::shared_ptr<std::istream> m_istr{};
 
 	int m_lookahead = (int)Token::TOK_INVALID;
 	t_num m_lookahead_val = 0;
-	std::string m_lookahead_text;
+	std::string m_lookahead_text = "";
 };
 
 

@@ -167,12 +167,12 @@ void Log::dec_depth()
 	}
 }
 
-Log::Log() : m_vecOstrs{{&std::cerr, 1}}
+Log::Log() : m_vecOstrs{{&std::cerr, 1}}, m_mapOstrsTh{}, m_strInfo{}
 {}
 
 Log::Log(const std::string& strInfo, LogColor col, std::ostream* pOstr)
 	: m_vecOstrs{{pOstr ? pOstr : &std::cerr, 1}},
-	  m_strInfo(strInfo), m_col(col)
+		m_mapOstrsTh{}, m_strInfo(strInfo), m_col(col)
 {}
 
 Log::~Log()

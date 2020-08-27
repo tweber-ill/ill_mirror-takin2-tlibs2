@@ -4,7 +4,7 @@
  * @date 28-mar-20
  * @license GPLv3, see 'LICENSE' file
  *
- * g++ -std=c++20 -o expr expr.cpp ../../libs/log.cpp
+ * g++-10 -std=c++20 -I.. -o expr expr.cpp ../libs/log.cpp
  */
 
 #define BOOST_TEST_MODULE Expr Test
@@ -36,8 +36,8 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(test_expr_real, t_real, t_types_real)
 	result = parser.parse(" - (sqrt(4)-5)^3 -  5/2 ");
 	BOOST_TEST(tl2::equals<t_real>(result, 24.5, eps));
 
-	result = parser.parse("-cos(sin(1.23))^(-1.2 + 3.2)");
-	BOOST_TEST(tl2::equals<t_real>(result, -0.345, 1e-3));
+	result = parser.parse("-cos(sin(1.23*pi))^(-1.2 + 3.2)");
+	BOOST_TEST(tl2::equals<t_real>(result, -0.6228, 1e-3));
 }
 
 
