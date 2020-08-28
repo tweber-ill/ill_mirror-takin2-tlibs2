@@ -62,13 +62,13 @@ template<class t_real, std::size_t iNumArgs, typename t_func>
 class FitterLamFuncModel : public FitterFuncModel<t_real>
 {
 protected:
-	t_func m_func;
-	std::vector<t_real> m_vecVals;
+	t_func m_func{};
+	std::vector<t_real> m_vecVals{};
 	bool m_bSeparateFreeParam = 1;	// separate "x" from parameters (for fitter)
 
 public:
 	FitterLamFuncModel(t_func func, bool bSeparateX=1)
-		: m_func{func}, m_bSeparateFreeParam{bSeparateX}
+		: m_func{func}, m_vecVals{}, m_bSeparateFreeParam{bSeparateX}
 	{
 		m_vecVals.resize(m_bSeparateFreeParam ? iNumArgs-1 : iNumArgs);
 	}
@@ -150,7 +150,9 @@ public:
 		for(std::size_t i=0; i<m_vecVals.size(); ++i)
 			expr.register_const(m_vecNames[i], m_vecVals[i]);
 
-		return expr.parse(m_func);
+		t_real val = expr.parse(m_func);
+		//std::cout << "f(" << x << ") = " << val << std::endl;
+		return val;
 	}
 
 
@@ -173,7 +175,7 @@ class Chi2Function : public ROOT::Minuit2::FCNBase
 protected:
 	const FitterFuncModel<t_real_min> *m_pfkt = nullptr;
 
-	std::size_t m_uiLen;
+	std::size_t m_uiLen = 0;
 	const t_real* m_px = nullptr;
 	const t_real* m_py = nullptr;
 	const t_real* m_pdy = nullptr;
@@ -185,7 +187,7 @@ public:
 	Chi2Function(const FitterFuncModel<t_real_min>* fkt=0,
 		std::size_t uiLen=0, const t_real *px=0,
 		const t_real *py=0, const t_real *pdy=0)
-		: m_pfkt(fkt), m_uiLen(uiLen), m_px(px), m_py(py), m_pdy(pdy)
+		: m_pfkt{fkt}, m_uiLen{uiLen}, m_px{px}, m_py{py}, m_pdy{pdy}
 	{}
 
 	virtual ~Chi2Function() = default;
@@ -211,7 +213,7 @@ public:
 	virtual t_real_min operator()(const std::vector<t_real_min>& vecParams) const override
 	{
 		t_real_min dChi2 = chi2(vecParams);
-		if(m_bDebug) log_debug("Chi2 = ", dChi2);
+		if(m_bDebug) log_debug("chi2 = ", dChi2);
 		return dChi2;
 	}
 
@@ -261,16 +263,16 @@ public:
 /**
  * fit function to x,y,dy data points
  */
-template<std::size_t iNumArgs, typename t_func>
+template<class t_real = t_real_min, std::size_t iNumArgs, typename t_func>
 bool fit(t_func&& func,
 
-	const std::vector<t_real_min>& vecX,
-	const std::vector<t_real_min>& vecY,
-	const std::vector<t_real_min>& vecYErr,
+	const std::vector<t_real>& vecX,
+	const std::vector<t_real>& vecY,
+	const std::vector<t_real>& vecYErr,
 
 	const std::vector<std::string>& vecParamNames,	// size: iNumArgs-1
-	std::vector<t_real_min>& vecVals,
-	std::vector<t_real_min>& vecErrs,
+	std::vector<t_real>& vecVals,
+	std::vector<t_real>& vecErrs,
 	const std::vector<bool>* pVecFixed = nullptr,
 
 	bool bDebug=1) noexcept
@@ -291,25 +293,130 @@ bool fit(t_func&& func,
 				return false;
 			}
 
+		// convert vectors if value types don't match with minuit's type
+		std::vector<t_real_min> vecXConverted, vecYConverted, vecYErrConverted;
+		if constexpr(!std::is_same_v<t_real, t_real_min>)
+		{
+			vecXConverted.reserve(vecX.size());
+			vecYConverted.reserve(vecY.size());
+			vecYErrConverted.reserve(vecYErr.size());
+
+			for(t_real d : vecX) vecXConverted.push_back(t_real_min{d});
+			for(t_real d : vecY) vecYConverted.push_back(t_real_min{d});
+			for(t_real d : vecYErr) vecYErrConverted.push_back(t_real_min{d});
+		}
+
 		FitterLamFuncModel<t_real_min, iNumArgs, t_func> mod(func);
-		Chi2Function<t_real_min> chi2(&mod, vecX.size(), vecX.data(), vecY.data(), vecYErr.data());
+
+		std::unique_ptr<Chi2Function<t_real_min>> chi2;
+		if constexpr(std::is_same_v<t_real, t_real_min>)
+			chi2 = std::make_unique<Chi2Function<t_real_min>>(&mod, vecX.size(), vecX.data(), vecY.data(), vecYErr.data());
+		else if constexpr(!std::is_same_v<t_real, t_real_min>)
+			chi2 = std::make_unique<Chi2Function<t_real_min>>(&mod, vecXConverted.size(), vecXConverted.data(), vecYConverted.data(), vecYErrConverted.data());
 
 		ROOT::Minuit2::MnUserParameters params;
 		for(std::size_t iParam=0; iParam<vecParamNames.size(); ++iParam)
 		{
-			params.Add(vecParamNames[iParam], vecVals[iParam], vecErrs[iParam]);
+			params.Add(vecParamNames[iParam], t_real_min{vecVals[iParam]}, t_real_min{vecErrs[iParam]});
 			if(pVecFixed && (*pVecFixed)[iParam])
 				params.Fix(vecParamNames[iParam]);
 		}
 
-		ROOT::Minuit2::MnMigrad migrad(chi2, params, 2);
+		ROOT::Minuit2::MnMigrad migrad(*chi2, params, 2);
 		ROOT::Minuit2::FunctionMinimum mini = migrad();
 		bool bValidFit = mini.IsValid() && mini.HasValidParameters() && mini.UserState().IsValid();
 
 		for(std::size_t iParam=0; iParam<vecParamNames.size(); ++iParam)
 		{
-			vecVals[iParam] = mini.UserState().Value(vecParamNames[iParam]);
-			vecErrs[iParam] = std::fabs(mini.UserState().Error(vecParamNames[iParam]));
+			vecVals[iParam] = t_real{mini.UserState().Value(vecParamNames[iParam])};
+			vecErrs[iParam] = t_real{std::fabs(mini.UserState().Error(vecParamNames[iParam]))};
+		}
+
+		if(bDebug)
+			log_debug(mini);
+
+		return bValidFit;
+	}
+	catch(const std::exception& ex)
+	{
+		log_err(ex.what());
+	}
+
+	return false;
+}
+
+
+/**
+ * fit expression to x,y,dy data points
+ */
+template<class t_real = t_real_min>
+bool fit_expr(const std::string& func,
+
+	const std::vector<t_real>& vecX,
+	const std::vector<t_real>& vecY,
+	const std::vector<t_real>& vecYErr,
+
+	const std::string& strXName,
+	const std::vector<std::string>& vecParamNames,	// size: iNumArgs-1
+	std::vector<t_real>& vecVals,
+	std::vector<t_real>& vecErrs,
+	const std::vector<bool>* pVecFixed = nullptr,
+
+	bool bDebug=1) noexcept
+{
+	try
+	{
+		if(!vecX.size() || !vecY.size() || !vecYErr.size())
+		{
+			log_err("No data given to fitter.");
+			return false;
+		}
+
+		// check if all params are fixed
+		if(pVecFixed && std::all_of(pVecFixed->begin(), pVecFixed->end(),
+			[](bool b)->bool { return b; }))
+			{
+				log_err("All parameters are fixed.");
+				return false;
+			}
+
+		// convert vectors if value types don't match with minuit's type
+		std::vector<t_real_min> vecXConverted, vecYConverted, vecYErrConverted;
+		if constexpr(!std::is_same_v<t_real, t_real_min>)
+		{
+			vecXConverted.reserve(vecX.size());
+			vecYConverted.reserve(vecY.size());
+			vecYErrConverted.reserve(vecYErr.size());
+
+			for(t_real d : vecX) vecXConverted.push_back(t_real_min{d});
+			for(t_real d : vecY) vecYConverted.push_back(t_real_min{d});
+			for(t_real d : vecYErr) vecYErrConverted.push_back(t_real_min{d});
+		}
+
+		FitterParsedFuncModel<t_real_min> mod(func, strXName, vecParamNames);
+
+		std::unique_ptr<Chi2Function<t_real_min>> chi2;
+		if constexpr(std::is_same_v<t_real, t_real_min>)
+			chi2 = std::make_unique<Chi2Function<t_real_min>>(&mod, vecX.size(), vecX.data(), vecY.data(), vecYErr.data());
+		else if constexpr(!std::is_same_v<t_real, t_real_min>)
+			chi2 = std::make_unique<Chi2Function<t_real_min>>(&mod, vecXConverted.size(), vecXConverted.data(), vecYConverted.data(), vecYErrConverted.data());
+
+		ROOT::Minuit2::MnUserParameters params;
+		for(std::size_t iParam=0; iParam<vecParamNames.size(); ++iParam)
+		{
+			params.Add(vecParamNames[iParam], t_real_min{vecVals[iParam]}, t_real_min{vecErrs[iParam]});
+			if(pVecFixed && (*pVecFixed)[iParam])
+				params.Fix(vecParamNames[iParam]);
+		}
+
+		ROOT::Minuit2::MnMigrad migrad(*chi2, params, 2);
+		ROOT::Minuit2::FunctionMinimum mini = migrad();
+		bool bValidFit = mini.IsValid() && mini.HasValidParameters() && mini.UserState().IsValid();
+
+		for(std::size_t iParam=0; iParam<vecParamNames.size(); ++iParam)
+		{
+			vecVals[iParam] = t_real{mini.UserState().Value(vecParamNames[iParam])};
+			vecErrs[iParam] = t_real{std::fabs(mini.UserState().Error(vecParamNames[iParam]))};
 		}
 
 		if(bDebug)
@@ -329,9 +436,9 @@ bool fit(t_func&& func,
 /**
  * find function minimum
  */
-template<std::size_t iNumArgs, typename t_func>
+template<class t_real=t_real_min, std::size_t iNumArgs, typename t_func>
 bool minimise(t_func&& func, const std::vector<std::string>& vecParamNames,
-	std::vector<t_real_min>& vecVals, std::vector<t_real_min>& vecErrs,
+	std::vector<t_real>& vecVals, std::vector<t_real>& vecErrs,
 	const std::vector<bool>* pVecFixed = nullptr, bool bDebug=1) noexcept
 {
 	try
@@ -350,7 +457,7 @@ bool minimise(t_func&& func, const std::vector<std::string>& vecParamNames,
 		ROOT::Minuit2::MnUserParameters params;
 		for(std::size_t iParam=0; iParam<vecParamNames.size(); ++iParam)
 		{
-			params.Add(vecParamNames[iParam], vecVals[iParam], vecErrs[iParam]);
+			params.Add(vecParamNames[iParam], t_real_min{vecVals[iParam]}, t_real_min{vecErrs[iParam]});
 			if(pVecFixed && (*pVecFixed)[iParam])
 				params.Fix(vecParamNames[iParam]);
 		}
@@ -361,8 +468,8 @@ bool minimise(t_func&& func, const std::vector<std::string>& vecParamNames,
 
 		for(std::size_t iParam=0; iParam<vecParamNames.size(); ++iParam)
 		{
-			vecVals[iParam] = mini.UserState().Value(vecParamNames[iParam]);
-			vecErrs[iParam] = std::fabs(mini.UserState().Error(vecParamNames[iParam]));
+			vecVals[iParam] = t_real{mini.UserState().Value(vecParamNames[iParam])};
+			vecErrs[iParam] = t_real{std::fabs(mini.UserState().Error(vecParamNames[iParam]))};
 		}
 
 		if(bDebug)
@@ -382,8 +489,9 @@ bool minimise(t_func&& func, const std::vector<std::string>& vecParamNames,
 /**
  * find function minimum for an expression
  */
+template<class t_real = t_real_min>
 bool minimise_expr(const std::string& func, const std::vector<std::string>& vecParamNames,
-	std::vector<t_real_min>& vecVals, std::vector<t_real_min>& vecErrs,
+	std::vector<t_real>& vecVals, std::vector<t_real>& vecErrs,
 	const std::vector<bool>* pVecFixed = nullptr, bool bDebug=1) noexcept
 {
 	try
@@ -402,7 +510,7 @@ bool minimise_expr(const std::string& func, const std::vector<std::string>& vecP
 		ROOT::Minuit2::MnUserParameters params;
 		for(std::size_t iParam=0; iParam<vecParamNames.size(); ++iParam)
 		{
-			params.Add(vecParamNames[iParam], vecVals[iParam], vecErrs[iParam]);
+			params.Add(vecParamNames[iParam], t_real_min{vecVals[iParam]}, t_real_min{vecErrs[iParam]});
 			if(pVecFixed && (*pVecFixed)[iParam])
 				params.Fix(vecParamNames[iParam]);
 		}
@@ -413,8 +521,8 @@ bool minimise_expr(const std::string& func, const std::vector<std::string>& vecP
 
 		for(std::size_t iParam=0; iParam<vecParamNames.size(); ++iParam)
 		{
-			vecVals[iParam] = mini.UserState().Value(vecParamNames[iParam]);
-			vecErrs[iParam] = std::fabs(mini.UserState().Error(vecParamNames[iParam]));
+			vecVals[iParam] = t_real{mini.UserState().Value(vecParamNames[iParam])};
+			vecErrs[iParam] = t_real{std::fabs(mini.UserState().Error(vecParamNames[iParam]))};
 		}
 
 		if(bDebug)

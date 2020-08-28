@@ -282,7 +282,6 @@ protected:
 			std::ostringstream ostr;
 			ostr << "Invalid input in lexer: \"" << input << "\".";
 			throw std::runtime_error(ostr.str());
-			return std::make_tuple((int)Token::TOK_INVALID, t_num{0}, longest_input);
 		}
 
 		// several possible matches
@@ -356,13 +355,12 @@ protected:
 			return expr_rest_val;
 		}
 
-		if(m_lookahead == 0 || m_lookahead == EOF)
-			exit(0);
-
 		std::ostringstream ostr;
-		ostr << "Invalid lookahead in " << __func__ << ": " << m_lookahead << ".";
+		if(m_lookahead == 0 || m_lookahead == EOF)
+			ostr << "EOF in " << __func__ << ".";
+		else
+			ostr << "Invalid lookahead in " << __func__ << ": " << m_lookahead << ".";
 		throw std::runtime_error(ostr.str());
-		return 0.;
 	}
 
 
@@ -396,7 +394,6 @@ protected:
 		std::ostringstream ostr;
 		ostr << "Invalid lookahead in " << __func__ << ": " << m_lookahead << ".";
 		throw std::runtime_error(ostr.str());
-		return 0.;
 	}
 
 
@@ -418,7 +415,6 @@ protected:
 		std::ostringstream ostr;
 		ostr << "Invalid lookahead in " << __func__ << ": " << m_lookahead << ".";
 		throw std::runtime_error(ostr.str());
-		return 0.;
 	}
 
 
@@ -464,7 +460,6 @@ protected:
 		std::ostringstream ostr;
 		ostr << "Invalid lookahead in " << __func__ << ": " << m_lookahead << ".";
 		throw std::runtime_error(ostr.str());
-		return 0.;
 	}
 
 
@@ -486,7 +481,6 @@ protected:
 		std::ostringstream ostr;
 		ostr << "Invalid lookahead in " << __func__ << ": " << m_lookahead << ".";
 		throw std::runtime_error(ostr.str());
-		return 0.;
 	}
 
 
@@ -513,7 +507,6 @@ protected:
 		std::ostringstream ostr;
 		ostr << "Invalid lookahead in " << __func__ << ": " << m_lookahead << ".";
 		throw std::runtime_error(ostr.str());
-		return 0.;
 	}
 
 
@@ -609,7 +602,6 @@ protected:
 		std::ostringstream ostr;
 		ostr << "Invalid lookahead in " << __func__ << ": " << m_lookahead << ".";
 		throw std::runtime_error(ostr.str());
-		return 0.;
 	}
 	// ----------------------------------------------------------------------------
 

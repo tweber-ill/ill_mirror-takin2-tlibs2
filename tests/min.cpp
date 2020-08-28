@@ -16,7 +16,7 @@ namespace testtools = boost::test_tools;
 #include "libs/fit.h"
 
 
-using t_types_real = std::tuple<double>;
+using t_types_real = std::tuple<double, float>;
 
 
 BOOST_AUTO_TEST_CASE_TEMPLATE(test_expr_real, t_real, t_types_real)
