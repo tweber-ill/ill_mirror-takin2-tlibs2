@@ -33,22 +33,214 @@
 namespace tl2 {
 
 
+template<class t_num=double>
+t_num modfunc(t_num t1, t_num t2)
+{
+	if constexpr(std::is_floating_point_v<t_num>)
+		return std::fmod(t1, t2);
+	else if constexpr(std::is_integral_v<t_num>)
+		return t1%t2;
+	else
+		throw std::runtime_error{"Invalid type for mod function."};
+}
+
+
+
+template<typename t_num=double> class ExprParser;
+
+
+// ------------------------------------------------------------------------
+// ast
+// ------------------------------------------------------------------------
 template<typename t_num=double>
-class ExprParser
+class ExprAST
 {
 public:
-	ExprParser() : m_consts{}, m_funcs0{}, m_funcs1{}, m_funcs2{}, m_istr{}, m_lookahead_text{}
+	virtual ~ExprAST() = default;
+	virtual t_num eval(const ExprParser<t_num>&) const = 0;
+};
+
+
+template<typename t_num=double>
+class ExprASTBinOp : public ExprAST<t_num>
+{
+public:
+	ExprASTBinOp(char op, const std::shared_ptr<ExprAST<t_num>>& left, const std::shared_ptr<ExprAST<t_num>>& right)
+		: m_op{op}, m_left{left}, m_right{right}
+	{}
+
+	ExprASTBinOp(const ExprASTBinOp<t_num>&) = delete;
+	const ExprASTBinOp<t_num>& operator=(const ExprASTBinOp<t_num>&) = delete;
+
+	virtual ~ExprASTBinOp() = default;
+
+	virtual t_num eval(const ExprParser<t_num>& context) const override
+	{
+		const t_num val_left = m_left->eval(context);
+		const t_num val_right = m_right->eval(context);
+
+		switch(m_op)
+		{
+			case '+': return val_left + val_right;
+			case '-': return val_left - val_right;
+			case '*': return val_left * val_right;
+			case '/': return val_left / val_right;
+			case '%': return modfunc<t_num>(val_left, val_right);
+			case '^': return static_cast<t_num>(std::pow(val_left, val_right));
+			default: throw std::runtime_error{"Invalid binary operator."};
+		}
+	}
+
+private:
+	char m_op{'+'};
+	std::shared_ptr<ExprAST<t_num>> m_left{}, m_right{};
+};
+
+
+template<typename t_num=double>
+class ExprASTUnOp : public ExprAST<t_num>
+{
+public:
+	ExprASTUnOp(char op, const std::shared_ptr<ExprAST<t_num>>& child)
+		: m_op{op}, m_child{child}
+	{}
+
+	ExprASTUnOp(const ExprASTUnOp<t_num>&) = delete;
+	const ExprASTUnOp<t_num>& operator=(const ExprASTUnOp<t_num>&) = delete;
+
+	virtual ~ExprASTUnOp() = default;
+
+	virtual t_num eval(const ExprParser<t_num>& context) const override
+	{
+		const t_num val = m_child->eval(context);
+
+		switch(m_op)
+		{
+			case '+': return val;
+			case '-': return -val;
+			default: throw std::runtime_error{"Invalid binary operator."};
+		}
+	}
+
+private:
+	char m_op{'+'};
+	std::shared_ptr<ExprAST<t_num>> m_child{};
+};
+
+
+template<typename t_num=double>
+class ExprASTVar : public ExprAST<t_num>
+{
+public:
+	ExprASTVar(const std::string& name) : m_name{name}
+	{}
+
+	ExprASTVar(const ExprASTVar<t_num>&) = delete;
+	const ExprASTVar<t_num>& operator=(const ExprASTVar<t_num>&) = delete;
+
+	virtual ~ExprASTVar() = default;
+
+	virtual t_num eval(const ExprParser<t_num>& context) const override
+	{
+		return context.get_const(m_name);
+	}
+
+private:
+	std::string m_name{};
+};
+
+
+template<typename t_num=double>
+class ExprASTValue : public ExprAST<t_num>
+{
+public:
+	ExprASTValue(t_num val) : m_val{val}
+	{}
+
+	ExprASTValue(const ExprASTValue<t_num>&) = delete;
+	const ExprASTValue<t_num>& operator=(const ExprASTValue<t_num>&) = delete;
+
+	virtual ~ExprASTValue() = default;
+
+	virtual t_num eval(const ExprParser<t_num>&) const override
+	{
+		return m_val;
+	}
+
+private:
+	t_num m_val{};
+};
+
+
+template<typename t_num=double>
+class ExprASTCall : public ExprAST<t_num>
+{
+public:
+	ExprASTCall(const std::string& name)
+		: m_name{name}
+	{}
+
+	ExprASTCall(const std::string& name, const std::shared_ptr<ExprAST<t_num>>& arg1)
+		: m_name{name}
+	{
+		m_args.push_back(arg1);
+	}
+
+	ExprASTCall(const std::string& name,
+		const std::shared_ptr<ExprAST<t_num>>& arg1, const std::shared_ptr<ExprAST<t_num>>& arg2)
+		: m_name{name}
+	{
+		m_args.push_back(arg1);
+		m_args.push_back(arg2);
+	}
+
+	ExprASTCall(const ExprASTCall<t_num>&) = delete;
+	const ExprASTCall<t_num>& operator=(const ExprASTCall<t_num>&) = delete;
+
+	virtual ~ExprASTCall() = default;
+
+	virtual t_num eval(const ExprParser<t_num>& context) const override
+	{
+		if(m_args.size() == 0)
+			return context.call_func0(m_name);
+		else if(m_args.size() == 1)
+			return context.call_func1(m_name, m_args[0]->eval(context));
+		else if(m_args.size() == 2)
+			return context.call_func2(m_name, m_args[0]->eval(context), m_args[1]->eval(context));
+
+		throw std::runtime_error("Invalid function call.");
+	}
+
+private:
+	std::string m_name{};
+	std::vector<std::shared_ptr<ExprAST<t_num>>> m_args{};
+};
+
+
+// ------------------------------------------------------------------------
+
+
+
+template<typename t_num>
+class ExprParser
+{
+	friend class ExprASTCall<t_num>;
+	friend class ExprASTVar<t_num>;
+
+
+public:
+	ExprParser() : m_ast{}, m_consts{}, m_funcs0{}, m_funcs1{}, m_funcs2{}, m_istr{}, m_lookahead_text{}
 	{
 		register_funcs();
 		register_consts();
 	}
 
 
-	t_num parse(const std::string& str)
+	bool parse(const std::string& str)
 	{
 		m_istr = std::make_shared<std::istringstream>(str);
 		next_lookahead();
-		t_num result = plus_term();
+		m_ast = plus_term();
 
 		// check if there would be are more tokens available?
 		next_lookahead();
@@ -56,7 +248,15 @@ public:
 		if(!at_eof)
 			throw std::underflow_error("Not all input tokens have been consumed.");
 
-		return result;
+		return !!m_ast;
+	}
+
+
+	t_num eval() const
+	{
+		if(!m_ast)
+			throw std::runtime_error("Invalid AST.");
+		return m_ast->eval(*this);
 	}
 
 
@@ -69,6 +269,7 @@ protected:
 	{
 		// common functions
 		register_func1("abs", std::abs);
+		register_func2("mod", modfunc<t_num>);
 
 		// real functions
 		if constexpr(std::is_floating_point_v<t_num>)
@@ -102,34 +303,32 @@ protected:
 
 			register_func2("pow", std::pow);
 			register_func2("atan2", std::atan2);
-			register_func2("mod", std::fmod);
 		}
 
 		// integer functions
 		else if constexpr(std::is_integral_v<t_num>)
 		{
 			register_func2("pow", [](t_num t1, t_num t2) -> t_num { return t_num(std::pow(t1, t2)); } );
-			register_func2("mod", [](t_num t1, t_num t2) -> t_num { return t1%t2; } );
 		}
 	}
 
 
 	// call function with zero parameters
-	t_num call_func0(const std::string& strName)
+	t_num call_func0(const std::string& strName) const
 	{
 		return m_funcs0.at(strName)();
 	}
 
 
 	// call function with one parameter
-	t_num call_func1(const std::string& strName, t_num t)
+	t_num call_func1(const std::string& strName, t_num t) const
 	{
 		return m_funcs1.at(strName)(t);
 	}
 
 
 	// call function with two parameters
-	t_num call_func2(const std::string& strName, t_num t1, t_num t2)
+	t_num call_func2(const std::string& strName, t_num t1, t_num t2) const
 	{
 		return m_funcs2.at(strName)(t1, t2);
 	}
@@ -158,6 +357,8 @@ protected:
 	{
 		return m_consts.at(strName);
 	}
+
+
 	// ------------------------------------------------------------------------
 
 
@@ -328,29 +529,29 @@ protected:
 	 * +,- terms
 	 * (lowest precedence, 1)
 	 */
-	t_num plus_term()
+	std::shared_ptr<ExprAST<t_num>> plus_term()
 	{
 		// plus_term -> mul_term plus_term_rest
 		if(m_lookahead == '(' || m_lookahead == (int)Token::TOK_NUM || m_lookahead == (int)Token::TOK_IDENT)
 		{
-			t_num term_val = mul_term();
-			t_num expr_rest_val = plus_term_rest(term_val);
+			auto term_val = mul_term();
+			auto expr_rest_val = plus_term_rest(term_val);
 
 			return expr_rest_val;
 		}
 		else if(m_lookahead == '+')	// unary +
 		{
 			next_lookahead();
-			t_num term_val = mul_term();
-			t_num expr_rest_val = plus_term_rest(term_val);
+			auto term_val = mul_term();
+			auto expr_rest_val = plus_term_rest(term_val);
 
 			return expr_rest_val;
 		}
 		else if(m_lookahead == '-')	// unary -
 		{
 			next_lookahead();
-			t_num term_val = -mul_term();
-			t_num expr_rest_val = plus_term_rest(term_val);
+			auto term_val = std::make_shared<ExprASTUnOp<t_num>>('-', mul_term());
+			auto expr_rest_val = plus_term_rest(term_val);
 
 			return expr_rest_val;
 		}
@@ -364,14 +565,14 @@ protected:
 	}
 
 
-	t_num plus_term_rest(t_num arg)
+	std::shared_ptr<ExprAST<t_num>> plus_term_rest(const std::shared_ptr<ExprAST<t_num>>& arg)
 	{
 		// plus_term_rest -> '+' mul_term plus_term_rest
 		if(m_lookahead == '+')
 		{
 			next_lookahead();
-			t_num term_val = arg + mul_term();
-			t_num expr_rest_val = plus_term_rest(term_val);
+			auto term_val = std::make_shared<ExprASTBinOp<t_num>>('+', arg, mul_term());
+			auto expr_rest_val = plus_term_rest(term_val);
 
 			return expr_rest_val;
 		}
@@ -380,8 +581,8 @@ protected:
 		else if(m_lookahead == '-')
 		{
 			next_lookahead();
-			t_num term_val = arg - mul_term();
-			t_num expr_rest_val = plus_term_rest(term_val);
+			auto term_val = std::make_shared<ExprASTBinOp<t_num>>('-', arg, mul_term());
+			auto expr_rest_val = plus_term_rest(term_val);
 
 			return expr_rest_val;
 		}
@@ -401,13 +602,13 @@ protected:
 	 * *,/,% terms
 	 * (precedence 2)
 	 */
-	t_num mul_term()
+	std::shared_ptr<ExprAST<t_num>> mul_term()
 	{
 		// mul_term -> pow_term mul_term_rest
 		if(m_lookahead == '(' || m_lookahead == (int)Token::TOK_NUM || m_lookahead == (int)Token::TOK_IDENT)
 		{
-			t_num factor_val = pow_term();
-			t_num term_rest_val = mul_term_rest(factor_val);
+			auto factor_val = pow_term();
+			auto term_rest_val = mul_term_rest(factor_val);
 
 			return term_rest_val;
 		}
@@ -418,14 +619,14 @@ protected:
 	}
 
 
-	t_num mul_term_rest(t_num arg)
+	std::shared_ptr<ExprAST<t_num>> mul_term_rest(const std::shared_ptr<ExprAST<t_num>>& arg)
 	{
 		// mul_term_rest -> '*' pow_term mul_term_rest
 		if(m_lookahead == '*')
 		{
 			next_lookahead();
-			t_num factor_val = arg * pow_term();
-			t_num term_rest_val = mul_term_rest(factor_val);
+			auto factor_val = std::make_shared<ExprASTBinOp<t_num>>('*', arg, pow_term());
+			auto term_rest_val = mul_term_rest(factor_val);
 
 			return term_rest_val;
 		}
@@ -434,8 +635,8 @@ protected:
 		else if(m_lookahead == '/')
 		{
 			next_lookahead();
-			t_num factor_val = arg / pow_term();
-			t_num term_rest_val = mul_term_rest(factor_val);
+			auto factor_val = std::make_shared<ExprASTBinOp<t_num>>('/', arg, pow_term());
+			auto term_rest_val = mul_term_rest(factor_val);
 
 			return term_rest_val;
 		}
@@ -444,8 +645,8 @@ protected:
 		else if(m_lookahead == '%')
 		{
 			next_lookahead();
-			t_num factor_val = std::fmod(arg, pow_term());
-			t_num term_rest_val = mul_term_rest(factor_val);
+			auto factor_val = std::make_shared<ExprASTBinOp<t_num>>('%', arg, pow_term());
+			auto term_rest_val = mul_term_rest(factor_val);
 
 			return term_rest_val;
 		}
@@ -467,13 +668,13 @@ protected:
 	 * ^ terms
 	 * (precedence 3)
 	 */
-	t_num pow_term()
+	std::shared_ptr<ExprAST<t_num>> pow_term()
 	{
 		// pow_term -> factor pow_term_rest
 		if(m_lookahead == '(' || m_lookahead == (int)Token::TOK_NUM || m_lookahead == (int)Token::TOK_IDENT)
 		{
-			t_num factor_val = factor();
-			t_num term_rest_val = pow_term_rest(factor_val);
+			auto factor_val = factor();
+			auto term_rest_val = pow_term_rest(factor_val);
 
 			return term_rest_val;
 		}
@@ -484,14 +685,14 @@ protected:
 	}
 
 
-	t_num pow_term_rest(t_num arg)
+	std::shared_ptr<ExprAST<t_num>> pow_term_rest(const std::shared_ptr<ExprAST<t_num>>& arg)
 	{
 		// pow_term_rest -> '^' factor pow_term_rest
 		if(m_lookahead == '^')
 		{
 			next_lookahead();
-			t_num factor_val = std::pow(arg, factor());
-			t_num term_rest_val = pow_term_rest(factor_val);
+			auto factor_val = std::make_shared<ExprASTBinOp<t_num>>('^', arg, factor());
+			auto term_rest_val = pow_term_rest(factor_val);
 
 			return term_rest_val;
 		}
@@ -514,13 +715,13 @@ protected:
 	 * () terms, real factor or identifier
 	 * (highest precedence, 4)
 	 */
-	t_num factor()
+	std::shared_ptr<ExprAST<t_num>> factor()
 	{
 		// factor -> '(' plus_term ')'
 		if(m_lookahead == '(')
 		{
 			next_lookahead();
-			t_num expr_val = plus_term();
+			auto expr_val = plus_term();
 			match(')');
 			next_lookahead();
 
@@ -533,7 +734,7 @@ protected:
 			t_num val = m_lookahead_val;
 			next_lookahead();
 
-			return val;
+			return std::make_shared<ExprASTValue<t_num>>(val);
 		}
 
 		// factor -> TOK_IDENT
@@ -554,14 +755,14 @@ protected:
 				{
 					next_lookahead();
 
-					return call_func0(ident);
+					return std::make_shared<ExprASTCall<t_num>>(ident);
 				}
 
 				// function with arguments
 				else
 				{
 					// first argument
-					t_num expr_val1 = plus_term();
+					auto expr_val1 = plus_term();
 
 					// one-argument-function
 					// factor -> TOK_IDENT '(' plus_term ')'
@@ -569,7 +770,7 @@ protected:
 					{
 						next_lookahead();
 
-						return call_func1(ident, expr_val1);
+						return std::make_shared<ExprASTCall<t_num>>(ident, expr_val1);
 					}
 
 					// two-argument-function
@@ -577,11 +778,11 @@ protected:
 					else if(m_lookahead == ',')
 					{
 						next_lookahead();
-						t_num expr_val2 = plus_term();
+						auto expr_val2 = plus_term();
 						match(')');
 						next_lookahead();
 
-						return call_func2(ident, expr_val1, expr_val2);
+						return std::make_shared<ExprASTCall<t_num>>(ident, expr_val1, expr_val2);
 					}
 					else
 					{
@@ -595,7 +796,7 @@ protected:
 			// variable lookup
 			else
 			{
-				return get_const(ident);
+				return std::make_shared<ExprASTVar<t_num>>(ident);
 			}
 		}
 
@@ -638,6 +839,9 @@ public:
 
 
 private:
+	// ast root
+	std::shared_ptr<ExprAST<t_num>> m_ast{};
+
 	// constants
 	std::unordered_map<std::string, t_num> m_consts{};
 

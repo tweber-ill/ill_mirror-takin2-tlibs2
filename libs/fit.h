@@ -124,10 +124,16 @@ protected:
 	const std::vector<std::string>& m_vecNames;
 	std::vector<t_real> m_vecVals;
 
+	ExprParser<t_real> m_expr{};
+
+
 public:
 	FitterParsedFuncModel(const std::string& func, const std::string& xName, const std::vector<std::string>& vecNames)
 		: m_func{func}, m_xName{xName}, m_vecNames{vecNames}
-	{}
+	{
+		if(!m_expr.parse(m_func))
+			throw std::runtime_error("Could not parse function.");
+	}
 
 
 	virtual bool SetParams(const std::vector<t_real>& vecParams) override
@@ -141,7 +147,8 @@ public:
 
 	virtual t_real operator()(t_real x = t_real(0)) const override
 	{
-		ExprParser<t_real> expr;
+		// copy the parsed expression to be thread safe
+		ExprParser<t_real> expr = m_expr;
 
 		// x is not used for minimiser
 		if(m_xName != "")
@@ -150,7 +157,7 @@ public:
 		for(std::size_t i=0; i<m_vecVals.size(); ++i)
 			expr.register_const(m_vecNames[i], m_vecVals[i]);
 
-		t_real val = expr.parse(m_func);
+		t_real val = expr.eval();
 		//std::cout << "f(" << x << ") = " << val << std::endl;
 		return val;
 	}

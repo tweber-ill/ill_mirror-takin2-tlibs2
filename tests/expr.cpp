@@ -27,16 +27,24 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(test_expr_real, t_real, t_types_real)
 	static constexpr t_real eps = 1e-6;
 	tl2::ExprParser<t_real> parser;
 
-	t_real result = parser.parse("1 + 2*3");
+	bool ok = parser.parse("1 + 2*3");
+	auto result = parser.eval();
+	BOOST_TEST(ok);
 	BOOST_TEST(tl2::equals<t_real>(result, 7, eps));
 
-	result = parser.parse("4 + 5*6");
+	ok = parser.parse("4 + 5*6");
+	result = parser.eval();
+	BOOST_TEST(ok);
 	BOOST_TEST(tl2::equals<t_real>(result, 34, eps));
 
-	result = parser.parse(" - (sqrt(4)-5)^3 -  5/2 ");
+	ok = parser.parse(" - (sqrt(4)-5)^3 -  5/2 ");
+	result = parser.eval();
+	BOOST_TEST(ok);
 	BOOST_TEST(tl2::equals<t_real>(result, 24.5, eps));
 
-	result = parser.parse("-cos(sin(1.23*pi))^(-1.2 + 3.2)");
+	ok = parser.parse("-cos(sin(1.23*pi))^(-1.2 + 3.2)");
+	result = parser.eval();
+	BOOST_TEST(ok);
 	BOOST_TEST(tl2::equals<t_real>(result, -0.6228, 1e-3));
 }
 
@@ -44,7 +52,6 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(test_expr_real, t_real, t_types_real)
 BOOST_AUTO_TEST_CASE_TEMPLATE(test_expr_func, t_real, t_types_real)
 {
 	static constexpr t_real eps = 1e-6;
-
 	auto tupres = tl2::eval_expr<std::string, t_real>("\t2 + \t2*3*4\n");
 
 	BOOST_TEST(
@@ -57,9 +64,13 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(test_expr_int, t_int, t_types_int)
 {
 	tl2::ExprParser<t_int> parser;
 
-	t_int result = parser.parse("1 + 2*3");
+	bool ok = parser.parse("1 + 2*3");
+	t_int result = parser.eval();
+	BOOST_TEST(ok);
 	BOOST_TEST(result == 7);
 
-	result = parser.parse("4 + 5*6");
+	ok = parser.parse("4 + 5*6");
+	result = parser.eval();
+	BOOST_TEST(ok);
 	BOOST_TEST(result == 34);
 }
