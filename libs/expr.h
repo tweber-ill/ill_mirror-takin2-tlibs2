@@ -57,7 +57,9 @@ class ExprAST
 {
 public:
 	virtual ~ExprAST() = default;
+
 	virtual t_num eval(const ExprParser<t_num>&) const = 0;
+	virtual void print(std::ostream& ostr=std::cout, std::size_t indent=0) const = 0;
 };
 
 
@@ -87,8 +89,17 @@ public:
 			case '/': return val_left / val_right;
 			case '%': return modfunc<t_num>(val_left, val_right);
 			case '^': return static_cast<t_num>(std::pow(val_left, val_right));
-			default: throw std::runtime_error{"Invalid binary operator."};
 		}
+
+		throw std::runtime_error{"Invalid binary operator."};
+	}
+
+	virtual void print(std::ostream& ostr=std::cout, std::size_t indent=0) const override
+	{
+		for(std::size_t i=0; i<indent; ++i) ostr << " | ";
+		ostr << "binary operator " << m_op << "\n";
+		m_left->print(ostr, indent+1);
+		m_right->print(ostr, indent+1);
 	}
 
 private:
@@ -118,8 +129,16 @@ public:
 		{
 			case '+': return val;
 			case '-': return -val;
-			default: throw std::runtime_error{"Invalid binary operator."};
 		}
+
+		throw std::runtime_error{"Invalid unary operator."};
+	}
+
+	virtual void print(std::ostream& ostr=std::cout, std::size_t indent=0) const override
+	{
+		for(std::size_t i=0; i<indent; ++i) ostr << " | ";
+		ostr << "unary operator " << m_op << "\n";
+		m_child->print(ostr, indent+1);
 	}
 
 private:
@@ -142,7 +161,13 @@ public:
 
 	virtual t_num eval(const ExprParser<t_num>& context) const override
 	{
-		return context.get_const(m_name);
+		return context.get_var(m_name);
+	}
+
+	virtual void print(std::ostream& ostr=std::cout, std::size_t indent=0) const override
+	{
+		for(std::size_t i=0; i<indent; ++i) ostr << " | ";
+		ostr << "variable \"" << m_name << "\"\n";
 	}
 
 private:
@@ -165,6 +190,12 @@ public:
 	virtual t_num eval(const ExprParser<t_num>&) const override
 	{
 		return m_val;
+	}
+
+	virtual void print(std::ostream& ostr=std::cout, std::size_t indent=0) const override
+	{
+		for(std::size_t i=0; i<indent; ++i) ostr << " | ";
+		ostr << "value " << m_val << "\n";
 	}
 
 private:
@@ -211,6 +242,15 @@ public:
 		throw std::runtime_error("Invalid function call.");
 	}
 
+	virtual void print(std::ostream& ostr=std::cout, std::size_t indent=0) const override
+	{
+		for(std::size_t i=0; i<indent; ++i) ostr << " | ";
+		ostr << "function call \"" << m_name << "\"\n";
+
+		for(const auto& arg : m_args)
+			arg->print(ostr, indent+1);
+	}
+
 private:
 	std::string m_name{};
 	std::vector<std::shared_ptr<ExprAST<t_num>>> m_args{};
@@ -229,7 +269,7 @@ class ExprParser
 
 
 public:
-	ExprParser() : m_ast{}, m_consts{}, m_funcs0{}, m_funcs1{}, m_funcs2{}, m_istr{}, m_lookahead_text{}
+	ExprParser() : m_ast{}, m_vars{}, m_funcs0{}, m_funcs1{}, m_funcs2{}, m_istr{}, m_lookahead_text{}
 	{
 		register_funcs();
 		register_consts();
@@ -241,6 +281,9 @@ public:
 		m_istr = std::make_shared<std::istringstream>(str);
 		next_lookahead();
 		m_ast = plus_term();
+
+		//m_ast->print(std::cout);
+		//std::cout << std::endl;
 
 		// check if there would be are more tokens available?
 		next_lookahead();
@@ -340,9 +383,9 @@ protected:
 		// real constants
 		if constexpr(std::is_floating_point_v<t_num>)
 		{
-			register_const("pi", __pi<t_num>);
-			register_const("hbar",  t_num(hbar<t_num>/meV<t_num>/sec<t_num>));	// hbar in [meV s]
-			register_const("kB",  t_num(kB<t_num>/meV<t_num>*kelvin<t_num>));	// kB in [meV / K]
+			register_var("pi", __pi<t_num>);
+			register_var("hbar",  t_num(hbar<t_num>/meV<t_num>/sec<t_num>));	// hbar in [meV s]
+			register_var("kB",  t_num(kB<t_num>/meV<t_num>*kelvin<t_num>));	// kB in [meV / K]
 		}
 
 		// integer constants
@@ -353,9 +396,9 @@ protected:
 
 
 	// get constant
-	t_num get_const(const std::string& strName) const
+	t_num get_var(const std::string& strName) const
 	{
-		return m_consts.at(strName);
+		return m_vars.at(strName);
 	}
 
 
@@ -796,6 +839,9 @@ protected:
 			// variable lookup
 			else
 			{
+				// register the variable if it doesn't yet exist
+				if(m_vars.find(ident) == m_vars.end())
+					register_var(ident, t_num{});
 				return std::make_shared<ExprASTVar<t_num>>(ident);
 			}
 		}
@@ -829,12 +875,18 @@ public:
 	}
 
 
-	// register a constant
-	void register_const(const std::string& name, t_num val)
+	// register a variable or constant
+	void register_var(const std::string& name, t_num val)
 	{
 		// overwrite value if key already exists
-		if(auto [iter, ok] = m_consts.emplace(std::make_pair(name, val)); !ok)
+		if(auto [iter, ok] = m_vars.emplace(std::make_pair(name, val)); !ok)
 			iter->second = val;
+	}
+
+
+	const std::unordered_map<std::string, t_num>& get_vars() const
+	{
+		return m_vars;
 	}
 
 
@@ -842,8 +894,8 @@ private:
 	// ast root
 	std::shared_ptr<ExprAST<t_num>> m_ast{};
 
-	// constants
-	std::unordered_map<std::string, t_num> m_consts{};
+	// variables and constants
+	std::unordered_map<std::string, t_num> m_vars{};
 
 	// functions
 	std::unordered_map<std::string, t_num(*)()> m_funcs0{};

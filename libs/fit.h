@@ -152,10 +152,10 @@ public:
 
 		// x is not used for minimiser
 		if(m_xName != "")
-			expr.register_const(m_xName, x);
+			expr.register_var(m_xName, x);
 
 		for(std::size_t i=0; i<m_vecVals.size(); ++i)
-			expr.register_const(m_vecNames[i], m_vecVals[i]);
+			expr.register_var(m_vecNames[i], m_vecVals[i]);
 
 		t_real val = expr.eval();
 		//std::cout << "f(" << x << ") = " << val << std::endl;
