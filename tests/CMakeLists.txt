@@ -40,6 +40,7 @@ message("Using Boost version ${Boost_MAJOR_VERSION}.${Boost_MINOR_VERSION}.${Boo
 # further packages
 find_package(Minuit2 REQUIRED)
 find_package(Threads REQUIRED)
+find_package(OpenMP REQUIRED)
 # -----------------------------------------------------------------------------
 
 
@@ -60,9 +61,9 @@ add_executable(fit1 fit1.cpp ../libs/log.cpp)
 #add_executable(eig eig.cpp)
 
 target_link_libraries(expr Threads::Threads)
-target_link_libraries(min ${Minuit2_LIBRARIES} Threads::Threads)
-target_link_libraries(fit0 ${Minuit2_LIBRARIES} Threads::Threads)
-target_link_libraries(fit1 ${Minuit2_LIBRARIES})
+target_link_libraries(min ${Minuit2_LIBRARIES} Threads::Threads OpenMP::OpenMP_CXX)
+target_link_libraries(fit0 ${Minuit2_LIBRARIES} Threads::Threads OpenMP::OpenMP_CXX)
+target_link_libraries(fit1 ${Minuit2_LIBRARIES} OpenMP::OpenMP_CXX)
 # -----------------------------------------------------------------------------
 
 
