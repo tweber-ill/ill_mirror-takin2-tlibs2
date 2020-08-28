@@ -308,9 +308,9 @@ bool fit(t_func&& func,
 			vecYConverted.reserve(vecY.size());
 			vecYErrConverted.reserve(vecYErr.size());
 
-			for(t_real d : vecX) vecXConverted.push_back(t_real_min{d});
-			for(t_real d : vecY) vecYConverted.push_back(t_real_min{d});
-			for(t_real d : vecYErr) vecYErrConverted.push_back(t_real_min{d});
+			for(t_real d : vecX) vecXConverted.push_back(static_cast<t_real_min>(d));
+			for(t_real d : vecY) vecYConverted.push_back(static_cast<t_real_min>(d));
+			for(t_real d : vecYErr) vecYErrConverted.push_back(static_cast<t_real_min>(d));
 		}
 
 		FitterLamFuncModel<t_real_min, iNumArgs, t_func> mod(func);
@@ -324,7 +324,7 @@ bool fit(t_func&& func,
 		ROOT::Minuit2::MnUserParameters params;
 		for(std::size_t iParam=0; iParam<vecParamNames.size(); ++iParam)
 		{
-			params.Add(vecParamNames[iParam], t_real_min{vecVals[iParam]}, t_real_min{vecErrs[iParam]});
+			params.Add(vecParamNames[iParam], static_cast<t_real_min>(vecVals[iParam]), static_cast<t_real_min>(vecErrs[iParam]));
 			if(pVecFixed && (*pVecFixed)[iParam])
 				params.Fix(vecParamNames[iParam]);
 		}
@@ -335,8 +335,8 @@ bool fit(t_func&& func,
 
 		for(std::size_t iParam=0; iParam<vecParamNames.size(); ++iParam)
 		{
-			vecVals[iParam] = t_real{mini.UserState().Value(vecParamNames[iParam])};
-			vecErrs[iParam] = t_real{std::fabs(mini.UserState().Error(vecParamNames[iParam]))};
+			vecVals[iParam] = static_cast<t_real>(mini.UserState().Value(vecParamNames[iParam]));
+			vecErrs[iParam] = static_cast<t_real>(std::fabs(mini.UserState().Error(vecParamNames[iParam])));
 		}
 
 		if(bDebug)
@@ -395,9 +395,9 @@ bool fit_expr(const std::string& func,
 			vecYConverted.reserve(vecY.size());
 			vecYErrConverted.reserve(vecYErr.size());
 
-			for(t_real d : vecX) vecXConverted.push_back(t_real_min{d});
-			for(t_real d : vecY) vecYConverted.push_back(t_real_min{d});
-			for(t_real d : vecYErr) vecYErrConverted.push_back(t_real_min{d});
+			for(t_real d : vecX) vecXConverted.push_back(static_cast<t_real_min>(d));
+			for(t_real d : vecY) vecYConverted.push_back(static_cast<t_real_min>(d));
+			for(t_real d : vecYErr) vecYErrConverted.push_back(static_cast<t_real_min>(d));
 		}
 
 		FitterParsedFuncModel<t_real_min> mod(func, strXName, vecParamNames);
@@ -411,7 +411,7 @@ bool fit_expr(const std::string& func,
 		ROOT::Minuit2::MnUserParameters params;
 		for(std::size_t iParam=0; iParam<vecParamNames.size(); ++iParam)
 		{
-			params.Add(vecParamNames[iParam], t_real_min{vecVals[iParam]}, t_real_min{vecErrs[iParam]});
+			params.Add(vecParamNames[iParam], static_cast<t_real_min>(vecVals[iParam]), static_cast<t_real_min>(vecErrs[iParam]));
 			if(pVecFixed && (*pVecFixed)[iParam])
 				params.Fix(vecParamNames[iParam]);
 		}
@@ -422,8 +422,8 @@ bool fit_expr(const std::string& func,
 
 		for(std::size_t iParam=0; iParam<vecParamNames.size(); ++iParam)
 		{
-			vecVals[iParam] = t_real{mini.UserState().Value(vecParamNames[iParam])};
-			vecErrs[iParam] = t_real{std::fabs(mini.UserState().Error(vecParamNames[iParam]))};
+			vecVals[iParam] = static_cast<t_real>(mini.UserState().Value(vecParamNames[iParam]));
+			vecErrs[iParam] = static_cast<t_real>(std::fabs(mini.UserState().Error(vecParamNames[iParam])));
 		}
 
 		if(bDebug)
@@ -464,7 +464,7 @@ bool minimise(t_func&& func, const std::vector<std::string>& vecParamNames,
 		ROOT::Minuit2::MnUserParameters params;
 		for(std::size_t iParam=0; iParam<vecParamNames.size(); ++iParam)
 		{
-			params.Add(vecParamNames[iParam], t_real_min{vecVals[iParam]}, t_real_min{vecErrs[iParam]});
+			params.Add(vecParamNames[iParam], static_cast<t_real_min>(vecVals[iParam]), static_cast<t_real_min>(vecErrs[iParam]));
 			if(pVecFixed && (*pVecFixed)[iParam])
 				params.Fix(vecParamNames[iParam]);
 		}
@@ -475,8 +475,8 @@ bool minimise(t_func&& func, const std::vector<std::string>& vecParamNames,
 
 		for(std::size_t iParam=0; iParam<vecParamNames.size(); ++iParam)
 		{
-			vecVals[iParam] = t_real{mini.UserState().Value(vecParamNames[iParam])};
-			vecErrs[iParam] = t_real{std::fabs(mini.UserState().Error(vecParamNames[iParam]))};
+			vecVals[iParam] = static_cast<t_real>(mini.UserState().Value(vecParamNames[iParam]));
+			vecErrs[iParam] = static_cast<t_real>(std::fabs(mini.UserState().Error(vecParamNames[iParam])));
 		}
 
 		if(bDebug)
@@ -517,7 +517,7 @@ bool minimise_expr(const std::string& func, const std::vector<std::string>& vecP
 		ROOT::Minuit2::MnUserParameters params;
 		for(std::size_t iParam=0; iParam<vecParamNames.size(); ++iParam)
 		{
-			params.Add(vecParamNames[iParam], t_real_min{vecVals[iParam]}, t_real_min{vecErrs[iParam]});
+			params.Add(vecParamNames[iParam], static_cast<t_real_min>(vecVals[iParam]), static_cast<t_real_min>(vecErrs[iParam]));
 			if(pVecFixed && (*pVecFixed)[iParam])
 				params.Fix(vecParamNames[iParam]);
 		}
@@ -528,8 +528,8 @@ bool minimise_expr(const std::string& func, const std::vector<std::string>& vecP
 
 		for(std::size_t iParam=0; iParam<vecParamNames.size(); ++iParam)
 		{
-			vecVals[iParam] = t_real{mini.UserState().Value(vecParamNames[iParam])};
-			vecErrs[iParam] = t_real{std::fabs(mini.UserState().Error(vecParamNames[iParam]))};
+			vecVals[iParam] = static_cast<t_real>(mini.UserState().Value(vecParamNames[iParam]));
+			vecErrs[iParam] = static_cast<t_real>(std::fabs(mini.UserState().Error(vecParamNames[iParam])));
 		}
 
 		if(bDebug)

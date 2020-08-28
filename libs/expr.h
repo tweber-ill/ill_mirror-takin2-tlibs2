@@ -21,6 +21,7 @@
 #include <vector>
 #include <memory>
 #include <cmath>
+#include <future>
 
 #if __has_include(<boost/math/special_functions/erf.hpp>)
 	#include <boost/math/special_functions/erf.hpp>
@@ -78,8 +79,9 @@ public:
 
 	virtual t_num eval(const ExprParser<t_num>& context) const override
 	{
-		const t_num val_left = m_left->eval(context);
+		auto fut_left = std::async([this, &context]() { return m_left->eval(context); });
 		const t_num val_right = m_right->eval(context);
+		const t_num val_left = fut_left.get();
 
 		switch(m_op)
 		{
@@ -233,11 +235,21 @@ public:
 	virtual t_num eval(const ExprParser<t_num>& context) const override
 	{
 		if(m_args.size() == 0)
+		{
 			return context.call_func0(m_name);
+		}
 		else if(m_args.size() == 1)
+		{
 			return context.call_func1(m_name, m_args[0]->eval(context));
+		}
 		else if(m_args.size() == 2)
-			return context.call_func2(m_name, m_args[0]->eval(context), m_args[1]->eval(context));
+		{
+			auto fut_arg0 = std::async([this, &context]() { return m_args[0]->eval(context); });
+			const t_num arg1 = m_args[1]->eval(context);
+			const t_num arg0 = fut_arg0.get();
+
+			return context.call_func2(m_name, arg0, arg1);
+		}
 
 		throw std::runtime_error("Invalid function call.");
 	}

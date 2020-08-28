@@ -5,12 +5,14 @@
 # @license see 'LICENSE' file
 #
 
+project(tlibs2_tests)
+
 cmake_minimum_required(VERSION 3.0)
 cmake_policy(SET CMP0078 NEW)
 cmake_policy(SET CMP0086 NEW)
 enable_testing()
 
-project(tlibs2_tests)
+list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}" "${PROJECT_SOURCE_DIR}/../cmake")
 
 
 message("Build type: ${CMAKE_BUILD_TYPE}")
@@ -34,18 +36,33 @@ message("Using Boost version ${Boost_MAJOR_VERSION}.${Boost_MINOR_VERSION}.${Boo
 # -----------------------------------------------------------------------------
 
 
-include_directories("${PROJECT_SOURCE_DIR}" "${PROJECT_SOURCE_DIR}/..")
+# -----------------------------------------------------------------------------
+# further packages
+find_package(Minuit2 REQUIRED)
+find_package(Threads REQUIRED)
+# -----------------------------------------------------------------------------
+
+
+include_directories("${PROJECT_SOURCE_DIR}" "${PROJECT_SOURCE_DIR}/.." "${Minuit2_INCLUDE_DIRS}")
 
 
 # -----------------------------------------------------------------------------
 # build individual test cases
-add_executable(cryst cryst.cpp)
+add_executable(cryst cryst.cpp ../libs/log.cpp)
 add_executable(mat1 mat1.cpp)
 add_executable(stat1 stat1.cpp)
 add_executable(quat1 quat1.cpp)
-add_executable(leastsq leastsq.cpp)
+add_executable(leastsq leastsq.cpp ../libs/log.cpp)
 add_executable(expr expr.cpp ../libs/log.cpp)
+add_executable(min min.cpp ../libs/log.cpp)
+add_executable(fit0 fit0.cpp ../libs/log.cpp)
+add_executable(fit1 fit1.cpp ../libs/log.cpp)
 #add_executable(eig eig.cpp)
+
+target_link_libraries(expr Threads::Threads)
+target_link_libraries(min ${Minuit2_LIBRARIES} Threads::Threads)
+target_link_libraries(fit0 ${Minuit2_LIBRARIES} Threads::Threads)
+target_link_libraries(fit1 ${Minuit2_LIBRARIES})
 # -----------------------------------------------------------------------------
 
 
@@ -57,5 +74,8 @@ add_test(stat1 stat1)
 add_test(quat1 quat1)
 add_test(lestsq leastsq)
 add_test(expr expr)
+add_test(min min)
+add_test(fit0 fit0)
+add_test(fit1 fit1)
 #add_test(eig eig)
 # -----------------------------------------------------------------------------
