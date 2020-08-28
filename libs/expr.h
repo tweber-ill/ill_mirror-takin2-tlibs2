@@ -25,6 +25,7 @@
 #include <vector>
 #include <memory>
 #include <cmath>
+#include <cstdint>
 
 #ifdef TL2_USE_THREADS
 	#include <future>
@@ -60,6 +61,34 @@ template<typename t_num=double> class ExprParser;
 
 
 // ------------------------------------------------------------------------
+// vm
+// ------------------------------------------------------------------------
+
+template<typename t_num=double>
+class ExprVM
+{
+public:
+	enum class Op : std::int8_t
+	{
+		NOP = 0,
+
+		PLUS, MINUS,
+		MULT, DIV, MOD,
+		POW,
+
+		UPLUS, UMINUS,
+
+		PUSH_VAR, PUSH_VAL,
+
+		CALL,
+	};
+};
+
+// ------------------------------------------------------------------------
+
+
+
+// ------------------------------------------------------------------------
 // ast
 // ------------------------------------------------------------------------
 template<typename t_num=double>
@@ -69,6 +98,8 @@ public:
 	virtual ~ExprAST() = default;
 
 	virtual t_num eval(const ExprParser<t_num>&) const = 0;
+	virtual void codegen(std::ostream& ostr) const = 0;
+
 	virtual void print(std::ostream& ostr=std::cout, std::size_t indent=0) const = 0;
 };
 
@@ -108,6 +139,27 @@ public:
 		}
 
 		throw std::runtime_error{"Invalid binary operator."};
+	}
+
+	virtual void codegen(std::ostream& ostr) const override
+	{
+		m_left->codegen(ostr);
+		m_right->codegen(ostr);
+
+		auto op = ExprVM<t_num>::Op::NOP;
+
+		switch(m_op)
+		{
+			case '+': op = ExprVM<t_num>::Op::PLUS; break;
+			case '-': op = ExprVM<t_num>::Op::MINUS; break;;
+			case '*': op = ExprVM<t_num>::Op::MULT; break;;
+			case '/': op = ExprVM<t_num>::Op::DIV; break;;
+			case '%': op = ExprVM<t_num>::Op::MOD; break;;
+			case '^': op = ExprVM<t_num>::Op::POW; break;;
+			default: throw std::runtime_error{"Invalid binary operator."};
+		}
+
+		ostr.write(reinterpret_cast<const char*>(&op), sizeof(op));
 	}
 
 	virtual void print(std::ostream& ostr=std::cout, std::size_t indent=0) const override
@@ -150,6 +202,22 @@ public:
 		throw std::runtime_error{"Invalid unary operator."};
 	}
 
+	virtual void codegen(std::ostream& ostr) const override
+	{
+		m_child->codegen(ostr);
+
+		auto op = ExprVM<t_num>::Op::NOP;
+
+		switch(m_op)
+		{
+			case '+': op = ExprVM<t_num>::Op::UPLUS; break;
+			case '-': op = ExprVM<t_num>::Op::UMINUS; break;;
+			default: throw std::runtime_error{"Invalid unary operator."};
+		}
+
+		ostr.write(reinterpret_cast<const char*>(&op), sizeof(op));
+	}
+
 	virtual void print(std::ostream& ostr=std::cout, std::size_t indent=0) const override
 	{
 		for(std::size_t i=0; i<indent; ++i) ostr << " | ";
@@ -180,6 +248,14 @@ public:
 		return context.get_var(m_name);
 	}
 
+	virtual void codegen(std::ostream& ostr) const override
+	{
+		auto op = ExprVM<t_num>::Op::PUSH_VAR;
+
+		ostr.write(reinterpret_cast<const char*>(&op), sizeof(op));
+		ostr.write(m_name.c_str(), m_name.length()+1);
+	}
+
 	virtual void print(std::ostream& ostr=std::cout, std::size_t indent=0) const override
 	{
 		for(std::size_t i=0; i<indent; ++i) ostr << " | ";
@@ -206,6 +282,14 @@ public:
 	virtual t_num eval(const ExprParser<t_num>&) const override
 	{
 		return m_val;
+	}
+
+	virtual void codegen(std::ostream& ostr) const override
+	{
+		auto op = ExprVM<t_num>::Op::PUSH_VAL;
+
+		ostr.write(reinterpret_cast<const char*>(&op), sizeof(op));
+		ostr.write(reinterpret_cast<const char*>(&m_val), sizeof(m_val));
 	}
 
 	virtual void print(std::ostream& ostr=std::cout, std::size_t indent=0) const override
@@ -273,6 +357,19 @@ public:
 		throw std::runtime_error("Invalid function call.");
 	}
 
+	virtual void codegen(std::ostream& ostr) const override
+	{
+		for(const auto& arg : m_args)
+			arg->codegen(ostr);
+
+		auto op = ExprVM<t_num>::Op::CALL;
+		std::uint8_t numargs = static_cast<std::uint8_t>(m_args.size());
+
+		ostr.write(reinterpret_cast<const char*>(&op), sizeof(op));
+		ostr.write(reinterpret_cast<const char*>(&numargs), sizeof(numargs));
+		ostr.write(m_name.c_str(), m_name.length()+1);
+	}
+
 	virtual void print(std::ostream& ostr=std::cout, std::size_t indent=0) const override
 	{
 		for(std::size_t i=0; i<indent; ++i) ostr << " | ";
@@ -300,21 +397,24 @@ class ExprParser
 
 
 public:
-	ExprParser() : m_ast{}, m_vars{}, m_funcs0{}, m_funcs1{}, m_funcs2{}, m_istr{}, m_lookahead_text{}
+	ExprParser(bool debug=false)
+		: m_debug{debug}, m_ast{}, m_code{},
+		m_vars{}, m_funcs0{}, m_funcs1{}, m_funcs2{},
+		m_istr{}, m_lookahead_text{}
 	{
 		register_funcs();
 		register_consts();
 	}
 
 
-	bool parse(const std::string& str)
+	bool parse(const std::string& str, bool codegen=true)
 	{
+		// clear
+		m_code = std::stringstream{};
+
 		m_istr = std::make_shared<std::istringstream>(str);
 		next_lookahead();
 		m_ast = plus_term();
-
-		//m_ast->print(std::cout);
-		//std::cout << std::endl;
 
 		// check if there would be are more tokens available?
 		next_lookahead();
@@ -322,12 +422,27 @@ public:
 		if(!at_eof)
 			throw std::underflow_error("Not all input tokens have been consumed.");
 
-		return !!m_ast;
+		bool ok = !!m_ast;
+		if(ok)
+		{
+			if(m_debug)
+			{
+				m_ast->print(std::cout);
+				std::cout << std::endl;
+			}
+
+			if(codegen)
+				m_ast->codegen(m_code);
+		}
+
+		return ok;
 	}
 
 
 	t_num eval() const
 	{
+		// TODO: run generated code
+
 		if(!m_ast)
 			throw std::runtime_error("Invalid AST.");
 		return m_ast->eval(*this);
@@ -924,8 +1039,13 @@ public:
 
 
 private:
+	bool m_debug = false;
+
 	// ast root
 	std::shared_ptr<ExprAST<t_num>> m_ast{};
+
+	// generated code
+	std::stringstream m_code{};
 
 	// variables and constants
 	std::unordered_map<std::string, t_num> m_vars{};
