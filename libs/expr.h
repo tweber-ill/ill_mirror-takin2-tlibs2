@@ -12,6 +12,10 @@
 #ifndef __TLIBS2_EXPR_PARSER_H__
 #define __TLIBS2_EXPR_PARSER_H__
 
+//#define TL2_USE_THREADS
+#define TL2_USE_UNITS
+
+
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -21,14 +25,19 @@
 #include <vector>
 #include <memory>
 #include <cmath>
-#include <future>
+
+#ifdef TL2_USE_THREADS
+	#include <future>
+#endif
 
 #if __has_include(<boost/math/special_functions/erf.hpp>)
 	#include <boost/math/special_functions/erf.hpp>
 	#define HAS_ERFINV
 #endif
 
-#include "units.h"
+#ifdef TL2_USE_UNITS
+	#include "units.h"
+#endif
 
 
 namespace tl2 {
@@ -79,9 +88,14 @@ public:
 
 	virtual t_num eval(const ExprParser<t_num>& context) const override
 	{
+#ifdef TL2_USE_THREADS
 		auto fut_left = std::async([this, &context]() { return m_left->eval(context); });
 		const t_num val_right = m_right->eval(context);
 		const t_num val_left = fut_left.get();
+#else
+		const t_num val_left = m_left->eval(context);
+		const t_num val_right = m_right->eval(context);
+#endif
 
 		switch(m_op)
 		{
@@ -244,9 +258,14 @@ public:
 		}
 		else if(m_args.size() == 2)
 		{
+#ifdef TL2_USE_THREADS
 			auto fut_arg0 = std::async([this, &context]() { return m_args[0]->eval(context); });
 			const t_num arg1 = m_args[1]->eval(context);
 			const t_num arg0 = fut_arg0.get();
+#else
+			const t_num arg0 = m_args[0]->eval(context);
+			const t_num arg1 = m_args[1]->eval(context);
+#endif
 
 			return context.call_func2(m_name, arg0, arg1);
 		}
@@ -395,9 +414,11 @@ protected:
 		// real constants
 		if constexpr(std::is_floating_point_v<t_num>)
 		{
+#ifdef TL2_USE_UNITS
 			register_var("pi", __pi<t_num>);
 			register_var("hbar",  t_num(hbar<t_num>/meV<t_num>/sec<t_num>));	// hbar in [meV s]
-			register_var("kB",  t_num(kB<t_num>/meV<t_num>*kelvin<t_num>));	// kB in [meV / K]
+			register_var("kB",  t_num(kB<t_num>/meV<t_num>*kelvin<t_num>));		// kB in [meV / K]
+#endif
 		}
 
 		// integer constants
