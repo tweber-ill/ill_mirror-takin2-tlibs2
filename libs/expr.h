@@ -23,6 +23,8 @@
 #include <regex>
 #include <unordered_map>
 #include <vector>
+#include <stack>
+#include <variant>
 #include <memory>
 #include <cmath>
 #include <cstdint>
@@ -45,7 +47,7 @@ namespace tl2 {
 
 
 template<class t_num=double>
-t_num modfunc(t_num t1, t_num t2)
+t_num expr_modfunc(t_num t1, t_num t2)
 {
 	if constexpr(std::is_floating_point_v<t_num>)
 		return std::fmod(t1, t2);
@@ -55,6 +57,35 @@ t_num modfunc(t_num t1, t_num t2)
 		throw std::runtime_error{"Invalid type for mod function."};
 }
 
+
+template<class t_num=double>
+t_num expr_binop(char op, t_num val_left, t_num val_right)
+{
+	switch(op)
+	{
+		case '+': return val_left + val_right;
+		case '-': return val_left - val_right;
+		case '*': return val_left * val_right;
+		case '/': return val_left / val_right;
+		case '%': return expr_modfunc<t_num>(val_left, val_right);
+		case '^': return static_cast<t_num>(std::pow(val_left, val_right));
+	}
+
+	throw std::runtime_error{"Invalid binary operator."};
+}
+
+
+template<class t_num=double>
+t_num expr_unop(char op, t_num val)
+{
+	switch(op)
+	{
+		case '+': return val;
+		case '-': return -val;
+	}
+
+	throw std::runtime_error{"Invalid unary operator."};
+}
 
 
 template<typename t_num=double> class ExprParser;
@@ -71,17 +102,162 @@ public:
 	enum class Op : std::int8_t
 	{
 		NOP = 0,
-
-		PLUS, MINUS,
-		MULT, DIV, MOD,
-		POW,
-
-		UPLUS, UMINUS,
-
+		BINOP, UNOP,
 		PUSH_VAR, PUSH_VAL,
-
 		CALL,
 	};
+
+
+public:
+	ExprVM() : m_stack{}
+	{}
+
+
+	t_num run(std::istream& istr, const ExprParser<t_num>& context)
+	{
+		while(true)
+		{
+			Op op;
+			istr.read(reinterpret_cast<char*>(&op), sizeof(op));
+			if(istr.eof())
+				break;
+			//std::cout << "opcode = " << unsigned(op) << std::endl;
+
+			switch(op)
+			{
+				case Op::NOP:
+				{
+					break;
+				}
+				case Op::BINOP:
+				{
+					char binop = 0;
+					istr.read(reinterpret_cast<char*>(&binop), sizeof(binop));
+
+					auto operand2 = m_stack.top(); m_stack.pop();
+					auto operand1 = m_stack.top(); m_stack.pop();
+					t_num val2 = get_value(operand2, context);
+					t_num val1 = get_value(operand1, context);
+
+					t_num result = expr_binop<t_num>(binop, val1, val2);
+					//std::cout << val1 << " " << binop << " " << val2 << " = " << result << std::endl;
+					m_stack.push(result);
+
+					break;
+				}
+				case Op::UNOP:
+				{
+					char unop = 0;
+					istr.read(reinterpret_cast<char*>(&unop), sizeof(unop));
+
+					auto operand = m_stack.top(); m_stack.pop();
+					t_num val = get_value(operand, context);
+
+					t_num result = expr_unop<t_num>(unop, val);
+					//std::cout << unop << " " << val << " = " << result << std::endl;
+					m_stack.push(result);
+
+					break;
+				}
+				case Op::PUSH_VAR:
+				{
+					std::size_t len{};
+					istr.read(reinterpret_cast<char*>(&len), sizeof(len));
+
+					std::string var(len, '\0');
+					istr.read(var.data(), len*sizeof(std::string::value_type));
+
+					//m_stack.emplace(std::move(var));
+					t_num val = context.get_var(var);
+					//std::cout << var << " = " << val << std::endl;
+					m_stack.push(val);
+
+					break;
+				}
+				case Op::PUSH_VAL:
+				{
+					t_num val{};
+					istr.read(reinterpret_cast<char*>(&val), sizeof(val));
+					//std::cout << val << " = " << val << std::endl;
+					m_stack.push(val);
+					break;
+				}
+				case Op::CALL:
+				{
+					std::uint8_t numargs = 0;
+					istr.read(reinterpret_cast<char*>(&numargs), sizeof(numargs));
+
+					std::size_t len{};
+					istr.read(reinterpret_cast<char*>(&len), sizeof(len));
+
+					std::string fkt(len, '\0');
+					istr.read(fkt.data(), len*sizeof(std::string::value_type));
+
+					if(numargs == 0)
+					{
+						t_num result = context.call_func0(fkt);
+						//std::cout << fkt << "() = " << result << std::endl;
+						m_stack.push(result);
+					}
+					else if(numargs == 1)
+					{
+						auto arg = m_stack.top(); m_stack.pop();
+						t_num argval = get_value(arg, context);
+
+						t_num result = context.call_func1(fkt, argval);
+						//std::cout << fkt << "(" << argval << ") = " << result << std::endl;
+						m_stack.push(result);
+					}
+					else if(numargs == 2)
+					{
+						auto arg2 = m_stack.top(); m_stack.pop();
+						t_num arg2val = get_value(arg2, context);
+
+						auto arg1 = m_stack.top(); m_stack.pop();
+						t_num arg1val = get_value(arg1, context);
+
+						t_num result = context.call_func2(fkt, arg1val, arg2val);
+						//std::cout << fkt << "(" << arg1val << ", " << arg2val << ") = " << result << std::endl;
+						m_stack.push(result);
+					}
+					else
+					{
+						throw std::runtime_error("Invalid function call.");
+					}
+
+					break;
+				}
+				default:
+				{
+					throw std::runtime_error("Invalid opcode.");
+				}
+			}
+		}
+
+		if(m_stack.size() != 1)
+			throw std::runtime_error("Result not on stack");
+		return std::get<t_num>(m_stack.top());
+	}
+
+
+protected:
+	t_num get_value(const std::variant<t_num, std::string>& variant, const ExprParser<t_num>& context) const
+	{
+		if (std::holds_alternative<t_num>(variant))
+		{
+			return std::get<t_num>(variant);
+		}
+		else if (std::holds_alternative<std::string>(variant))
+		{
+			return context.get_var(std::get<std::string>(variant));
+		}
+
+		throw std::runtime_error("Invalid request from variant.");
+	}
+
+
+private:
+	std::stack<std::variant<t_num, std::string>> m_stack;
 };
 
 // ------------------------------------------------------------------------
@@ -128,17 +304,7 @@ public:
 		const t_num val_right = m_right->eval(context);
 #endif
 
-		switch(m_op)
-		{
-			case '+': return val_left + val_right;
-			case '-': return val_left - val_right;
-			case '*': return val_left * val_right;
-			case '/': return val_left / val_right;
-			case '%': return modfunc<t_num>(val_left, val_right);
-			case '^': return static_cast<t_num>(std::pow(val_left, val_right));
-		}
-
-		throw std::runtime_error{"Invalid binary operator."};
+		return expr_binop<t_num>(m_op, val_left, val_right);
 	}
 
 	virtual void codegen(std::ostream& ostr) const override
@@ -146,20 +312,9 @@ public:
 		m_left->codegen(ostr);
 		m_right->codegen(ostr);
 
-		auto op = ExprVM<t_num>::Op::NOP;
-
-		switch(m_op)
-		{
-			case '+': op = ExprVM<t_num>::Op::PLUS; break;
-			case '-': op = ExprVM<t_num>::Op::MINUS; break;;
-			case '*': op = ExprVM<t_num>::Op::MULT; break;;
-			case '/': op = ExprVM<t_num>::Op::DIV; break;;
-			case '%': op = ExprVM<t_num>::Op::MOD; break;;
-			case '^': op = ExprVM<t_num>::Op::POW; break;;
-			default: throw std::runtime_error{"Invalid binary operator."};
-		}
-
+		auto op = ExprVM<t_num>::Op::BINOP;
 		ostr.write(reinterpret_cast<const char*>(&op), sizeof(op));
+		ostr.write(&m_op, sizeof(m_op));
 	}
 
 	virtual void print(std::ostream& ostr=std::cout, std::size_t indent=0) const override
@@ -192,30 +347,16 @@ public:
 	virtual t_num eval(const ExprParser<t_num>& context) const override
 	{
 		const t_num val = m_child->eval(context);
-
-		switch(m_op)
-		{
-			case '+': return val;
-			case '-': return -val;
-		}
-
-		throw std::runtime_error{"Invalid unary operator."};
+		return expr_unop<t_num>(m_op, val);
 	}
 
 	virtual void codegen(std::ostream& ostr) const override
 	{
 		m_child->codegen(ostr);
 
-		auto op = ExprVM<t_num>::Op::NOP;
-
-		switch(m_op)
-		{
-			case '+': op = ExprVM<t_num>::Op::UPLUS; break;
-			case '-': op = ExprVM<t_num>::Op::UMINUS; break;;
-			default: throw std::runtime_error{"Invalid unary operator."};
-		}
-
+		auto op = ExprVM<t_num>::Op::UNOP;
 		ostr.write(reinterpret_cast<const char*>(&op), sizeof(op));
+		ostr.write(&m_op, sizeof(m_op));
 	}
 
 	virtual void print(std::ostream& ostr=std::cout, std::size_t indent=0) const override
@@ -251,9 +392,11 @@ public:
 	virtual void codegen(std::ostream& ostr) const override
 	{
 		auto op = ExprVM<t_num>::Op::PUSH_VAR;
+		std::size_t len = m_name.length();
 
 		ostr.write(reinterpret_cast<const char*>(&op), sizeof(op));
-		ostr.write(m_name.c_str(), m_name.length()+1);
+		ostr.write(reinterpret_cast<const char*>(&len), sizeof(len));
+		ostr.write(m_name.c_str(), m_name.length());
 	}
 
 	virtual void print(std::ostream& ostr=std::cout, std::size_t indent=0) const override
@@ -364,10 +507,12 @@ public:
 
 		auto op = ExprVM<t_num>::Op::CALL;
 		std::uint8_t numargs = static_cast<std::uint8_t>(m_args.size());
+		std::size_t len = m_name.length();
 
 		ostr.write(reinterpret_cast<const char*>(&op), sizeof(op));
 		ostr.write(reinterpret_cast<const char*>(&numargs), sizeof(numargs));
-		ostr.write(m_name.c_str(), m_name.length()+1);
+		ostr.write(reinterpret_cast<const char*>(&len), sizeof(len));
+		ostr.write(m_name.c_str(), len);
 	}
 
 	virtual void print(std::ostream& ostr=std::cout, std::size_t indent=0) const override
@@ -394,6 +539,7 @@ class ExprParser
 {
 	friend class ExprASTCall<t_num>;
 	friend class ExprASTVar<t_num>;
+	friend class ExprVM<t_num>;
 
 
 public:
@@ -409,8 +555,7 @@ public:
 
 	bool parse(const std::string& str, bool codegen=true)
 	{
-		// clear
-		m_code = std::stringstream{};
+		m_code.clear();
 
 		m_istr = std::make_shared<std::istringstream>(str);
 		next_lookahead();
@@ -432,17 +577,38 @@ public:
 			}
 
 			if(codegen)
-				m_ast->codegen(m_code);
+			{
+				std::stringstream code;
+				m_ast->codegen(code);
+
+				code.seekg(0, std::stringstream::end);
+				auto code_size = code.tellg();
+				code.seekg(0, std::stringstream::beg);
+
+				m_code.resize(code_size);
+				code.read(reinterpret_cast<char*>(m_code.data()), code_size);
+			}
 		}
 
 		return ok;
 	}
 
 
-	t_num eval() const
+	t_num eval()
 	{
-		// TODO: run generated code
+		// is compiled code available?
+		if(m_code.size())
+		{
+			std::stringstream code;
+			code.write(reinterpret_cast<char*>(m_code.data()), m_code.size());
+			code.seekg(0, std::stringstream::beg);
 
+			// run generated code
+			ExprVM<t_num> vm;
+			return vm.run(code, *this);
+		}
+
+		// otherwise run ast directly
 		if(!m_ast)
 			throw std::runtime_error("Invalid AST.");
 		return m_ast->eval(*this);
@@ -458,7 +624,7 @@ protected:
 	{
 		// common functions
 		register_func1("abs", std::abs);
-		register_func2("mod", modfunc<t_num>);
+		register_func2("mod", expr_modfunc<t_num>);
 
 		// real functions
 		if constexpr(std::is_floating_point_v<t_num>)
@@ -1045,7 +1211,7 @@ private:
 	std::shared_ptr<ExprAST<t_num>> m_ast{};
 
 	// generated code
-	std::stringstream m_code{};
+	std::vector<std::uint8_t> m_code{};
 
 	// variables and constants
 	std::unordered_map<std::string, t_num> m_vars{};
