@@ -24,7 +24,6 @@
 #include <unordered_map>
 #include <vector>
 #include <stack>
-#include <variant>
 #include <memory>
 #include <cmath>
 #include <cstdint>
@@ -134,10 +133,8 @@ public:
 					char binop = 0;
 					istr.read(reinterpret_cast<char*>(&binop), sizeof(binop));
 
-					auto operand2 = m_stack.top(); m_stack.pop();
-					auto operand1 = m_stack.top(); m_stack.pop();
-					t_num val2 = get_value(operand2, context);
-					t_num val1 = get_value(operand1, context);
+					t_num val2 = m_stack.top(); m_stack.pop();
+					t_num val1 = m_stack.top(); m_stack.pop();
 
 					t_num result = expr_binop<t_num>(binop, val1, val2);
 					//std::cout << val1 << " " << binop << " " << val2 << " = " << result << std::endl;
@@ -150,9 +147,7 @@ public:
 					char unop = 0;
 					istr.read(reinterpret_cast<char*>(&unop), sizeof(unop));
 
-					auto operand = m_stack.top(); m_stack.pop();
-					t_num val = get_value(operand, context);
-
+					t_num val = m_stack.top(); m_stack.pop();
 					t_num result = expr_unop<t_num>(unop, val);
 					//std::cout << unop << " " << val << " = " << result << std::endl;
 					m_stack.push(result);
@@ -167,7 +162,6 @@ public:
 					std::string var(len, '\0');
 					istr.read(var.data(), len*sizeof(std::string::value_type));
 
-					//m_stack.emplace(std::move(var));
 					t_num val = context.get_var(var);
 					//std::cout << var << " = " << val << std::endl;
 					m_stack.push(val);
@@ -201,20 +195,15 @@ public:
 					}
 					else if(numargs == 1)
 					{
-						auto arg = m_stack.top(); m_stack.pop();
-						t_num argval = get_value(arg, context);
-
+						t_num argval = m_stack.top(); m_stack.pop();
 						t_num result = context.call_func1(fkt, argval);
 						//std::cout << fkt << "(" << argval << ") = " << result << std::endl;
 						m_stack.push(result);
 					}
 					else if(numargs == 2)
 					{
-						auto arg2 = m_stack.top(); m_stack.pop();
-						t_num arg2val = get_value(arg2, context);
-
-						auto arg1 = m_stack.top(); m_stack.pop();
-						t_num arg1val = get_value(arg1, context);
+						t_num arg2val = m_stack.top(); m_stack.pop();
+						t_num arg1val = m_stack.top(); m_stack.pop();
 
 						t_num result = context.call_func2(fkt, arg1val, arg2val);
 						//std::cout << fkt << "(" << arg1val << ", " << arg2val << ") = " << result << std::endl;
@@ -236,28 +225,12 @@ public:
 
 		if(m_stack.size() != 1)
 			throw std::runtime_error("Result not on stack");
-		return std::get<t_num>(m_stack.top());
-	}
-
-
-protected:
-	t_num get_value(const std::variant<t_num, std::string>& variant, const ExprParser<t_num>& context) const
-	{
-		if (std::holds_alternative<t_num>(variant))
-		{
-			return std::get<t_num>(variant);
-		}
-		else if (std::holds_alternative<std::string>(variant))
-		{
-			return context.get_var(std::get<std::string>(variant));
-		}
-
-		throw std::runtime_error("Invalid request from variant.");
+		return m_stack.top();
 	}
 
 
 private:
-	std::stack<std::variant<t_num, std::string>> m_stack;
+	std::stack<t_num> m_stack;
 };
 
 // ------------------------------------------------------------------------
