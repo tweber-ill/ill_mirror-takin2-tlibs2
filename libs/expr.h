@@ -98,7 +98,7 @@ template<typename t_num=double>
 class ExprVM
 {
 public:
-	enum class Op : std::int8_t
+	enum class Op : std::uint8_t
 	{
 		NOP = 0,
 		BINOP, UNOP,
@@ -108,97 +108,108 @@ public:
 
 
 public:
-	ExprVM() : m_stack{}
+	ExprVM(bool debug) : m_stack{}, m_debug{debug}
 	{}
 
 
-	t_num run(std::istream& istr, const ExprParser<t_num>& context)
+	t_num run(const std::uint8_t* code, std::size_t size, const ExprParser<t_num>& context)
 	{
-		while(true)
+		for(std::size_t ip=0; ip<size;)
 		{
-			Op op;
-			istr.read(reinterpret_cast<char*>(&op), sizeof(op));
-			if(istr.eof())
-				break;
-			//std::cout << "opcode = " << unsigned(op) << std::endl;
+			const Op op = *reinterpret_cast<const Op*>(code + ip++);
 
 			switch(op)
 			{
 				case Op::NOP:
 				{
+					++ip;
 					break;
 				}
 				case Op::BINOP:
 				{
-					char binop = 0;
-					istr.read(reinterpret_cast<char*>(&binop), sizeof(binop));
+					char binop = *reinterpret_cast<const char*>(code + ip++);
 
 					t_num val2 = m_stack.top(); m_stack.pop();
 					t_num val1 = m_stack.top(); m_stack.pop();
 
 					t_num result = expr_binop<t_num>(binop, val1, val2);
-					//std::cout << val1 << " " << binop << " " << val2 << " = " << result << std::endl;
 					m_stack.push(result);
 
+					if(m_debug)
+						std::cout << val1 << " " << binop << " " << val2 << " = " << result << std::endl;
 					break;
 				}
 				case Op::UNOP:
 				{
-					char unop = 0;
-					istr.read(reinterpret_cast<char*>(&unop), sizeof(unop));
+					char unop = *reinterpret_cast<const char*>(code + ip++);
 
 					t_num val = m_stack.top(); m_stack.pop();
 					t_num result = expr_unop<t_num>(unop, val);
-					//std::cout << unop << " " << val << " = " << result << std::endl;
 					m_stack.push(result);
+
+					if(m_debug)
+						std::cout << unop << " " << val << " = " << result << std::endl;
 
 					break;
 				}
 				case Op::PUSH_VAR:
 				{
-					std::size_t len{};
-					istr.read(reinterpret_cast<char*>(&len), sizeof(len));
+					std::size_t len = *reinterpret_cast<const std::size_t*>(code + ip);
+					ip += sizeof(len);
 
-					std::string var(len, '\0');
-					istr.read(var.data(), len*sizeof(std::string::value_type));
+					std::string var(reinterpret_cast<const char*>(code + ip),
+						reinterpret_cast<const char*>(code + ip+len));
+					ip += len;
 
 					t_num val = context.get_var(var);
-					//std::cout << var << " = " << val << std::endl;
 					m_stack.push(val);
+
+					if(m_debug)
+						std::cout << var << " = " << val << std::endl;
 
 					break;
 				}
 				case Op::PUSH_VAL:
 				{
-					t_num val{};
-					istr.read(reinterpret_cast<char*>(&val), sizeof(val));
-					//std::cout << val << " = " << val << std::endl;
+					t_num val = *reinterpret_cast<const t_num*>(code + ip);
+					ip += sizeof(val);
+
 					m_stack.push(val);
+
+
+					if(m_debug)
+						std::cout << val << " = " << val << std::endl;
 					break;
 				}
 				case Op::CALL:
 				{
-					std::uint8_t numargs = 0;
-					istr.read(reinterpret_cast<char*>(&numargs), sizeof(numargs));
+					std::uint8_t numargs = *reinterpret_cast<const std::uint8_t*>(code + ip);
+					ip += sizeof(numargs);
 
-					std::size_t len{};
-					istr.read(reinterpret_cast<char*>(&len), sizeof(len));
+					std::size_t len = *reinterpret_cast<const std::size_t*>(code + ip);
+					ip += sizeof(len);
 
-					std::string fkt(len, '\0');
-					istr.read(fkt.data(), len*sizeof(std::string::value_type));
+					std::string fkt(reinterpret_cast<const char*>(code + ip),
+						reinterpret_cast<const char*>(code + ip+len));
+					ip += len;
 
 					if(numargs == 0)
 					{
 						t_num result = context.call_func0(fkt);
-						//std::cout << fkt << "() = " << result << std::endl;
 						m_stack.push(result);
+
+						if(m_debug)
+							std::cout << fkt << "() = " << result << std::endl;
 					}
 					else if(numargs == 1)
 					{
 						t_num argval = m_stack.top(); m_stack.pop();
 						t_num result = context.call_func1(fkt, argval);
-						//std::cout << fkt << "(" << argval << ") = " << result << std::endl;
+
 						m_stack.push(result);
+
+						if(m_debug)
+							std::cout << fkt << "(" << argval << ") = " << result << std::endl;
 					}
 					else if(numargs == 2)
 					{
@@ -206,8 +217,11 @@ public:
 						t_num arg1val = m_stack.top(); m_stack.pop();
 
 						t_num result = context.call_func2(fkt, arg1val, arg2val);
-						//std::cout << fkt << "(" << arg1val << ", " << arg2val << ") = " << result << std::endl;
+
 						m_stack.push(result);
+
+						if(m_debug)
+							std::cout << fkt << "(" << arg1val << ", " << arg2val << ") = " << result << std::endl;
 					}
 					else
 					{
@@ -231,6 +245,7 @@ public:
 
 private:
 	std::stack<t_num> m_stack;
+	bool m_debug = false;
 };
 
 // ------------------------------------------------------------------------
@@ -572,16 +587,13 @@ public:
 		// is compiled code available?
 		if(m_code.size())
 		{
-			std::stringstream code;
-			code.write(reinterpret_cast<char*>(m_code.data()), m_code.size());
-			code.seekg(0, std::stringstream::beg);
-
 			// run generated code
-			ExprVM<t_num> vm;
-			return vm.run(code, *this);
+			ExprVM<t_num> vm{m_debug};
+			return vm.run(m_code.data(), m_code.size(), *this);
 		}
 
-		// otherwise run ast directly
+		if(m_debug)
+			std::cerr << "Warning: No code available, interpreting AST." << std::endl;
 		if(!m_ast)
 			throw std::runtime_error("Invalid AST.");
 		return m_ast->eval(*this);
