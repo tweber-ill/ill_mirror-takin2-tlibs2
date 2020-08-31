@@ -122,7 +122,6 @@ public:
 			{
 				case Op::NOP:
 				{
-					++ip;
 					break;
 				}
 				case Op::BINOP:
@@ -239,7 +238,8 @@ public:
 
 		if(m_stack.size() != 1)
 			throw std::runtime_error("Result not on stack");
-		return m_stack.top();
+		t_num result = m_stack.top(); m_stack.pop();
+		return result;
 	}
 
 
