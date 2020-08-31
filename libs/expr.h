@@ -160,7 +160,7 @@ public:
 						reinterpret_cast<const char*>(code + ip+len));
 					ip += len;
 
-					t_num val = context.get_var(var);
+					t_num val = context.get_var_or_const(var);
 					m_stack.push(val);
 
 					if(m_debug)
@@ -374,7 +374,7 @@ public:
 
 	virtual t_num eval(const ExprParser<t_num>& context) const override
 	{
-		return context.get_var(m_name);
+		return context.get_var_or_const(m_name);
 	}
 
 	virtual void codegen(std::ostream& ostr) const override
@@ -533,7 +533,7 @@ class ExprParser
 public:
 	ExprParser(bool debug=false)
 		: m_debug{debug}, m_ast{}, m_code{},
-		m_vars{}, m_funcs0{}, m_funcs1{}, m_funcs2{},
+		m_vars{}, m_consts{}, m_funcs0{}, m_funcs1{}, m_funcs2{},
 		m_istr{}, m_lookahead_text{}
 	{
 		register_funcs();
@@ -681,9 +681,9 @@ protected:
 		if constexpr(std::is_floating_point_v<t_num>)
 		{
 #ifdef TL2_USE_UNITS
-			register_var("pi", __pi<t_num>);
-			register_var("hbar",  t_num(hbar<t_num>/meV<t_num>/sec<t_num>));	// hbar in [meV s]
-			register_var("kB",  t_num(kB<t_num>/meV<t_num>*kelvin<t_num>));		// kB in [meV / K]
+			register_const("pi", __pi<t_num>);
+			register_const("hbar",  t_num(hbar<t_num>/meV<t_num>/sec<t_num>));	// hbar in [meV s]
+			register_const("kB",  t_num(kB<t_num>/meV<t_num>*kelvin<t_num>));		// kB in [meV / K]
 #endif
 		}
 
@@ -694,10 +694,18 @@ protected:
 	}
 
 
-	// get constant
-	t_num get_var(const std::string& strName) const
+	// get variable or constant
+	t_num get_var_or_const(const std::string& strName) const
 	{
-		return m_vars.at(strName);
+		// look for variable
+		if(const auto iterVar = m_vars.find(strName); iterVar != m_vars.end())
+			return iterVar->second;
+
+		// else look for constant
+		if(const auto iterConst = m_consts.find(strName); iterConst != m_consts.end())
+			return iterConst->second;
+
+		throw std::runtime_error("Variable or constant \"" + strName + "\" not found.");
 	}
 
 
@@ -1139,7 +1147,7 @@ protected:
 			else
 			{
 				// register the variable if it doesn't yet exist
-				if(m_vars.find(ident) == m_vars.end())
+				if(m_vars.find(ident) == m_vars.end() && m_consts.find(ident) == m_consts.end())
 					register_var(ident, t_num{});
 				return std::make_shared<ExprASTVar<t_num>>(ident);
 			}
@@ -1174,11 +1182,20 @@ public:
 	}
 
 
-	// register a variable or constant
+	// register a variable
 	void register_var(const std::string& name, t_num val)
 	{
 		// overwrite value if key already exists
 		if(auto [iter, ok] = m_vars.emplace(std::make_pair(name, val)); !ok)
+			iter->second = val;
+	}
+
+
+	// register a constant
+	void register_const(const std::string& name, t_num val)
+	{
+		// overwrite value if key already exists
+		if(auto [iter, ok] = m_consts.emplace(std::make_pair(name, val)); !ok)
 			iter->second = val;
 	}
 
@@ -1199,7 +1216,7 @@ private:
 	std::vector<std::uint8_t> m_code{};
 
 	// variables and constants
-	std::unordered_map<std::string, t_num> m_vars{};
+	std::unordered_map<std::string, t_num> m_vars{}, m_consts{};
 
 	// functions
 	std::unordered_map<std::string, t_num(*)()> m_funcs0{};
