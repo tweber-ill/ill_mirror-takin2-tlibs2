@@ -73,7 +73,6 @@ int main(int argc, char** argv)
 		// llvm toolchain
 		std::string tool_opt = "opt";
 		std::string tool_bc = "llvm-as";
-		std::string tool_interp = "lli";
 		std::string tool_s = "llc";
 		std::string tool_o = "clang";
 		std::string tool_exec = "clang";
@@ -519,7 +518,7 @@ define i32 @main()
 			outprog_o, "\" -> \"", outprog, "\"...");
 
 		std::string opt_flag_exec = optimise ? "-O2" : "";
-		std::string exec_libs = "-lmcalc_rt -lm";
+		std::string exec_libs = "-L. -lmcalc_rt -lm";
 		std::string cmd_exec = tool_exec + " " + opt_flag_exec + " -o " + outprog + " " + outprog_o + " " + exec_libs;
 		if(std::system(cmd_exec.c_str()) != 0)
 		{
