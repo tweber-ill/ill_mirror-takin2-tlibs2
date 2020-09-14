@@ -4,14 +4,16 @@
  * @date 27-aug-20
  * @license GPLv3, see 'LICENSE' file
  *
- * g++-10 -std=c++20 -I.. -o min min.cpp ../libs/log.cpp -lMinuit2
+ * g++-10 -std=c++20 -I.. -o min min0.cpp ../libs/log.cpp -lMinuit2
  */
+
+#include <string>
+#include <iostream>
 
 #define BOOST_TEST_MODULE Min Test
 #include <boost/test/included/unit_test.hpp>
 namespace test = boost::unit_test;
 namespace testtools = boost::test_tools;
-
 
 #include "libs/fit.h"
 
