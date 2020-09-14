@@ -18,6 +18,7 @@
 #include <Minuit2/MnPrint.h>
 
 
+using t_real = float;
 using t_real_min = double;
 
 
@@ -35,7 +36,7 @@ public:
 			std::cout << param << ", ";
 		std::cout << std::endl;
 
-		//return chi^2 here
+		// return chi^2 here
 		return 0.;
 	}
 
@@ -57,14 +58,14 @@ int main()
 {
 	// add parameters
 	std::vector<std::string> names{{std::string{"param1"}, std::string{"param2"}}};
-	std::vector<t_real_min> vals{{0., 0.}};
-	std::vector<t_real_min> errs{{1., 1.}};
+	std::vector<t_real> vals{{0., 0.}};
+	std::vector<t_real> errs{{1., 1.}};
 
 	ROOT::Minuit2::MnUserParameters params;
 	for(std::size_t param=0; param<names.size(); ++param)
 	{
-		params.Add(names[param], 
-			static_cast<t_real_min>(vals[param]), 
+		params.Add(names[param],
+			static_cast<t_real_min>(vals[param]),
 			static_cast<t_real_min>(errs[param]));
 	}
 
@@ -79,8 +80,8 @@ int main()
 	// get back minimised parameters
 	for(std::size_t param=0; param<names.size(); ++param)
 	{
-		vals[param] = static_cast<t_real_min>(mini.UserState().Value(names[param]));
-		errs[param] = static_cast<t_real_min>(std::abs(mini.UserState().Error(names[param])));
+		vals[param] = static_cast<t_real>(mini.UserState().Value(names[param]));
+		errs[param] = static_cast<t_real>(std::abs(mini.UserState().Error(names[param])));
 	}
 
 	std::cout << mini << std::endl;
