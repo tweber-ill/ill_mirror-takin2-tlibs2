@@ -1112,8 +1112,8 @@ void GlPlot_impl::mouseMoveEvent(const QPointF& pos)
 		t_real_gl phi = diff.x() + m_phi_saved;
 		t_real_gl theta = diff.y() + m_theta_saved;
 
-		m_matCamRot = tl2::rotation<t_mat_gl, t_vec_gl>(m_vecCamX, theta/180.*M_PI, 0);
-		m_matCamRot *= tl2::rotation<t_mat_gl, t_vec_gl>(m_vecCamY, phi/180.*M_PI, 0);
+		m_matCamRot = tl2::rotation<t_mat_gl, t_vec_gl>(m_vecCamX, theta/180.*tl2::pi<t_real_gl>, 0);
+		m_matCamRot *= tl2::rotation<t_mat_gl, t_vec_gl>(m_vecCamY, phi/180.*tl2::pi<t_real_gl>, 0);
 
 		UpdateCam();
 	}
