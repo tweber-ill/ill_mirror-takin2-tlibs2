@@ -1244,8 +1244,9 @@ public:
 
 	vec(const std::initializer_list<T>& lst) : t_cont<T>(lst.size())
 	{
+		std::size_t i = 0;
 		for(auto iterLst=lst.begin(); iterLst!=lst.end(); std::advance(iterLst, 1))
-			this->operator[](*iterLst);
+			this->operator[](i++) = *iterLst;
 	}
 
 	const value_type& operator()(std::size_t i) const { return this->operator[](i); }
