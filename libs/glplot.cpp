@@ -1,6 +1,5 @@
 /**
- * tlibs2
- * GL plotter
+ * tlibs2 -- GL plotter
  * @author Tobias Weber <tweber@ill.fr>
  * @date 2017-2020
  * @license GPLv3, see 'LICENSE' file
@@ -395,7 +394,7 @@ void GlPlot_impl::RemoveObject(std::size_t idx)
 	m_objs[idx].m_pvertexbuf.reset();
 	m_objs[idx].m_pnormalsbuf.reset();
 	m_objs[idx].m_pcolorbuf.reset();
-	
+
 	m_objs[idx].m_vertices.clear();
 	m_objs[idx].m_triangles.clear();
 
