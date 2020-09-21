@@ -1,6 +1,5 @@
 /**
- * tlibs2
- * GL plotter
+ * tlibs2 -- GL plotter
  * @author Tobias Weber <tweber@ill.fr>
  * @date 2017-2020
  * @license GPLv3, see 'LICENSE' file
@@ -246,7 +245,7 @@ public:
 		GetGlDescr() const { return std::make_tuple(m_strGlVer, m_strGlShaderVer, m_strGlVendor, m_strGlRenderer); }
 
 	QPointF GlToScreenCoords(const t_vec_gl& vec, bool *pVisible=nullptr);
-	static t_mat_gl GetArrowMatrix(const t_vec_gl& vecTo, 
+	static t_mat_gl GetArrowMatrix(const t_vec_gl& vecTo,
 		t_real_gl postscale = 1,  const t_vec_gl& vecPostTrans = tl2::create<t_vec_gl>({0,0,0.5}),
 		const t_vec_gl& vecFrom = tl2::create<t_vec_gl>({0,0,1}),
 		t_real_gl prescale = 1,  const t_vec_gl& vecPreTrans = tl2::create<t_vec_gl>({0,0,0}));

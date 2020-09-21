@@ -1,6 +1,5 @@
 /**
- * tlibs2
- * GL plotter
+ * tlibs2 -- GL plotter
  * @author Tobias Weber <tweber@ill.fr>
  * @date 2017-2020
  * @license GPLv3, see 'LICENSE' file
