@@ -88,6 +88,14 @@ template<class T=double> constexpr T d2r(T deg) { return deg/T(180)*pi<T>; }	// 
 template<class T=double> constexpr T r2m(T rad) { return rad/pi<T>*T(180*60); }	// rad -> min
 template<class T=double> constexpr T m2r(T min) { return min/T(180*60)*pi<T>; }	// min -> rad
 
+/**
+ * Gaussian around 0: f(x) = exp(-1/2 * (x/sig)^2)
+ * at hwhm: f(x_hwhm) = 1/2
+ *          exp(-1/2 * (x_hwhm/sig)^2) = 1/2
+ *          -1/2 * (x_hwhm/sig)^2 = ln(1/2)
+ *          (x_hwhm/sig)^2 = -2*ln(1/2)
+ *          x_hwhm^2 = sig^2 * 2*ln(2)
+ */
 template<class T=double> static constexpr T SIGMA2FWHM = T(2)*std::sqrt(T(2)*std::log(T(2)));
 template<class T=double> static constexpr T SIGMA2HWHM = std::sqrt(T(2)*std::log(T(2)));
 template<class T=double> static constexpr T FWHM2SIGMA = T(1)/SIGMA2FWHM<T>;
