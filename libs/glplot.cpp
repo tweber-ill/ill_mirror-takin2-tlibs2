@@ -1351,7 +1351,7 @@ void GlPlot_impl::paintGL()
 
 		// gl painting
 		{
-			BOOST_SCOPE_EXIT(m_pPlot, &painter) { painter.endNativePainting(); } BOOST_SCOPE_EXIT_END
+			BOOST_SCOPE_EXIT(&painter) { painter.endNativePainting(); } BOOST_SCOPE_EXIT_END
 
 			if(m_bPickerNeedsUpdate) UpdatePicker();
 
@@ -1420,8 +1420,8 @@ void GlPlot_impl::paintGL()
 // GLPlot wrapper class
 
 GlPlot::GlPlot(QWidget *pParent) : QOpenGLWidget(pParent),
-	m_thread_impl(std::make_unique<QThread>(this)),
-	m_impl(std::make_unique<GlPlot_impl>(this))
+	m_impl(std::make_unique<GlPlot_impl>(this)),
+	m_thread_impl(std::make_unique<QThread>(this))
 {
 	qRegisterMetaType<std::size_t>("std::size_t");
 

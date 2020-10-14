@@ -1802,7 +1802,9 @@ requires is_basic_vec<t_vec>
 		vec = t_vec(lst.size());
 
 	auto iterLst = lst.begin();
-	for(std::size_t i=0; i<vec.size(); ++i)
+	auto size = vec.size();
+	using local_size_t = std::decay_t<decltype(size)>;
+	for(local_size_t i=0; i<size; ++i)
 	{
 		if(iterLst != lst.end())
 		{
@@ -1986,9 +1988,11 @@ template<class t_vec>
 typename t_vec::value_type inner(const t_vec& vec1, const t_vec& vec2)
 requires is_basic_vec<t_vec>
 {
-	typename t_vec::value_type val(0);
+	typename t_vec::value_type val{0};
+	auto size = vec1.size();
+	using local_size_t = std::decay_t<decltype(size)>;
 
-	for(std::size_t i=0; i<vec1.size(); ++i)
+	for(local_size_t i=0; i<size; ++i)
 	{
 		if constexpr(is_complex<typename t_vec::value_type>)
 			val += std::conj(vec1[i]) * vec2[i];
@@ -2455,8 +2459,12 @@ requires is_mat<t_mat> && is_basic_vec<t_cont<typename t_mat::value_type>>
 	using T = typename t_mat::value_type;
 	t_cont<T> vec;
 
-	for(std::size_t iRow=0; iRow<mat.size1(); ++iRow)
-		for(std::size_t iCol=0; iCol<mat.size2(); ++iCol)
+	auto size1 = mat.size1();
+	auto size2 = mat.size2();
+	using local_size_t = std::decay_t<decltype(size1)>;
+
+	for(local_size_t iRow=0; iRow<size1; ++iRow)
+		for(local_size_t iCol=0; iCol<size2; ++iCol)
 			vec.push_back(mat(iRow, iCol));
 
 	return vec;
@@ -3119,8 +3127,12 @@ requires is_vec<t_vec> && is_mat<t_mat>
 	if(equals<t_real>(std::abs(angle), pi<t_real>, eps))
 	{
 		t_mat mat = -unit<t_mat>(vec1.size());
+		auto size1 = mat.size1();
+		auto size2 = mat.size2();
+		using local_size_t = std::decay_t<decltype(size1)>;
+
 		// e.g. homogeneous coordinates -> only have -1 on the first 3 diagonal elements
-		for(std::size_t i=3; i<std::min(mat.size1(), mat.size2()); ++i)
+		for(local_size_t i=3; i<std::min(size1, size2); ++i)
 			mat(i,i) = 1;
 		return mat;
 	}
@@ -3421,7 +3433,7 @@ spherify(const std::tuple<t_cont<t_vec>, t_cont<t_vec>, t_cont<t_vec>>& tup,
 requires is_vec<t_vec>
 {
 	const t_cont<t_vec>& vertices = std::get<0>(tup);
-	const t_cont<t_vec>& normals = std::get<1>(tup);
+	//const t_cont<t_vec>& normals = std::get<1>(tup);
 	const t_cont<t_vec>& uvs = std::get<2>(tup);
 
 	t_cont<t_vec> vertices_new;
