@@ -1316,7 +1316,7 @@ void GlPlot_impl::DoPaintNonGL(QPainter &painter)
 			QFont fontLabel = fontOrig;
 			QPen penLabel = penOrig;
 
-			fontLabel.setStyleStrategy(QFont::StyleStrategy(QFont::OpenGLCompatible | QFont::PreferAntialias | QFont::PreferQuality));
+			fontLabel.setStyleStrategy(QFont::StyleStrategy(/*QFont::OpenGLCompatible |*/ QFont::PreferAntialias | QFont::PreferQuality));
 			fontLabel.setWeight(QFont::Medium);
 			//penLabel.setColor(QColor(int((1.-obj.m_color[0])*255.), int((1.-obj.m_color[1])*255.), int((1.-obj.m_color[2])*255.), int(obj.m_color[3]*255.)));
 			penLabel.setColor(QColor(0,0,0,255));
