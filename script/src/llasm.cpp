@@ -60,6 +60,44 @@ t_astret LLAsm::visit(const ASTLoop* ast)
 }
 
 
+t_astret LLAsm::visit(const ASTLoopJump* ast)
+{
+	Func& actfunc = m_funcstack.top();
+	std::size_t levels = ast->GetLevels();
+
+	if(actfunc.loopEndLabels.size() == 0)
+		throw std::runtime_error("No active loop.");
+
+	switch(ast->GetKind())
+	{
+		case ASTLoopJump::SKIP:
+		{
+			// TODO
+			throw std::runtime_error("\"skiploop\" is not yet implemented.");
+			break;
+		}
+
+		case ASTLoopJump::ENDALL:
+		{
+			levels = actfunc.loopEndLabels.size();
+			// no break, execute next block
+		}
+		case ASTLoopJump::END:
+		{
+			levels = std::min(levels, actfunc.loopEndLabels.size());
+			std::string endLabel = actfunc.loopEndLabels[actfunc.loopEndLabels.size()-levels];
+
+			if(endLabel == "")
+				throw std::runtime_error("No loop end label found.");
+			(*m_ostr) << "br label %" << endLabel << "\n";
+			break;
+		}
+	}
+
+	return nullptr;
+}
+
+
 // ----------------------------------------------------------------------------
 
 

@@ -35,6 +35,14 @@ std::size_t get_arraydim(const std::array<std::size_t, NUM_DIMS>& dims)
 }
 
 
+struct Func
+{
+	const ASTFunc* func = nullptr;
+	std::vector<std::string> loopEndLabels{};
+};
+
+
+
 class LLAsm : public ASTVisitor
 {
 public:
@@ -61,6 +69,7 @@ public:
 	virtual t_astret visit(const ASTCond* ast) override;
 	virtual t_astret visit(const ASTBool* ast) override;
 	virtual t_astret visit(const ASTLoop* ast) override;
+	virtual t_astret visit(const ASTLoopJump* ast) override;
 	virtual t_astret visit(const ASTStrConst* ast) override;
 	virtual t_astret visit(const ASTExprList* ast) override;
 	virtual t_astret visit(const ASTNumConst<double>* ast) override;
@@ -161,7 +170,7 @@ protected:
 
 
 private:
-	std::size_t m_varCount = 0;	// # of tmp vars
+	std::size_t m_varCount = 0; 	// # of tmp vars
 	std::size_t m_labelCount = 0;	// # of labels
 
 	std::vector<std::string> m_curscope;
@@ -173,8 +182,8 @@ private:
 	// helper functions to reduce code redundancy
 	t_astret scalar_matrix_prod(t_astret scalar, t_astret matrix, bool mul_or_div=1);
 
-	// stack only needed for (future) nested functions
-	std::stack<const ASTFunc*> m_funcstack;
+	// TODO: nested functions
+	std::stack<Func> m_funcstack;
 };
 
 
@@ -236,6 +245,9 @@ void LLAsm::generate_loop(t_funcCond funcCond, t_funcBody funcBody)
 	std::string labelBegin = get_label();
 	std::string labelEnd = get_label();
 
+	Func& actfunc = m_funcstack.top();
+	actfunc.loopEndLabels.push_back(labelEnd);
+
 	(*m_ostr) << "\n;-------------------------------------------------------------\n";
 	(*m_ostr) << "; loop head\n";
 	(*m_ostr) << ";-------------------------------------------------------------\n";
@@ -254,6 +266,8 @@ void LLAsm::generate_loop(t_funcCond funcCond, t_funcBody funcBody)
 	(*m_ostr) << "br label %" << labelStart << "\n";
 	(*m_ostr) << labelEnd << ":\n";
 	(*m_ostr) << ";-------------------------------------------------------------\n\n";
+
+	actfunc.loopEndLabels.pop_back();
 }
 
 

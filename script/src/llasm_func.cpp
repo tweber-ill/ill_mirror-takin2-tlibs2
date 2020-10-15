@@ -146,7 +146,7 @@ t_astret LLAsm::visit(const ASTCall* ast)
 
 t_astret LLAsm::visit(const ASTFunc* ast)
 {
-	m_funcstack.push(ast);
+	m_funcstack.push(Func{.func = ast});
 	m_curscope.push_back(ast->GetIdent());
 
 	std::string rettype = LLAsm::get_type_name(std::get<0>(ast->GetRetType()));
@@ -251,7 +251,8 @@ t_astret LLAsm::visit(const ASTFunc* ast)
 
 t_astret LLAsm::visit(const ASTReturn* ast)
 {
-	const ASTFunc* thisfunc = m_funcstack.top();
+	const Func& actfunc = m_funcstack.top();
+	const ASTFunc* thisfunc = actfunc.func;
 
 	const auto& rets = ast->GetRets();
 	if(!rets)

@@ -433,6 +433,23 @@ t_astret ASTPrinter::visit(const ASTLoop* ast)
 }
 
 
+t_astret ASTPrinter::visit(const ASTLoopJump* ast)
+{
+	(*m_ostr) << "<LoopJump kind=\"";
+
+	switch(ast->GetKind())
+	{
+		case ASTLoopJump::SKIP: (*m_ostr) << "skip"; break;
+		case ASTLoopJump::END: (*m_ostr) << "end"; break;
+		case ASTLoopJump::ENDALL: (*m_ostr) << "endall"; break;
+		default: (*m_ostr) << "unknown"; break;
+	}
+
+	(*m_ostr) << "\", levels=\"" << ast->GetLevels() << "\"/>\n";
+	return nullptr;
+}
+
+
 t_astret ASTPrinter::visit(const ASTStrConst* ast)
 {
 	(*m_ostr) << "<Const type=\"str\" val=\"" << ast->GetVal() << "\" />\n";

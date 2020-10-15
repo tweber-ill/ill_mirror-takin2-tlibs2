@@ -73,7 +73,7 @@
 %token FUNC RET ASSIGN
 %token SCALARDECL VECTORDECL MATRIXDECL STRINGDECL INTDECL
 %token IF THEN ELSE
-%token LOOP DO
+%token LOOP DO ENDLOOP ENDLOOPS SKIPLOOP
 %token EQU NEQ GT LT GEQ LEQ
 %token AND XOR OR NOT
 %token PLUSASSIGN MINUSASSIGN MULTASSIGN DIVASSIGN MODASSIGN POWASSIGN
@@ -261,7 +261,15 @@ statement[res]
 	// loop
 	| LOOP expr[cond] DO statement[stmt] {
 		$res = std::make_shared<ASTLoop>($cond, $stmt); }
-	;
+
+	| SKIPLOOP ';' {
+		$res = std::make_shared<ASTLoopJump>(ASTLoopJump::SKIP); }
+	| ENDLOOP ';' {
+		$res = std::make_shared<ASTLoopJump>(ASTLoopJump::END); }
+	| ENDLOOP INT[num] ';' {
+		$res = std::make_shared<ASTLoopJump>(ASTLoopJump::END, std::size_t($num)); }
+	| ENDLOOPS ';' {
+		$res = std::make_shared<ASTLoopJump>(ASTLoopJump::ENDALL); }
 
 	// simple loop with automatic counter variable
 	| LOOP IDENT[name] '=' expr[idx1] RANGE {

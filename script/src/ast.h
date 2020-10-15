@@ -44,6 +44,7 @@ class ASTComp;
 class ASTBool;
 class ASTCond;
 class ASTLoop;
+class ASTLoopJump;
 class ASTExprList;
 template<class> class ASTNumConst;
 
@@ -112,6 +113,7 @@ public:
 	virtual t_astret visit(const ASTBool* ast) = 0;
 	virtual t_astret visit(const ASTCond* ast) = 0;
 	virtual t_astret visit(const ASTLoop* ast) = 0;
+	virtual t_astret visit(const ASTLoopJump* ast) = 0;
 	virtual t_astret visit(const ASTStrConst* ast) = 0;
 	virtual t_astret visit(const ASTExprList* ast) = 0;
 	virtual t_astret visit(const ASTNumConst<double>* ast) = 0;
@@ -650,6 +652,34 @@ public:
 
 private:
 	ASTPtr cond, stmt;
+};
+
+
+class ASTLoopJump : public AST
+{
+public:
+	enum LoopJumpType
+	{
+		SKIP,
+		END,
+		ENDALL
+	};
+
+public:
+	ASTLoopJump(LoopJumpType kind, std::size_t levels=1)
+		: m_kind{kind}, m_levels{levels}
+	{}
+
+	LoopJumpType GetKind() const { return m_kind; }
+	std::size_t GetLevels() const { return m_levels; }
+
+	virtual ASTType type() override { return ASTType::Loop; }
+	ASTVISITOR_ACCEPT
+
+private:
+	ASTPtr cond, stmt;
+	LoopJumpType m_kind{LoopJumpType::SKIP};
+	std::size_t m_levels{1};
 };
 
 
