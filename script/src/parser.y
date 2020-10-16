@@ -262,15 +262,6 @@ statement[res]
 	| LOOP expr[cond] DO statement[stmt] {
 		$res = std::make_shared<ASTLoop>($cond, $stmt); }
 
-	| SKIPLOOP ';' {
-		$res = std::make_shared<ASTLoopJump>(ASTLoopJump::SKIP); }
-	| ENDLOOP ';' {
-		$res = std::make_shared<ASTLoopJump>(ASTLoopJump::END); }
-	| ENDLOOP INT[num] ';' {
-		$res = std::make_shared<ASTLoopJump>(ASTLoopJump::END, std::size_t($num)); }
-	| ENDLOOPS ';' {
-		$res = std::make_shared<ASTLoopJump>(ASTLoopJump::ENDALL); }
-
 	// simple loop with automatic counter variable
 	| LOOP IDENT[name] '=' expr[idx1] RANGE {
 			auto stmts = std::make_shared<ASTStmts>();
@@ -294,15 +285,22 @@ statement[res]
 			auto opres = std::make_shared<ASTPlus>(ctrvar, one, 0);
 			auto inc_ctr = std::make_shared<ASTAssign>($name, opres);
 
-			// the actual loop
-			auto loopstmts = std::make_shared<ASTStmts>();
-			loopstmts->AddStatement($stmt);
-			loopstmts->AddStatement(inc_ctr);
-			auto loop = std::make_shared<ASTLoop>(cond, loopstmts);
+			auto loop = std::make_shared<ASTLoop>(cond, $stmt, inc_ctr);
 			stmts->AddStatement(loop);
 
 			$res = stmts;
 		}
+
+	| SKIPLOOP ';' {
+		$res = std::make_shared<ASTLoopJump>(ASTLoopJump::SKIP); }
+	| SKIPLOOP INT[num] ';' {
+		$res = std::make_shared<ASTLoopJump>(ASTLoopJump::SKIP, std::size_t($num)); }
+	| ENDLOOP ';' {
+		$res = std::make_shared<ASTLoopJump>(ASTLoopJump::END); }
+	| ENDLOOP INT[num] ';' {
+		$res = std::make_shared<ASTLoopJump>(ASTLoopJump::END, std::size_t($num)); }
+	| ENDLOOPS ';' {
+		$res = std::make_shared<ASTLoopJump>(ASTLoopJump::ENDALL); }
 	;
 
 

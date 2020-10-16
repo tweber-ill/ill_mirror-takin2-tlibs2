@@ -640,18 +640,19 @@ private:
 class ASTLoop : public AST
 {
 public:
-	ASTLoop(const ASTPtr cond, ASTPtr stmt)
-		: cond{cond}, stmt{stmt}
+	ASTLoop(const ASTPtr cond, ASTPtr stmt, ASTPtr footer=nullptr)
+		: cond{cond}, stmt{stmt}, footer{footer}
 	{}
 
 	const ASTPtr GetCond() const { return cond; }
 	const ASTPtr GetLoopStmt() const { return stmt; }
+	const ASTPtr GetLoopFooter() const { return footer; }
 
 	virtual ASTType type() override { return ASTType::Loop; }
 	ASTVISITOR_ACCEPT
 
 private:
-	ASTPtr cond, stmt;
+	ASTPtr cond, stmt, footer;
 };
 
 

@@ -47,6 +47,16 @@ t_astret LLAsm::visit(const ASTCond* ast)
 
 t_astret LLAsm::visit(const ASTLoop* ast)
 {
+	auto footer = std::make_optional([this, ast]
+	{
+		if(ast->GetLoopFooter())
+			ast->GetLoopFooter()->accept(this);
+	});
+
+	if(!ast->GetLoopFooter())
+		footer = std::nullopt;
+
+
 	generate_loop([this, ast]() -> t_astret
 	{
 		t_astret cond = ast->GetCond()->accept(this);
@@ -54,7 +64,7 @@ t_astret LLAsm::visit(const ASTLoop* ast)
 	}, [this, ast]
 	{
 		ast->GetLoopStmt()->accept(this);
-	});
+	}, footer);
 
 	return nullptr;
 }
@@ -65,6 +75,11 @@ t_astret LLAsm::visit(const ASTLoopJump* ast)
 	Func& actfunc = m_funcstack.top();
 	std::size_t levels = ast->GetLevels();
 
+	const auto& beforectr = actfunc.loopFooterLabels;
+	const std::size_t beforectrsize = beforectr.size();
+
+	const auto& endloop = actfunc.loopEndLabels;
+	const std::size_t endloopsize = endloop.size();
 	if(actfunc.loopEndLabels.size() == 0)
 		throw std::runtime_error("No active loop.");
 
@@ -72,20 +87,27 @@ t_astret LLAsm::visit(const ASTLoopJump* ast)
 	{
 		case ASTLoopJump::SKIP:
 		{
-			// TODO
-			throw std::runtime_error("\"skiploop\" is not yet implemented.");
+			if(beforectrsize == 0)
+				throw std::runtime_error("No active managed loop.");
+
+			levels = std::min(levels, beforectrsize);
+			std::string labelBeforeCtr = beforectr[beforectrsize-levels];
+
+			if(labelBeforeCtr == "")
+				throw std::runtime_error("No loop label found before counter.");
+			(*m_ostr) << "br label %" << labelBeforeCtr << "\n";
 			break;
 		}
 
 		case ASTLoopJump::ENDALL:
 		{
-			levels = actfunc.loopEndLabels.size();
+			levels = endloopsize;
 			// no break, execute next block
 		}
 		case ASTLoopJump::END:
 		{
-			levels = std::min(levels, actfunc.loopEndLabels.size());
-			std::string endLabel = actfunc.loopEndLabels[actfunc.loopEndLabels.size()-levels];
+			levels = std::min(levels, endloopsize);
+			std::string endLabel = endloop[endloopsize-levels];
 
 			if(endLabel == "")
 				throw std::runtime_error("No loop end label found.");

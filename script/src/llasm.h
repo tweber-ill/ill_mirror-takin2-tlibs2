@@ -37,8 +37,14 @@ std::size_t get_arraydim(const std::array<std::size_t, NUM_DIMS>& dims)
 
 struct Func
 {
+	// currently active function
 	const ASTFunc* func = nullptr;
+
+	// label after loop
 	std::vector<std::string> loopEndLabels{};
+
+	// label skipping loop body, but before incrementing counter
+	std::vector<std::string> loopFooterLabels{};
 };
 
 
@@ -150,8 +156,8 @@ protected:
 	/**
 	 * generates loop code
 	 */
-	template<class t_funcCond, class t_funcBody>
-	void generate_loop(t_funcCond funcCond, t_funcBody funcBody);
+	template<class t_funcCond, class t_funcBody, class t_funcFooter=std::function<void()>>
+	void generate_loop(t_funcCond funcCond, t_funcBody funcBody, std::optional<t_funcFooter> funcFooter=std::nullopt);
 
 	/**
 	 * generates loop code with managed counter
@@ -238,15 +244,21 @@ void LLAsm::generate_cond(t_funcCond funcCond, t_funcBody funcBody, t_funcElseBo
 /**
  * generates loop code
  */
-template<class t_funcCond, class t_funcBody>
-void LLAsm::generate_loop(t_funcCond funcCond, t_funcBody funcBody)
+template<class t_funcCond, class t_funcBody, class t_funcFooter>
+void LLAsm::generate_loop(t_funcCond funcCond, t_funcBody funcBody, std::optional<t_funcFooter> funcFooter)
 {
 	std::string labelStart = get_label();
 	std::string labelBegin = get_label();
 	std::string labelEnd = get_label();
+	std::string labelFooter{};
 
 	Func& actfunc = m_funcstack.top();
 	actfunc.loopEndLabels.push_back(labelEnd);
+	if(funcFooter)
+	{
+		labelFooter = get_label();
+		actfunc.loopFooterLabels.push_back(labelFooter);
+	}
 
 	(*m_ostr) << "\n;-------------------------------------------------------------\n";
 	(*m_ostr) << "; loop head\n";
@@ -263,17 +275,30 @@ void LLAsm::generate_loop(t_funcCond funcCond, t_funcBody funcBody)
 	funcBody();
 	(*m_ostr) << ";-------------------------------------------------------------\n";
 
+	if(funcFooter)
+	{
+		(*m_ostr) << ";-------------------------------------------------------------\n";
+		(*m_ostr) << "; loop foot\n";
+		(*m_ostr) << ";-------------------------------------------------------------\n";
+		(*m_ostr) << "br label %" << labelFooter << "\n";	// dummy jump to prevent assembler error
+		(*m_ostr) << labelFooter << ":\n";
+		(*funcFooter)();
+		(*m_ostr) << ";-------------------------------------------------------------\n";
+	}
+
 	(*m_ostr) << "br label %" << labelStart << "\n";
 	(*m_ostr) << labelEnd << ":\n";
 	(*m_ostr) << ";-------------------------------------------------------------\n\n";
 
+	if(funcFooter)
+		actfunc.loopFooterLabels.pop_back();
 	actfunc.loopEndLabels.pop_back();
 }
 
 
 
 /**
- * generates loop code with managed counter
+ * generates a loop code with managed counter
  */
 template<class t_funcBody>
 void LLAsm::generate_loop(std::int64_t start, std::int64_t end, t_funcBody funcBody)
