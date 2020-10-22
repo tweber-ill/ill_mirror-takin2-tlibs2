@@ -3,7 +3,7 @@
  * @author Tobias Weber <tweber@ill.fr>
  * @date 2017-2020
  * @license GPLv3, see 'LICENSE' file
- * @desc The present version was forked on 8-Nov-2018 from the privately developed "magtools" project (https://github.com/t-weber/magtools).
+ * @desc The present version was forked on 8-Nov-2018 from my privately developed "magtools" project (https://github.com/t-weber/magtools).
  */
 
 #ifndef __MAG_GL_PLOT_H__
