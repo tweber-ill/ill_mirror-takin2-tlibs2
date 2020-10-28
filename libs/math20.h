@@ -5654,7 +5654,7 @@ requires (tl2::is_mat<t_mat> && tl2::is_vec<t_vec>)
 
 	t_vec f = tl2::zero<t_vec>(cols);
 	for(std::size_t i=0; i<cols; ++i)
-		f += norm[i] * tl2::col<t_mat, t_vec>(basis, i) * std::exp(evals[i]*(x-x0));
+		f += norm[i] * evecs[i] * std::exp(evals[i]*(x-x0));
 
 	return std::make_tuple(true, f);
 }
@@ -5685,7 +5685,7 @@ requires (tl2::is_mat<t_mat> && tl2::is_vec<t_vec>)
 
 	t_vec f = tl2::zero<t_vec>(cols);
 	for(std::size_t i=0; i<cols; ++i)
-		f += norm[i] * tl2::col<t_mat, t_vec>(basis, i) * std::pow(evals[i], n);
+		f += norm[i] * evecs[i] * std::pow(evals[i], n);
 
 	return std::make_tuple(true, f);
 }
