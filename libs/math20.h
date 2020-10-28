@@ -5628,7 +5628,7 @@ requires tl2::is_mat<t_mat>
 
 /**
  * system of ODEs with constant coefficients C
- * f'(x) = A f(x) and f(x0) = f0
+ * f'(x) = C f(x) and f(x0) = f0
  * => f(x) = f0 * exp(C(x-x0)) = sum_i norm_i * evec_i * exp(eval_i * (x-x0))
  *    norm = (evec_i)^(-1) * f0
  */
