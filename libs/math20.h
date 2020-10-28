@@ -1353,7 +1353,7 @@ public:
 	mat& operator/=(value_type d) { return tl2_ops::operator/=(*this, d); }
 
 private:
-	container_type m_data;
+	container_type m_data{};
 	std::size_t m_rowsize = 0;
 	std::size_t m_colsize = 0;
 };
@@ -1793,8 +1793,8 @@ requires is_basic_mat<t_mat>
 /**
  * create vector from initializer_list
  */
-template<class t_vec>
-t_vec create(const std::initializer_list<typename t_vec::value_type>& lst)
+template<class t_vec, template<class...> class t_cont = std::initializer_list>
+t_vec create(const t_cont<typename t_vec::value_type>& lst)
 requires is_basic_vec<t_vec>
 {
 	t_vec vec;
@@ -5323,7 +5323,7 @@ eigenvec(const t_mat_cplx& mat, bool only_evals=false, bool is_hermitian=false, 
 				throw std::domain_error("Invalid real type.");
 
 			// resize to actual number of eigenvalues and -vectors
-			if(iNumFound != N)
+			if(std::size_t(iNumFound) != N)
 			{
 				evals.resize(iNumFound, t_real{0});
 				evecs.resize(iNumFound, tl2::zero<t_vec_cplx>(N));
@@ -5620,6 +5620,76 @@ requires tl2::is_mat<t_mat>
 	auto diag = tl2::diag<t_mat>(vals);
 	return std::make_tuple(tl2::prod<t_mat>(V, tl2::prod(diag, Uh)), ok);
 }
+
+
+// ----------------------------------------------------------------------------
+// equation solvers
+// ----------------------------------------------------------------------------
+
+/**
+ * system of ODEs with constant coefficients C
+ * f'(x) = A f(x) and f(x0) = f0
+ * => f(x) = f0 * exp(C(x-x0)) = sum_i norm_i * evec_i * exp(eval_i * (x-x0))
+ *    norm = (evec_i)^(-1) * f0
+ */
+template<class t_mat, class t_vec, class t_val = typename t_vec::value_type>
+std::tuple<bool, t_vec>
+odesys_const(const t_mat& C, const t_val& x, const t_val& x0, const t_vec& f0)
+requires (tl2::is_mat<t_mat> && tl2::is_vec<t_vec>)
+{
+	const std::size_t rows = C.size1();
+	const std::size_t cols = C.size2();
+	if(rows != cols)
+		return std::make_tuple(false, t_vec{});
+
+	const auto [ok, evals, evecs] = eigenvec<t_mat, t_vec, t_val>(C);
+	if(!ok)
+		return std::make_tuple(false, t_vec{});
+
+	const t_mat basis = tl2::create<t_mat, t_vec, std::vector>(evecs, false);
+	const auto [basis_inv, invok] = tl2::inv<t_mat>(basis);
+	const t_vec norm = basis_inv * f0;
+	if(!invok)
+		return std::make_tuple(false, t_vec{});
+
+	t_vec f = tl2::zero<t_vec>(cols);
+	for(std::size_t i=0; i<cols; ++i)
+		f += norm[i] * tl2::col<t_mat, t_vec>(basis, i) * std::exp(evals[i]*(x-x0));
+
+	return std::make_tuple(true, f);
+}
+
+
+/**
+ * system of difference equations with constant coefficients C
+ */
+template<class t_mat, class t_vec, class t_val = typename t_vec::value_type>
+std::tuple<bool, t_vec>
+diffsys_const(const t_mat& C, const t_val& n, const t_vec& f0)
+requires (tl2::is_mat<t_mat> && tl2::is_vec<t_vec>)
+{
+	const std::size_t rows = C.size1();
+	const std::size_t cols = C.size2();
+	if(rows != cols)
+		return std::make_tuple(false, t_vec{});
+
+	const auto [ok, evals, evecs] = eigenvec<t_mat, t_vec, t_val>(C);
+	if(!ok)
+		return std::make_tuple(false, t_vec{});
+
+	const t_mat basis = tl2::create<t_mat, t_vec, std::vector>(evecs, false);
+	const auto [basis_inv, invok] = tl2::inv<t_mat>(basis);
+	const t_vec norm = basis_inv * f0;
+	if(!invok)
+		return std::make_tuple(false, t_vec{});
+
+	t_vec f = tl2::zero<t_vec>(cols);
+	for(std::size_t i=0; i<cols; ++i)
+		f += norm[i] * tl2::col<t_mat, t_vec>(basis, i) * std::pow(evals[i], n);
+
+	return std::make_tuple(true, f);
+}
+// ----------------------------------------------------------------------------
 
 }
 
@@ -6625,7 +6695,6 @@ T chi2_nd(const t_func& func,
 
 
 // ----------------------------------------------------------------------------
-
 
 }
 
