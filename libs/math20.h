@@ -5361,7 +5361,7 @@ eigenvec(const t_mat_cplx& mat, bool only_evals=false, bool is_hermitian=false, 
 		{
 			// hermitian algo overwrites original matrix!
 			for(std::size_t j=0; j<N; ++j)
-				evecs[i][j] = (is_hermitian && !use_selective_func) ? inmat[j*N + i] : outevecs[j*N + i];
+				evecs[i][j] = (is_hermitian && !use_selective_func) ? inmat[i*N + j] : outevecs[i*N + j];
 
 			if(normalise && (err == 0))
 			{
@@ -5505,14 +5505,14 @@ eigenvec(const t_mat& mat, bool only_evals=false, bool is_symmetric=false, bool 
 		{
 			// symmetric algo overwrites original matrix!
 			for(std::size_t j=0; j<N; ++j)
-				evecs_re[i][j] = (is_symmetric && !use_selective_func) ? inmat[j*N + i] : outevecs[j*N + i];
+				evecs_re[i][j] = (is_symmetric && !use_selective_func) ? inmat[i*N + j] : outevecs[i*N + j];
 
 			if(!is_symmetric && !tl2::equals<t_real>(evals_im[i], 0))
 			{
 				for(std::size_t j=0; j<N; ++j)
 				{
-					evecs_im[i][j] = outevecs[j*N + i+1];	// imag part of evec follows next in array
-					evecs_re[i+1][j] = evecs_re[i][j];		// next evec is the conjugated one
+					evecs_im[i][j] = outevecs[i*N + j+1];	// imag part of evec follows next in array
+					evecs_re[i+1][j] = evecs_re[i][j];	// next evec is the conjugated one
 					evecs_im[i+1][j] = -evecs_im[i][j];
 				}
 				++i;	// already used two values in array
@@ -5646,11 +5646,14 @@ requires (tl2::is_mat<t_mat> && tl2::is_vec<t_vec>)
 	if(!ok)
 		return std::make_tuple(false, t_vec{});
 
+	//for(std::size_t i=0; i<evals.size(); ++i)
+	//	std::cout << "eval: " << evals[i] << ", evec: " << evecs[i] << std::endl;
+
 	const t_mat basis = tl2::create<t_mat, t_vec, std::vector>(evecs, false);
 	const auto [basis_inv, invok] = tl2::inv<t_mat>(basis);
-	const t_vec norm = basis_inv * f0;
 	if(!invok)
 		return std::make_tuple(false, t_vec{});
+	const t_vec norm = basis_inv * f0;
 
 	t_vec f = tl2::zero<t_vec>(cols);
 	for(std::size_t i=0; i<cols; ++i)
@@ -5665,7 +5668,7 @@ requires (tl2::is_mat<t_mat> && tl2::is_vec<t_vec>)
  */
 template<class t_mat, class t_vec, class t_val = typename t_vec::value_type>
 std::tuple<bool, t_vec>
-diffsys_const(const t_mat& C, const t_val& n, const t_vec& f0)
+diffsys_const(const t_mat& C, const t_val& n, const t_val& n0, const t_vec& f0)
 requires (tl2::is_mat<t_mat> && tl2::is_vec<t_vec>)
 {
 	const std::size_t rows = C.size1();
@@ -5677,15 +5680,18 @@ requires (tl2::is_mat<t_mat> && tl2::is_vec<t_vec>)
 	if(!ok)
 		return std::make_tuple(false, t_vec{});
 
+	for(std::size_t i=0; i<evals.size(); ++i)
+		std::cout << "eval: " << evals[i] << ", evec: " << evecs[i] << std::endl;
+
 	const t_mat basis = tl2::create<t_mat, t_vec, std::vector>(evecs, false);
 	const auto [basis_inv, invok] = tl2::inv<t_mat>(basis);
-	const t_vec norm = basis_inv * f0;
 	if(!invok)
 		return std::make_tuple(false, t_vec{});
+	const t_vec norm = basis_inv * f0;
 
 	t_vec f = tl2::zero<t_vec>(cols);
 	for(std::size_t i=0; i<cols; ++i)
-		f += norm[i] * evecs[i] * std::pow(evals[i], n);
+		f += norm[i] * evecs[i] * std::pow(evals[i], n-n0);
 
 	return std::make_tuple(true, f);
 }

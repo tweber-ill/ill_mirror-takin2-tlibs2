@@ -35,7 +35,8 @@ int main()
 		1., 1. });
 
 	auto f0 = tl2::create<t_vec_cplx>({1., 1.});
-	t_cplx x0 = 12.3;
+	t_cplx x0 = 0.;
+	t_cplx n0 = 0.;
 
 	std::cout << "coeff = " << coeff << std::endl;
 	std::cout << "x0 = " << x0 << ", f0 = " << f0 << std::endl;
@@ -58,7 +59,7 @@ int main()
 	for(t_cplx n=0; n.real()<10; n+=1)
 	{
 		std::cout << "n = " << n << std::endl;
-		auto [ok, f] = tl2_la::diffsys_const<t_mat_cplx, t_vec_cplx, t_cplx>(coeff, n, f0);
+		auto [ok, f] = tl2_la::diffsys_const<t_mat_cplx, t_vec_cplx, t_cplx>(coeff, n, n0, f0);
 		std::cout << "ok = " << std::boolalpha << ok << std::endl;
 
 		for(std::size_t i=0; i<f.size(); ++i)

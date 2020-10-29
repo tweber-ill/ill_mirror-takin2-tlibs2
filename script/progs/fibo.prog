@@ -46,6 +46,8 @@ func scalar fibo_closed(scalar n)
 	vec 2 fibos = 
 		norm[0]*pow(eval_re[0], n-1) * evec_re[0~1, 0] + 
 		norm[1]*pow(eval_re[1], n-1) * evec_re[0~1, 1];
+
+	#putstr("results: " + fibos);
 	ret fibos[0];
 }
 
