@@ -1240,37 +1240,60 @@ public:
 	using value_type = T;
 	using container_type = t_cont<T>;
 
-	vec() = default;
+	using container_type::container_type;
+	using container_type::size;
+	using container_type::operator[];
+	using typename container_type::iterator;
+	using typename container_type::const_iterator;
+
 	~vec() = default;
 
-	vec(std::size_t SIZE, const T* arr = nullptr)
-		: t_cont<T>(SIZE), m_size{SIZE}
+	vec(const vec<T, t_cont>& other)
+	{
+		*static_cast<container_type*>(this) = other;
+	}
+
+	vec<T, t_cont>& operator=(const vec<T, t_cont>& other)
+	{
+		*static_cast<container_type*>(this) = other;
+		return *this;
+	}
+
+	const vec<T, t_cont>& operator=(const vec<T, t_cont>& other) const
+	{
+		*static_cast<container_type*>(this) = other;
+		return *this;
+	}
+
+	vec(std::size_t SIZE, const T* arr = nullptr) : container_type(SIZE)
 	{
 		if(arr)
 			from_array(arr);
 	}
 
-	vec(const std::initializer_list<T>& lst) : t_cont<T>(lst.size())
+	vec(const std::initializer_list<T>& lst) : container_type(lst.size())
 	{
 		std::size_t i = 0;
 		for(auto iterLst=lst.begin(); iterLst!=lst.end(); std::advance(iterLst, 1))
 			this->operator[](i++) = *iterLst;
 	}
 
+
 	const value_type& operator()(std::size_t i) const { return this->operator[](i); }
 	value_type& operator()(std::size_t i) { return this->operator[](i); }
+
 
 	void from_array(const T* arr)
 	{
 		// initialise from given array data
-		for(std::size_t i=0; i<m_size; ++i)
+		for(std::size_t i=0; i<size(); ++i)
 			this->operator[](i) = arr[i];
 	}
 
 	void to_array(T* arr) const
 	{
 		// write elements to array
-		for(std::size_t i=0; i<m_size; ++i)
+		for(std::size_t i=0; i<size(); ++i)
 			arr[i] = this->operator[](i);
 	}
 
@@ -1288,9 +1311,6 @@ public:
 	vec& operator-=(const vec& vec2) { return tl2_ops::operator-=(*this, vec2); }
 	vec& operator*=(value_type d) { return tl2_ops::operator*=(*this, d); }
 	vec& operator/=(value_type d) { return tl2_ops::operator/=(*this, d); }
-
-private:
-	std::size_t m_size = 0;
 };
 
 
@@ -1312,10 +1332,36 @@ public:
 			from_array(arr);
 	}
 
+	mat<T, t_cont>& operator=(const mat<T, t_cont>& other)
+	{
+		this->m_data = other.m_data;
+		this->m_rowsize = other.m_rowsize;
+		this->m_colsize = other.m_colsize;
+		return *this;
+	}
+
+	const mat<T, t_cont>& operator=(const mat<T, t_cont>& other) const
+	{
+		this->m_data = other.m_data;
+		this->m_rowsize = other.m_rowsize;
+		this->m_colsize = other.m_colsize;
+		return *this;
+	}
+
+	mat(const mat<T, t_cont>& other)
+	{
+		this->operator=(other);
+	}
+
+
 	std::size_t size1() const { return m_rowsize; }
 	std::size_t size2() const { return m_colsize; }
+
+
+	// element access
 	const T& operator()(std::size_t row, std::size_t col) const { return m_data[row*m_colsize + col]; }
 	T& operator()(std::size_t row, std::size_t col) { return m_data[row*m_colsize + col]; }
+
 
 	void from_array(const T* arr)
 	{
@@ -1354,8 +1400,8 @@ public:
 
 private:
 	container_type m_data{};
-	std::size_t m_rowsize = 0;
-	std::size_t m_colsize = 0;
+	std::size_t m_rowsize{0};
+	std::size_t m_colsize{0};
 };
 
 // ----------------------------------------------------------------------------
@@ -4478,6 +4524,31 @@ requires is_complex<typename t_vec_cplx::value_type> && is_vec<t_vec_cplx> && is
 
 
 /**
+ * split a complex matrix into two matrices with the real and imag parts
+ */
+template<class t_mat_cplx, class t_mat_real>
+std::tuple<t_mat_real, t_mat_real> split_cplx(const t_mat_cplx& mat)
+requires is_complex<typename t_mat_cplx::value_type> && is_mat<t_mat_cplx> && is_mat<t_mat_real>
+{
+	using t_real = typename t_mat_real::value_type;
+
+	t_mat_real matRe = zero<t_mat_real>(mat.size1(), mat.size2());
+	t_mat_real matIm = zero<t_mat_real>(mat.size1(), mat.size2());
+
+	for(std::size_t i=0; i<mat.size1(); ++i)
+	{
+		for(std::size_t j=0; j<mat.size2(); ++j)
+		{
+			matRe(i,j) = mat(i,j).real();
+			matIm(i,j) = mat(i,j).imag();
+		}
+	}
+
+	return std::make_tuple(matRe, matIm);
+}
+
+
+/**
  * SU(2) generators, pauli matrices sig_i = 2*S_i
  */
 template<class t_mat>
@@ -5680,8 +5751,8 @@ requires (tl2::is_mat<t_mat> && tl2::is_vec<t_vec>)
 	if(!ok)
 		return std::make_tuple(false, t_vec{});
 
-	for(std::size_t i=0; i<evals.size(); ++i)
-		std::cout << "eval: " << evals[i] << ", evec: " << evecs[i] << std::endl;
+	//for(std::size_t i=0; i<evals.size(); ++i)
+	//	std::cout << "eval: " << evals[i] << ", evec: " << evecs[i] << std::endl;
 
 	const t_mat basis = tl2::create<t_mat, t_vec, std::vector>(evecs, false);
 	const auto [basis_inv, invok] = tl2::inv<t_mat>(basis);

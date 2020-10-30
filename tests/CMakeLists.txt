@@ -23,7 +23,7 @@ endif()
 
 
 set(CMAKE_CXX_STANDARD 20)
-add_definitions(-std=c++20)
+add_compile_options(-std=c++20)
 
 
 # -----------------------------------------------------------------------------
@@ -35,6 +35,11 @@ add_definitions(${Boost_CXX_FLAGS})
 message("Using Boost version ${Boost_MAJOR_VERSION}.${Boost_MINOR_VERSION}.${Boost_SUBMINOR_VERSION}.")
 # -----------------------------------------------------------------------------
 
+# -----------------------------------------------------------------------------
+# Lapacke
+find_package(Lapacke REQUIRED)
+add_definitions(-DUSE_LAPACK)
+# -----------------------------------------------------------------------------
 
 # -----------------------------------------------------------------------------
 # further packages
@@ -44,7 +49,11 @@ find_package(OpenMP REQUIRED)
 # -----------------------------------------------------------------------------
 
 
-include_directories("${PROJECT_SOURCE_DIR}" "${PROJECT_SOURCE_DIR}/.." "${Minuit2_INCLUDE_DIRS}")
+include_directories(
+	"${PROJECT_SOURCE_DIR}" "${PROJECT_SOURCE_DIR}/.."
+	"${Minuit2_INCLUDE_DIRS}"
+	"${Lapacke_INCLUDE_DIRS}"
+)
 
 
 # -----------------------------------------------------------------------------
@@ -58,12 +67,17 @@ add_executable(expr expr.cpp ../libs/log.cpp)
 add_executable(min0 min0.cpp ../libs/log.cpp)
 add_executable(fit0 fit0.cpp ../libs/log.cpp)
 add_executable(fit1 fit1.cpp ../libs/log.cpp)
-#add_executable(eig eig.cpp)
+add_executable(eig eig.cpp)
+add_executable(ode ode.cpp)
 
+target_link_libraries(cryst ${Lapacke_LIBRARIES})
 target_link_libraries(expr Threads::Threads)
 target_link_libraries(min0 ${Minuit2_LIBRARIES} Threads::Threads OpenMP::OpenMP_CXX)
 target_link_libraries(fit0 ${Minuit2_LIBRARIES} Threads::Threads OpenMP::OpenMP_CXX)
 target_link_libraries(fit1 ${Minuit2_LIBRARIES} OpenMP::OpenMP_CXX)
+target_link_libraries(leastsq ${Lapacke_LIBRARIES})
+target_link_libraries(eig ${Lapacke_LIBRARIES})
+target_link_libraries(ode ${Lapacke_LIBRARIES})
 # -----------------------------------------------------------------------------
 
 
@@ -78,5 +92,6 @@ add_test(expr expr)
 add_test(min0 min0)
 add_test(fit0 fit0)
 add_test(fit1 fit1)
-#add_test(eig eig)
+add_test(eig eig)
+add_test(ode ode)
 # -----------------------------------------------------------------------------
