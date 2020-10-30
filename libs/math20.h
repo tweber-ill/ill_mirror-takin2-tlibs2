@@ -1245,6 +1245,7 @@ public:
 	using container_type::operator[];
 	using typename container_type::iterator;
 	using typename container_type::const_iterator;
+	using typename container_type::size_type;
 
 	~vec() = default;
 

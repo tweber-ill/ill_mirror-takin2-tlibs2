@@ -26,7 +26,6 @@
 #include <boost/units/systems/si/codata/physico-chemical_constants.hpp>
 
 #include <boost/math/constants/constants.hpp>
-#include <boost/numeric/ublas/vector.hpp>
 
 namespace units = boost::units;
 namespace co = boost::units::si::constants::codata;
@@ -161,7 +160,7 @@ decltype(t_quant()*t_quant()) my_units_pow2(const t_quant& val)
 	return val*val;
 }
 
-template<class t_elem, template<class...> class t_vec=boost::numeric::ublas::vector>
+template<class t_elem, template<class...> class t_vec>
 t_elem my_units_norm2(const t_vec<t_elem>& vec)
 {
 	using t_elem_sq = decltype(t_elem()*t_elem());
