@@ -28,12 +28,12 @@ using namespace tl2_ops;
 namespace odeint = boost::numeric::odeint;
 
 // mark custom vector as resizeable
-template<> struct boost::numeric::odeint::is_resizeable<tl2::vec<float, std::vector>>
+template<> struct odeint::is_resizeable<tl2::vec<float, std::vector>>
 {
 	using type = typename boost::true_type;
 	static const bool value = type::value;
 };
-template<> struct boost::numeric::odeint::is_resizeable<tl2::vec<double, std::vector>>
+template<> struct odeint::is_resizeable<tl2::vec<double, std::vector>>
 {
 	using type = typename boost::true_type;
 	static const bool value = type::value;
