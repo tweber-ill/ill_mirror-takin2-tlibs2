@@ -1243,16 +1243,17 @@ public:
 	using container_type::container_type;
 	using container_type::size;
 	using container_type::operator[];
+
 	using typename container_type::iterator;
 	using typename container_type::const_iterator;
 	using typename container_type::size_type;
+	using typename container_type::difference_type;
+	using typename container_type::allocator_type;
 
 	~vec() = default;
 
-	vec(const vec<T, t_cont>& other)
-	{
-		*static_cast<container_type*>(this) = other;
-	}
+	vec(const vec<T, t_cont>& other) : container_type{other}
+	{}
 
 	vec<T, t_cont>& operator=(const vec<T, t_cont>& other)
 	{
@@ -1272,12 +1273,12 @@ public:
 			from_array(arr);
 	}
 
-	vec(const std::initializer_list<T>& lst) : container_type(lst.size())
+	/*vec(const std::initializer_list<T>& lst) : container_type(lst.size())
 	{
 		std::size_t i = 0;
 		for(auto iterLst=lst.begin(); iterLst!=lst.end(); std::advance(iterLst, 1))
 			this->operator[](i++) = *iterLst;
-	}
+	}*/
 
 
 	const value_type& operator()(std::size_t i) const { return this->operator[](i); }
@@ -4531,8 +4532,6 @@ template<class t_mat_cplx, class t_mat_real>
 std::tuple<t_mat_real, t_mat_real> split_cplx(const t_mat_cplx& mat)
 requires is_complex<typename t_mat_cplx::value_type> && is_mat<t_mat_cplx> && is_mat<t_mat_real>
 {
-	using t_real = typename t_mat_real::value_type;
-
 	t_mat_real matRe = zero<t_mat_real>(mat.size1(), mat.size2());
 	t_mat_real matIm = zero<t_mat_real>(mat.size1(), mat.size2());
 
