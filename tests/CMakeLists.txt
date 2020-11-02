@@ -58,40 +58,40 @@ include_directories(
 
 # -----------------------------------------------------------------------------
 # build individual test cases
-add_executable(cryst cryst.cpp ../libs/log.cpp)
 add_executable(mat1 mat1.cpp)
 add_executable(stat1 stat1.cpp)
 add_executable(quat1 quat1.cpp)
-add_executable(leastsq leastsq.cpp ../libs/log.cpp)
 add_executable(expr expr.cpp ../libs/log.cpp)
+add_executable(cryst cryst.cpp ../libs/log.cpp)
+add_executable(leastsq leastsq.cpp ../libs/log.cpp)
+add_executable(eig eig.cpp)
+add_executable(ode ode.cpp)
 add_executable(min0 min0.cpp ../libs/log.cpp)
 add_executable(fit0 fit0.cpp ../libs/log.cpp)
 add_executable(fit1 fit1.cpp ../libs/log.cpp)
-add_executable(eig eig.cpp)
-add_executable(ode ode.cpp)
 
-target_link_libraries(cryst ${Lapacke_LIBRARIES})
 target_link_libraries(expr Threads::Threads)
-target_link_libraries(min0 ${Minuit2_LIBRARIES} Threads::Threads OpenMP::OpenMP_CXX)
-target_link_libraries(fit0 ${Minuit2_LIBRARIES} Threads::Threads OpenMP::OpenMP_CXX)
-target_link_libraries(fit1 ${Minuit2_LIBRARIES} OpenMP::OpenMP_CXX)
+target_link_libraries(cryst ${Lapacke_LIBRARIES})
 target_link_libraries(leastsq ${Lapacke_LIBRARIES})
 target_link_libraries(eig ${Lapacke_LIBRARIES})
 target_link_libraries(ode ${Lapacke_LIBRARIES})
+target_link_libraries(min0 ${Minuit2_LIBRARIES} Threads::Threads OpenMP::OpenMP_CXX)
+target_link_libraries(fit0 ${Minuit2_LIBRARIES} Threads::Threads OpenMP::OpenMP_CXX)
+target_link_libraries(fit1 ${Minuit2_LIBRARIES} OpenMP::OpenMP_CXX)
 # -----------------------------------------------------------------------------
 
 
 # -----------------------------------------------------------------------------
 # run individual test cases
+add_test(expr expr)
 add_test(cryst cryst)
 add_test(mat1 mat1)
 add_test(stat1 stat1)
 add_test(quat1 quat1)
 add_test(lestsq leastsq)
-add_test(expr expr)
+add_test(eig eig)
+add_test(ode ode)
 add_test(min0 min0)
 add_test(fit0 fit0)
 add_test(fit1 fit1)
-add_test(eig eig)
-add_test(ode ode)
 # -----------------------------------------------------------------------------

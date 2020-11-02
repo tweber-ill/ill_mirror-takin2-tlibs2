@@ -19,7 +19,7 @@ namespace testtools = boost::test_tools;
 #include "libs/math20.h"
 using namespace tl2_ops;
 
-//#define DEBUG_OUTPUT
+#define DEBUG_OUTPUT
 
 
 // ----------------------------------------------------------------------------

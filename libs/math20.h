@@ -5572,21 +5572,39 @@ eigenvec(const t_mat& mat, bool only_evals=false, bool is_symmetric=false, bool 
 	// evecs
 	if(!only_evals)
 	{
-		for(std::size_t i=0; i<evals_re.size(); ++i)
+		if((is_symmetric && !use_selective_func))
 		{
-			// symmetric algo overwrites original matrix!
-			for(std::size_t j=0; j<N; ++j)
-				evecs_re[i][j] = (is_symmetric && !use_selective_func) ? inmat[i*N + j] : outevecs[i*N + j];
-
-			if(!is_symmetric && !tl2::equals<t_real>(evals_im[i], 0))
+			for(std::size_t i=0; i<evals_re.size(); ++i)
 			{
+				// symmetric algo overwrites original matrix!
 				for(std::size_t j=0; j<N; ++j)
+					evecs_re[i][j] = inmat[i*N + j];
+			}
+		}
+		else
+		{
+			for(std::size_t i=0; i<evals_re.size(); ++i)
+			{
+				if(tl2::equals<t_real>(evals_im[i], 0))
 				{
-					evecs_im[i][j] = outevecs[i*N + j+1];	// imag part of evec follows next in array
-					evecs_re[i+1][j] = evecs_re[i][j];	// next evec is the conjugated one
-					evecs_im[i+1][j] = -evecs_im[i][j];
+					for(std::size_t j=0; j<N; ++j)
+					{
+						evecs_re[i][j] = outevecs[i*N + j];
+						evecs_im[i][j] = 0;
+					}
 				}
-				++i;	// already used two values in array
+				else
+				{
+					for(std::size_t j=0; j<N; ++j)
+					{
+						evecs_re[i][j] = outevecs[i*N + j];
+						evecs_im[i][j] = outevecs[(i+1)*N + j];	// imag part of evec follows next in array
+
+						evecs_re[i+1][j] = evecs_re[i][j];		// next evec is the conjugated one
+						evecs_im[i+1][j] = -evecs_im[i][j];
+					}
+					++i;	// already used two values in array
+				}
 			}
 		}
 
