@@ -1,5 +1,5 @@
 /**
- * lapack test
+ * math lib and lapack test
  * @author Tobias Weber <tweber@ill.fr>
  * @date feb-19
  * @license GPLv3, see 'LICENSE' file
@@ -16,15 +16,17 @@ namespace testtools = boost::test_tools;
 #include <vector>
 
 #include "libs/math20.h"
-using namespace tl2_ops;
+
 
 using t_types = std::tuple<double, float>;
 BOOST_AUTO_TEST_CASE_TEMPLATE(test_equals, t_real, t_types)
 {
+	using namespace tl2_ops;
+
 	using t_cplx = std::complex<t_real>;
-	using t_vec = std::vector<t_real>;
+	using t_vec = tl2::vec<t_real, std::vector>;
 	using t_mat = tl2::mat<t_real, std::vector>;
-	using t_vec_cplx = std::vector<t_cplx>;
+	using t_vec_cplx = tl2::vec<t_cplx, std::vector>;
 	using t_mat_cplx = tl2::mat<t_cplx, std::vector>;
 
 
@@ -58,7 +60,6 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(test_equals, t_real, t_types)
 		BOOST_TEST(tl2::equals(PLU, M, 1e-4));
 	}
 
-
 	{
 		auto [ok, Q, R] = tl2_la::qr<t_mat_cplx>(Z);
 		auto [ok2, P, L, U] = tl2_la::lu<t_mat_cplx>(Z);
@@ -83,9 +84,9 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(test_equals, t_real, t_types)
 		BOOST_TEST(tl2::equals(PLU, Z, 1e-4));
 	}
 
-
 	{
-		auto [ok, evals, evecs] = tl2_la::eigenvec<t_mat_cplx, t_vec_cplx>(Z, 0, 0, 1);
+		auto [ok, evals, evecs] =
+			tl2_la::eigenvec<t_mat_cplx, t_vec_cplx, t_cplx>(Z, 0, 0, 1);
 		std::cout << "\nok = " << std::boolalpha << ok << std::endl;
 		for(std::size_t i=0; i<evals.size(); ++i)
 			std::cout << "eval: " << evals[i] << ", evec: " << evecs[i] << std::endl;
@@ -108,15 +109,25 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(test_equals, t_real, t_types)
 		std::cout << "pseudoinv = " << inva << std::endl;
 		std::cout << "      inv  = " << invb << std::endl;
 
-
 		BOOST_TEST(ok);
 		BOOST_TEST(ok2);
 		BOOST_TEST(ok3a);
 		BOOST_TEST(ok3b);
+
+		auto ident = tl2::unit<t_mat_cplx>(Z.size1(), Z.size2());
+		auto mata1 = inva*Z;
+		auto mata2 = Z*inva;
+		auto matb1 = invb*Z;
+		auto matb2 = Z*invb;
+		BOOST_TEST(tl2::equals(mata1, ident, 1e-4));
+		BOOST_TEST(tl2::equals(matb1, ident, 1e-4));
+		BOOST_TEST(tl2::equals(mata2, ident, 1e-4));
+		BOOST_TEST(tl2::equals(matb2, ident, 1e-4));
 	}
 
 	{
-		auto [ok, evals_re, evals_im, evecs_re, evecs_im] = tl2_la::eigenvec<t_mat, t_vec>(M, 0, 0, 1);
+		auto [ok, evals_re, evals_im, evecs_re, evecs_im] =
+			tl2_la::eigenvec<t_mat, t_vec, t_real>(M, 0, 0, 1);
 		std::cout << "\nok = " << std::boolalpha << ok << std::endl;
 		for(std::size_t i=0; i<evals_re.size(); ++i)
 			std::cout << "eval: " << evals_re[i] << " + i*" << evals_im[i]
@@ -140,10 +151,15 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(test_equals, t_real, t_types)
 		std::cout << "pseudoinv = " << inva << std::endl;
 		std::cout << "      inv  = " << invb << std::endl;
 
-
 		BOOST_TEST(ok);
 		BOOST_TEST(ok2);
 		BOOST_TEST(ok3a);
 		BOOST_TEST(ok3b);
+
+		auto ident = tl2::unit<t_mat>(M.size1(), M.size2());
+		auto mata = inva*M;
+		auto matb = invb*M;
+		BOOST_TEST(tl2::equals(mata, ident, 1e-4));
+		BOOST_TEST(tl2::equals(matb, ident, 1e-4));
 	}
 }
