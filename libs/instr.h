@@ -251,6 +251,8 @@ class FileInstrBase
 		virtual const t_vecVals& GetCol(const std::string& strName, std::size_t *pIdx=0) const = 0;
 		virtual t_vecVals& GetCol(const std::string& strName, std::size_t *pIdx=0) = 0;
 
+		virtual std::array<t_real, 4> GetPosHKLE() const = 0;	// zero pos.
+
 		virtual std::size_t GetScanCount() const = 0;
 		virtual std::array<t_real, 5> GetScanHKLKiKf(std::size_t i) const = 0;
 		virtual bool MergeWith(const FileInstrBase<t_real>* pDat);
@@ -353,7 +355,7 @@ class FilePsi : public FileInstrBase<_t_real>
 		virtual t_real GetKFix() const override;
 		virtual bool IsKiFixed() const override;
 
-		std::array<t_real, 4> GetPosHKLE() const;	// zero pos.
+		virtual std::array<t_real, 4> GetPosHKLE() const override;	// zero pos
 		std::array<t_real, 4> GetDeltaHKLE() const;	// scan steps
 
 		virtual std::size_t GetScanCount() const override;
@@ -437,6 +439,8 @@ class FileFrm : public FileInstrBase<_t_real>
 		virtual t_real GetKFix() const override;
 		virtual bool IsKiFixed() const override;
 
+		virtual std::array<t_real, 4> GetPosHKLE() const override;	// zero pos
+
 		virtual std::size_t GetScanCount() const override;
 		virtual std::array<t_real, 5> GetScanHKLKiKf(std::size_t i) const override;
 		virtual bool MergeWith(const FileInstrBase<t_real>* pDat) override;
@@ -502,6 +506,8 @@ class FileMacs : public FileInstrBase<_t_real>
 
 		virtual t_real GetKFix() const override;
 		virtual bool IsKiFixed() const override;
+
+		virtual std::array<t_real, 4> GetPosHKLE() const override;	// zero pos
 
 		virtual std::size_t GetScanCount() const override;
 		virtual std::array<t_real, 5> GetScanHKLKiKf(std::size_t i) const override;
@@ -569,6 +575,8 @@ class FileTrisp : public FileInstrBase<_t_real>
 		virtual t_real GetKFix() const override;
 		virtual bool IsKiFixed() const override;
 
+		virtual std::array<t_real, 4> GetPosHKLE() const override;	// zero pos
+
 		virtual std::size_t GetScanCount() const override;
 		virtual std::array<t_real, 5> GetScanHKLKiKf(std::size_t i) const override;
 		virtual bool MergeWith(const FileInstrBase<t_real>* pDat) override;
@@ -629,6 +637,8 @@ class FileRaw : public FileInstrBase<_t_real>
 
 		virtual t_real GetKFix() const override;
 		virtual bool IsKiFixed() const override;
+
+		virtual std::array<t_real, 4> GetPosHKLE() const override;	// zero pos
 
 		virtual std::size_t GetScanCount() const override;
 		virtual std::array<t_real, 5> GetScanHKLKiKf(std::size_t i) const override;
@@ -764,22 +774,25 @@ template<class t_real>
 std::array<t_real, 5> FileInstrBase<t_real>::GetScanHKLKiKf(const char* pcH, const char* pcK,
 	const char* pcL, const char* pcE, std::size_t i) const
 {
+	// zero position to fallback if no position is given in scan rows
+	const std::array<t_real, 4> arrZeroPos = GetPosHKLE();
+
 	const t_vecVals& vecH = GetCol(pcH);
 	const t_vecVals& vecK = GetCol(pcK);
 	const t_vecVals& vecL = GetCol(pcL);
 	const t_vecVals& vecE = GetCol(pcE);
 
-	std::size_t minSize = min4(vecH.size(), vecK.size(), vecL.size(), vecE.size());
+	/*std::size_t minSize = min4(vecH.size(), vecK.size(), vecL.size(), vecE.size());
 	if(i>=minSize)
 	{
 		log_err("Scan position ", i, " out of bounds. Size: ", minSize, ".");
 		return std::array<t_real,5>{{0.,0.,0.,0.}};
-	}
+	}*/
 
-	t_real h = vecH[i];
-	t_real k = vecK[i];
-	t_real l = vecL[i];
-	t_real E = vecE[i];
+	t_real h = i < vecH.size() ? vecH[i] : std::get<0>(arrZeroPos);
+	t_real k = i < vecK.size() ? vecK[i] : std::get<1>(arrZeroPos);
+	t_real l = i < vecL.size() ? vecL[i] : std::get<2>(arrZeroPos);
+	t_real E = i < vecE.size() ? vecE[i] : std::get<3>(arrZeroPos);
 
 	bool bKiFix = IsKiFixed();
 	t_real kfix = GetKFix();
@@ -1196,14 +1209,14 @@ bool FilePsi<t_real>::Load(const char* pcFile)
 
 
 template<class t_real>
-const typename FileInstrBase<t_real>::t_vecVals& 
+const typename FileInstrBase<t_real>::t_vecVals&
 FilePsi<t_real>::GetCol(const std::string& strName, std::size_t *pIdx) const
 {
 	return const_cast<FilePsi*>(this)->GetCol(strName, pIdx);
 }
 
 template<class t_real>
-typename FileInstrBase<t_real>::t_vecVals& 
+typename FileInstrBase<t_real>::t_vecVals&
 FilePsi<t_real>::GetCol(const std::string& strName, std::size_t *pIdx)
 {
 	static std::vector<t_real> vecNull;
@@ -1714,14 +1727,14 @@ bool FileFrm<t_real>::Load(const char* pcFile)
 }
 
 template<class t_real>
-const typename FileInstrBase<t_real>::t_vecVals& 
+const typename FileInstrBase<t_real>::t_vecVals&
 FileFrm<t_real>::GetCol(const std::string& strName, std::size_t *pIdx) const
 {
 	return const_cast<FileFrm*>(this)->GetCol(strName, pIdx);
 }
 
 template<class t_real>
-typename FileInstrBase<t_real>::t_vecVals& 
+typename FileInstrBase<t_real>::t_vecVals&
 FileFrm<t_real>::GetCol(const std::string& strName, std::size_t *pIdx)
 {
 	static std::vector<t_real> vecNull;
@@ -1841,6 +1854,14 @@ std::array<t_real, 3> FileFrm<t_real>::GetScatterPlane1() const
 	}
 	return std::array<t_real,3>{{-vec[0],-vec[1],-vec[2]}};	// LH -> RH
 }
+
+template<class t_real>
+std::array<t_real, 4> FileFrm<t_real>::GetPosHKLE() const
+{
+	// TODO: implement
+	return std::array<t_real,4>{{0,0,0,0}};
+}
+
 
 template<class t_real>
 t_real FileFrm<t_real>::GetKFix() const
@@ -2160,14 +2181,14 @@ bool FileMacs<t_real>::Load(const char* pcFile)
 }
 
 template<class t_real>
-const typename FileInstrBase<t_real>::t_vecVals& 
+const typename FileInstrBase<t_real>::t_vecVals&
 FileMacs<t_real>::GetCol(const std::string& strName, std::size_t *pIdx) const
 {
 	return const_cast<FileMacs*>(this)->GetCol(strName, pIdx);
 }
 
 template<class t_real>
-typename FileInstrBase<t_real>::t_vecVals& 
+typename FileInstrBase<t_real>::t_vecVals&
 FileMacs<t_real>::GetCol(const std::string& strName, std::size_t *pIdx)
 {
 	static std::vector<t_real> vecNull;
@@ -2275,6 +2296,15 @@ std::array<t_real, 3> FileMacs<t_real>::GetScatterPlane1() const
 
 	return std::array<t_real,3>{{vecToks[3],vecToks[4],vecToks[5]}};
 }
+
+
+template<class t_real>
+std::array<t_real, 4> FileMacs<t_real>::GetPosHKLE() const
+{
+	// TODO: implement
+	return std::array<t_real,4>{{0,0,0,0}};
+}
+
 
 template<class t_real>
 t_real FileMacs<t_real>::GetKFix() const
@@ -2585,7 +2615,7 @@ void FileTrisp<t_real>::ReadData(std::istream& istr)
 					m_mapParams["scan_finish_timestamp"] = trimmed(strLine.substr(9));
 				else if(begins_with<std::string>(str_to_lower(strLine), "scan"))
 				{
-					std::pair<std::string, std::string> pairLine = 
+					std::pair<std::string, std::string> pairLine =
 						split_first<std::string>(strLine, " \t", 1);
 
 					m_mapParams["scan_vars"] = trimmed(pairLine.second);
@@ -2631,14 +2661,14 @@ bool FileTrisp<t_real>::Load(const char* pcFile)
 }
 
 template<class t_real>
-const typename FileInstrBase<t_real>::t_vecVals& 
+const typename FileInstrBase<t_real>::t_vecVals&
 FileTrisp<t_real>::GetCol(const std::string& strName, std::size_t *pIdx) const
 {
 	return const_cast<FileTrisp*>(this)->GetCol(strName, pIdx);
 }
 
 template<class t_real>
-typename FileInstrBase<t_real>::t_vecVals& 
+typename FileInstrBase<t_real>::t_vecVals&
 FileTrisp<t_real>::GetCol(const std::string& strName, std::size_t *pIdx)
 {
 	static std::vector<t_real> vecNull;
@@ -2737,6 +2767,15 @@ std::array<t_real, 3> FileTrisp<t_real>::GetScatterPlane1() const
 
 	return std::array<t_real,3>{{x,y,z}};
 }
+
+
+template<class t_real>
+std::array<t_real, 4> FileTrisp<t_real>::GetPosHKLE() const
+{
+	// TODO: implement
+	return std::array<t_real,4>{{0,0,0,0}};
+}
+
 
 template<class t_real>
 t_real FileTrisp<t_real>::GetKFix() const
@@ -2862,14 +2901,14 @@ bool FileRaw<t_real>::Load(const char* pcFile)
 }
 
 template<class t_real>
-const typename FileInstrBase<t_real>::t_vecVals& 
+const typename FileInstrBase<t_real>::t_vecVals&
 FileRaw<t_real>::GetCol(const std::string& strName, std::size_t *pIdx) const
 {
 	return const_cast<FileRaw*>(this)->GetCol(strName, pIdx);
 }
 
 template<class t_real>
-typename FileInstrBase<t_real>::t_vecVals& 
+typename FileInstrBase<t_real>::t_vecVals&
 FileRaw<t_real>::GetCol(const std::string& strName, std::size_t *pIdx)
 {
 	std::size_t iCol = str_to_var<std::size_t>(strName)-1;
@@ -2899,15 +2938,15 @@ FileRaw<t_real>::GetData()
 }
 
 template<class t_real>
-const typename FileInstrBase<t_real>::t_vecColNames& 
+const typename FileInstrBase<t_real>::t_vecColNames&
 FileRaw<t_real>::GetColNames() const
 {
 	return m_vecCols;
 }
 
 template<class t_real>
-const typename FileInstrBase<t_real>::t_mapParams& 
-FileRaw<t_real>::GetAllParams() const 
+const typename FileInstrBase<t_real>::t_mapParams&
+FileRaw<t_real>::GetAllParams() const
 {
 	return m_dat.GetHeader();
 }
@@ -3062,6 +3101,15 @@ std::array<t_real, 3> FileRaw<t_real>::GetScatterPlane1() const
 
 	return std::array<t_real,3>{{x, y, z}};
 }
+
+
+template<class t_real>
+std::array<t_real, 4> FileRaw<t_real>::GetPosHKLE() const
+{
+	// TODO: implement
+	return std::array<t_real,4>{{0,0,0,0}};
+}
+
 
 template<class t_real>
 t_real FileRaw<t_real>::GetKFix() const

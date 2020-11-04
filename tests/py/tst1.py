@@ -53,4 +53,5 @@ def load_all(dir):
 
 print("#          h            k            l            E            S        S_err")
 #load_all("/users/tw/tmp/mvo_phonon")
-load_all("/Users/tweber/tmp/skx_data")
+#load_all("/Users/tweber/tmp/skx_data")
+load_all("/Users/tweber/tmp/scans")
