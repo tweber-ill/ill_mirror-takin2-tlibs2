@@ -26,8 +26,6 @@
 #include "phys.h"
 
 
-namespace rex = ::std;
-
 namespace tl2{
 
 
@@ -47,11 +45,11 @@ class DatFile
 		t_str m_strSeps = {'=', ':'};		// key-value separator
 		t_str m_strDatSep = {' ', '\t'};	// data separators
 
-		t_dat m_vecCols;
+		t_dat m_vecCols{};
 		std::size_t m_iCurLine = 0;
 
-		t_map m_mapHdr;
-		std::vector<t_str> m_vecRawHdr;
+		t_map m_mapHdr{};
+		std::vector<t_str> m_vecRawHdr{};
 
 	protected:
 		void ReadHeaderLine(const t_str& _strLine)
@@ -220,10 +218,10 @@ class FileInstrBase
 	public:
 		using t_real = _t_real;
 
-		typedef std::unordered_map<std::string, std::string> t_mapParams;
-		typedef std::vector<std::string> t_vecColNames;
-		typedef std::vector<t_real> t_vecVals;
-		typedef std::vector<t_vecVals> t_vecDat;
+		using t_mapParams = std::unordered_map<std::string, std::string>;
+		using t_vecColNames = std::vector<std::string>;
+		using t_vecVals = std::vector<t_real>;
+		using t_vecDat = std::vector<t_vecVals>;
 
 	protected:
 		void RenameDuplicateCols();
@@ -304,19 +302,23 @@ class FilePsi : public FileInstrBase<_t_real>
 		using t_vecDat = typename FileInstrBase<t_real>::t_vecDat;
 
 		// internal parameters in m_mapParams
-		typedef std::map<std::string, t_real> t_mapIParams;
+		using t_mapIParams = std::map<std::string, t_real>;
 
 	protected:
-		t_mapParams m_mapParams;
-		t_mapIParams m_mapParameters, m_mapZeros, m_mapVariables, m_mapPosHkl, m_mapScanSteps;
-		t_vecColNames m_vecColNames;
-		t_vecDat m_vecData;
+		t_mapParams m_mapParams{};
+		t_mapIParams m_mapParameters{};
+		t_mapIParams m_mapZeros{};
+		t_mapIParams m_mapVariables{};
+		t_mapIParams m_mapPosHkl{};
+		t_mapIParams m_mapScanSteps{};
+		t_vecColNames m_vecColNames{};
+		t_vecDat m_vecData{};
 
 		// automatically look and parse for polarisation data
 		bool m_bAutoParsePol = false;
 
 		// incoming and outgoing polarisation states
-		std::vector<std::array<t_real, 6>> m_vecPolStates;
+		std::vector<std::array<t_real, 6>> m_vecPolStates{};
 
 		// instrument-specific device names
 		std::string m_strPolVec1 = "p1", m_strPolVec2 = "p2";
@@ -413,9 +415,11 @@ class FileFrm : public FileInstrBase<_t_real>
 		using t_vecDat = typename FileInstrBase<t_real>::t_vecDat;
 
 	protected:
-		t_mapParams m_mapParams;
-		t_vecColNames m_vecQuantities, m_vecUnits;
-		t_vecDat m_vecData;
+		t_mapParams m_mapParams{};
+		t_vecColNames m_vecQuantities{};
+		t_vecColNames m_vecUnits{};
+		t_vecDat m_vecData{};
+		std::string m_strInstrIdent{};
 
 	public:
 		FileFrm() = default;
@@ -481,9 +485,9 @@ class FileMacs : public FileInstrBase<_t_real>
 		using t_vecDat = typename FileInstrBase<t_real>::t_vecDat;
 
 	protected:
-		t_mapParams m_mapParams;
-		t_vecColNames m_vecQuantities;
-		t_vecDat m_vecData;
+		t_mapParams m_mapParams{};
+		t_vecColNames m_vecQuantities{};
+		t_vecDat m_vecData{};
 
 	public:
 		FileMacs() = default;
@@ -549,9 +553,9 @@ class FileTrisp : public FileInstrBase<_t_real>
 		using t_vecDat = typename FileInstrBase<t_real>::t_vecDat;
 
 	protected:
-		t_mapParams m_mapParams;
-		t_vecColNames m_vecQuantities;
-		t_vecDat m_vecData;
+		t_mapParams m_mapParams{};
+		t_vecColNames m_vecQuantities{};
+		t_vecDat m_vecData{};
 
 	public:
 		FileTrisp() = default;
@@ -617,8 +621,8 @@ class FileRaw : public FileInstrBase<_t_real>
 		using t_vecDat = typename FileInstrBase<t_real>::t_vecDat;
 
 	protected:
-		DatFile<t_real, char> m_dat;
-		t_vecColNames m_vecCols;
+		DatFile<t_real, char> m_dat{};
+		t_vecColNames m_vecCols{};
 
 	public:
 		FileRaw() = default;
@@ -808,15 +812,15 @@ bool FileInstrBase<t_real>::MatchColumn(const std::string& strRegex,
 	std::string& strColName, bool bSortByCounts, bool bFilterEmpty) const
 {
 	const FileInstrBase<t_real>::t_vecColNames& vecColNames = GetColNames();
-	rex::regex rx(strRegex, rex::regex::ECMAScript | rex::regex_constants::icase);
+	std::regex rx(strRegex, std::regex::ECMAScript | std::regex_constants::icase);
 
 	using t_pairCol = std::pair<std::string, t_real>;
 	std::vector<t_pairCol> vecMatchedCols;
 
 	for(const std::string& strCurColName : vecColNames)
 	{
-		rex::smatch m;
-		if(rex::regex_match(strCurColName, m, rx))
+		std::smatch m;
+		if(std::regex_match(strCurColName, m, rx))
 		{
 			const typename FileInstrBase<t_real>::t_vecVals& vecVals = GetCol(strCurColName);
 			/*if(std::find_if(vecVals.begin(), vecVals.end(),
@@ -1522,9 +1526,9 @@ std::vector<std::string> FilePsi<t_real>::GetScannedVars() const
 			if(!vecVars.size())
 			{
 				const std::string strRegex = R"REX((sc|scan)[ \t]+([a-z0-9]+)[ \t]+[0-9\.-]+[ \t]+[d|D]([a-z0-9]+).*)REX";
-				rex::regex rx(strRegex, rex::regex::ECMAScript|rex::regex_constants::icase);
-				rex::smatch m;
-				if(rex::regex_search(iter->second, m, rx) && m.size()>3)
+				std::regex rx(strRegex, std::regex::ECMAScript|std::regex_constants::icase);
+				std::smatch m;
+				if(std::regex_search(iter->second, m, rx) && m.size()>3)
 				{
 					const std::string& strSteps = m[3];
 					vecVars.push_back(str_to_upper(strSteps));
@@ -1643,6 +1647,19 @@ void FileFrm<t_real>::ReadHeader(std::istream& istr)
 				m_mapParams.insert(pairLine);
 			else
 				iter->second += ", " + pairLine.second;
+
+			// try to find instrument name
+			if(m_strInstrIdent == "")
+			{
+				const std::string strRegex = R"REX(([a-z0-9]+)\_responsible)REX";
+				std::regex rx(strRegex, std::regex::ECMAScript|std::regex_constants::icase);
+				std::smatch m;
+				if(std::regex_search(pairLine.first, m, rx) && m.size()>=2)
+				{
+					m_strInstrIdent = m[1];
+					//std::cout << "Instrument name: " << m_strInstrIdent << std::endl;
+				}
+			}
 		}
 	}
 }
@@ -1855,11 +1872,19 @@ std::array<t_real, 3> FileFrm<t_real>::GetScatterPlane1() const
 	return std::array<t_real,3>{{-vec[0],-vec[1],-vec[2]}};	// LH -> RH
 }
 
+
 template<class t_real>
 std::array<t_real, 4> FileFrm<t_real>::GetPosHKLE() const
 {
-	// TODO: implement
-	return std::array<t_real,4>{{0,0,0,0}};
+	typename t_mapParams::const_iterator iter = m_mapParams.find(m_strInstrIdent + "_value");
+	if(iter == m_mapParams.end())
+		return std::array<t_real,4>{{0, 0, 0, 0}};
+
+	std::vector<t_real> vecPos = get_py_array<std::string, std::vector<t_real>>(iter->second);
+	if(vecPos.size() < 4)
+		return std::array<t_real,4>{{0, 0, 0, 0}};
+
+	return std::array<t_real,4>{{vecPos[0], vecPos[1], vecPos[2], vecPos[3]}};
 }
 
 
@@ -2000,9 +2025,9 @@ std::vector<std::string> FileFrm<t_real>::GetScannedVars() const
 
 		// try qscan/qcscan
 		const std::string strRegex = R"REX((qscan|qcscan)\((\[.*\])[, ]+(\[.*\]).*\))REX";
-		rex::regex rx(strRegex, rex::regex::ECMAScript|rex::regex_constants::icase);
-		rex::smatch m;
-		if(rex::regex_search(strInfo, m, rx) && m.size()>3)
+		std::regex rx(strRegex, std::regex::ECMAScript|std::regex_constants::icase);
+		std::smatch m;
+		if(std::regex_search(strInfo, m, rx) && m.size()>3)
 		{
 			const std::string& strSteps = m[3];
 			std::vector<t_real> vecSteps = get_py_array<std::string, std::vector<t_real>>(strSteps);
@@ -2022,9 +2047,9 @@ std::vector<std::string> FileFrm<t_real>::GetScannedVars() const
 		{
 			// try scan/cscan
 			const std::string strRegexDevScan = R"REX((scan|cscan)\(([a-z0-9_\.]+)[, ]+.*\))REX";
-			rex::regex rxDev(strRegexDevScan, rex::regex::ECMAScript|rex::regex_constants::icase);
-			rex::smatch mDev;
-			if(rex::regex_search(strInfo, mDev, rxDev) && mDev.size()>2)
+			std::regex rxDev(strRegexDevScan, std::regex::ECMAScript|std::regex_constants::icase);
+			std::smatch mDev;
+			if(std::regex_search(strInfo, mDev, rxDev) && mDev.size()>2)
 			{
 				std::string strDev = mDev[2];
 				if(std::find(m_vecQuantities.begin(), m_vecQuantities.end(), strDev) != m_vecQuantities.end())
