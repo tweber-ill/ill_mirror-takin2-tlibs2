@@ -1635,9 +1635,12 @@ void FileFrm<t_real>::ReadHeader(std::istream& istr)
 		//std::cout << strLine << std::endl;
 
 		std::pair<std::string, std::string> pairLine =
-				split_first<std::string>(strLine, ":", 1);
+			split_first<std::string>(strLine, ":", 1);
+
 		if(pairLine.first == "")
+		{
 			continue;
+		}
 		else
 		{
 			//std::cout << "Key: " << pairLine.first << ", Val: " << pairLine.second << std::endl;

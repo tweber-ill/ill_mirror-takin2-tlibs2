@@ -28,11 +28,11 @@ using namespace tl2_ops;
 #endif
 BOOST_AUTO_TEST_CASE_TEMPLATE(test_xtal, t_real, t_types)
 {
-	using t_cplx = std::complex<t_real>;
-	using t_vec = std::vector<t_real>;
+	//using t_cplx = std::complex<t_real>;
+	//using t_vec = std::vector<t_real>;
 	using t_mat = tl2::mat<t_real, std::vector>;
-	using t_vec_cplx = std::vector<t_cplx>;
-	using t_mat_cplx = tl2::mat<t_cplx, std::vector>;
+	//using t_vec_cplx = std::vector<t_cplx>;
+	//using t_mat_cplx = tl2::mat<t_cplx, std::vector>;
 
 	auto A = tl2::A_matrix<t_mat, t_real>(3., 4., 5., 80./180.*M_PI, 100./180.*M_PI, 60./180.*tl2::pi<t_real>);
 	auto B = tl2::B_matrix<t_mat, t_real>(3., 4., 5., 80./180.*M_PI, 100./180.*M_PI, 60./180.*tl2::pi<t_real>);
