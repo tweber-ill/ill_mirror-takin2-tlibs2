@@ -6161,7 +6161,7 @@ namespace tl2_qh {
  * https://github.com/t-weber/misc/blob/master/geo/qhulltst.cpp
  */
 template<class t_vec, template<class...> class t_cont = std::vector>
-std::tuple<t_cont<t_cont<t_vec>>, t_cont<t_vec>>
+std::tuple<t_cont<t_cont<t_vec>>, t_cont<t_vec>, t_cont<typename t_vec::value_type>>
 get_convexhull(const t_cont<t_vec>& vecVerts)
 requires tl2::is_vec<t_vec>
 {
@@ -6174,7 +6174,8 @@ requires tl2::is_vec<t_vec>
 
 	t_cont<t_cont<t_vec>> vecPolys;
 	t_cont<t_vec> vecNormals;
-	const t_vec vecCentre = tl2::mean(vecVerts);
+	t_cont<t_real> vecDists;
+	//const t_vec vecCentre = tl2::mean(vecVerts);
 
 	// copy vertices
 	int dim = vecVerts[0].size();
@@ -6213,16 +6214,26 @@ requires tl2::is_vec<t_vec>
 			vecPoly.emplace_back(std::move(vecPoint));
 		}
 
-		t_vec vecNormal = tl2::sort_poly_verts<t_vec, t_cont>(vecPoly, vecCentre);
+
+		t_vec vecNormal; //= tl2::sort_poly_verts<t_vec, t_cont>(vecPoly, vecCentre, true);
+		vecNormal.resize(dim);
+
+		orgQhull::QhullHyperplane plane = iter->hyperplane();
+		const t_real_qh* planenorm = plane.coordinates();
+		const t_real_qh planedist = plane.offset();
+		for(int i=0; i<dim; ++i)
+			vecNormal[i] = t_real(planenorm[i]);
+
 		vecPolys.emplace_back(std::move(vecPoly));
 		vecNormals.emplace_back(std::move(vecNormal));
+		vecDists.emplace_back(planedist);
 	}
 
 	// too few polygons => remove polyhedron
 	if(vecPolys.size() < 3)
 		vecPolys = decltype(vecPolys){};
 
-	return std::make_tuple(vecPolys, vecNormals);
+	return std::make_tuple(vecPolys, vecNormals, vecDists);
 }
 }
 #endif
