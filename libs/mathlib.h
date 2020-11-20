@@ -175,7 +175,18 @@ extern void tl2_vec_mean(const struct tl2_list* veclist, const struct tl2_list* 
  * covariance matrix
  */
 extern void tl2_covariance(const struct tl2_list* veclist, const struct tl2_list* problist,
-	double* COV, int N);
+	double* COV, double* mean, int N);
+
+/**
+ * matrix trafo
+ */
+extern void tl2_mat_trafo(const double* M, const double* T, double* RES, int N, int ortho);
+
+/**
+ * resolution matrix
+ */
+extern void tl2_reso(const struct tl2_list* veclist, const struct tl2_list* problist,
+	double* COV, double* RESO);
 // ----------------------------------------------------------------------------
 
 

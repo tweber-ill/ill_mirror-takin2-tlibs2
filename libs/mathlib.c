@@ -488,11 +488,9 @@ void tl2_vec_mean(const struct tl2_list* veclist, const struct tl2_list* problis
  * covariance matrix
  */
 void tl2_covariance(const struct tl2_list* veclist, const struct tl2_list* problist,
-	double* COV, int N)
+	double* COV, double* mean, int N)
 {
 	tl2_mat_zero(COV, N, N);
-
-	double *mean = calloc(N, sizeof(double));
 	tl2_vec_mean(veclist, problist, mean, N);
 
 	double *vec = calloc(N, sizeof(double));
@@ -526,5 +524,71 @@ void tl2_covariance(const struct tl2_list* veclist, const struct tl2_list* probl
 	free(vec);
 	free(dev);
 	free(outer);
+}
+
+
+/**
+ * matrix trafo
+ */
+void tl2_mat_trafo(const double* M, const double* T, double* RES, int N, int ortho)
+{
+	double *Tinv = calloc(N*N, sizeof(double));
+	double *TMP = calloc(N*N, sizeof(double));
+
+	if(ortho)
+		tl2_transpose(T, Tinv, N, N);
+	else
+		tl2_inverse(T, Tinv, N);
+
+	tl2_matmat_mul(Tinv, M, TMP, N, N, N);
+	tl2_matmat_mul(TMP, T, RES, N, N, N);
+
+	free(Tinv);
+	free(TMP);
+}
+
+
+/**
+ * resolution matrix
+ */
+void tl2_reso(const struct tl2_list* veclist, const struct tl2_list* problist,
+	double* COV, double* RESO)
+{
+	const int N = 4;
+	tl2_mat_zero(COV, N, N);
+
+	double *Qmean = calloc(N, sizeof(double));
+	tl2_covariance(veclist, problist, COV, Qmean, N);
+
+	double *Qdir = calloc(N, sizeof(double));
+	double Qlen = tl2_vec_len(Qmean, N-1);
+	tl2_vec_div(Qmean, Qlen, Qdir, N-1);
+
+	double *Qup = calloc(N, sizeof(double));
+	tl2_vec_zero(Qup, N);
+	Qup[1] = 1;
+
+	double *Qside = calloc(N, sizeof(double));
+	tl2_vec_zero(Qside, N);
+	tl2_cross(Qup, Qdir, Qside);
+
+	double *T = calloc(N*N, sizeof(double));
+	tl2_mat_zero(T, N, N);
+	for(int i=0; i<N; ++i)
+	{
+		T[i*N + 0] = Qdir[i];
+		T[i*N + 1] = Qside[i];
+		T[i*N + 2] = Qup[i];
+	}
+	T[3*N + 3] = 1;
+
+	tl2_mat_trafo(COV, T, COV, N, 1);
+	tl2_inverse(COV, RESO, N);
+
+	free(Qside);
+	free(Qup);
+	free(T);
+	free(Qdir);
+	free(Qmean);
 }
 // ----------------------------------------------------------------------------
