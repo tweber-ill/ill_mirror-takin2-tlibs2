@@ -458,7 +458,7 @@ void tl2_vec_mean(const struct tl2_list* veclist, const struct tl2_list* problis
 {
 	tl2_vec_zero(mean, N);
 	double prob = 0.;
-	double *vec = calloc(N, sizeof(double));
+	double *vec = (double*)calloc(N, sizeof(double));
 
 	while(veclist)
 	{
@@ -493,9 +493,9 @@ void tl2_covariance(const struct tl2_list* veclist, const struct tl2_list* probl
 	tl2_mat_zero(COV, N, N);
 	tl2_vec_mean(veclist, problist, mean, N);
 
-	double *vec = calloc(N, sizeof(double));
-	double *dev = calloc(N, sizeof(double));
-	double *outer = calloc(N*N, sizeof(double));
+	double *vec = (double*)calloc(N, sizeof(double));
+	double *dev = (double*)calloc(N, sizeof(double));
+	double *outer = (double*)calloc(N*N, sizeof(double));
 	double prob = 0.;
 
 	while(veclist)
@@ -532,8 +532,8 @@ void tl2_covariance(const struct tl2_list* veclist, const struct tl2_list* probl
  */
 void tl2_mat_trafo(const double* M, const double* T, double* RES, int N, int ortho)
 {
-	double *Tinv = calloc(N*N, sizeof(double));
-	double *TMP = calloc(N*N, sizeof(double));
+	double *Tinv = (double*)calloc(N*N, sizeof(double));
+	double *TMP = (double*)calloc(N*N, sizeof(double));
 
 	if(ortho)
 		tl2_transpose(T, Tinv, N, N);
@@ -557,22 +557,22 @@ void tl2_reso(const struct tl2_list* veclist, const struct tl2_list* problist,
 	const int N = 4;
 	tl2_mat_zero(COV, N, N);
 
-	double *Qmean = calloc(N, sizeof(double));
+	double *Qmean = (double*)calloc(N, sizeof(double));
 	tl2_covariance(veclist, problist, COV, Qmean, N);
 
-	double *Qdir = calloc(N, sizeof(double));
+	double *Qdir = (double*)calloc(N, sizeof(double));
 	double Qlen = tl2_vec_len(Qmean, N-1);
 	tl2_vec_div(Qmean, Qlen, Qdir, N-1);
 
-	double *Qup = calloc(N, sizeof(double));
+	double *Qup = (double*)calloc(N, sizeof(double));
 	tl2_vec_zero(Qup, N);
 	Qup[1] = 1;
 
-	double *Qside = calloc(N, sizeof(double));
+	double *Qside = (double*)calloc(N, sizeof(double));
 	tl2_vec_zero(Qside, N);
 	tl2_cross(Qup, Qdir, Qside);
 
-	double *T = calloc(N*N, sizeof(double));
+	double *T = (double*)calloc(N*N, sizeof(double));
 	tl2_mat_zero(T, N, N);
 	for(int i=0; i<N; ++i)
 	{

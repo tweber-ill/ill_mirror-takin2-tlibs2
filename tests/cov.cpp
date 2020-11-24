@@ -5,7 +5,6 @@
  * @license GPLv3, see 'LICENSE' file
  *
  * g++ -std=c++20 -I.. -o cov cov.cpp
- * compare with: np.cov([[1,2,3], [3,2,1], [5,-2,0.5]], rowvar=False, aweights=[1,1,0.5], ddof=0)
  */
 
 #define BOOST_TEST_MODULE Cov1
@@ -35,5 +34,14 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(test_equals, t_real, t_types)
 	std::vector<t_real> probs{{ 1., 1., 0.5 }};
 
 	auto [cov, corr] = tl2::covariance<t_mat, t_vec>(vecs, &probs);
-	std::cout << cov << std::endl;
+	std::cout << "cov  = " << cov << std::endl;
+	std::cout << "corr = " << corr << std::endl;
+
+	// comparing with: np.cov([[1,2,3], [3,2,1], [5,-2,0.5]], rowvar=False, aweights=[1,1,0.5], ddof=0)
+	const t_mat cov_cmp = tl2::create<t_mat>({
+		 2.24, -1.92, -1.52,
+		-1.92,  2.56,  0.96,
+		-1.52,  0.96,  1.16
+	});
+	BOOST_TEST(tl2::equals(cov, cov_cmp, 1e-5));
 }

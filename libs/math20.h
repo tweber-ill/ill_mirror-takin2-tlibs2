@@ -31,6 +31,7 @@
 #include <functional>
 #include <iterator>
 #include <numeric>
+#include <numbers>
 #include <utility>
 #include <memory>
 #include <iostream>
@@ -41,7 +42,6 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/math/special_functions/factorials.hpp>
 #include <boost/math/special_functions/spherical_harmonic.hpp>
-#include <boost/math/constants/constants.hpp>
 #include <boost/algorithm/minmax_element.hpp>
 
 #include "log.h"
@@ -76,9 +76,7 @@ requires tl2::is_basic_mat<t_mat> && tl2::is_dyn_mat<t_mat>;
 // ----------------------------------------------------------------------------
 
 // constants
-template<typename T=double> constexpr T pi = boost::math::constants::pi<T>();
-template<typename T> T golden = T(0.5) + std::sqrt(T(5))/T(2);
-
+template<typename T=double> constexpr T pi = std::numbers::pi_v<T>;
 
 template<typename INT=int> bool is_even(INT i) { return (i%2 == 0); }
 template<typename INT=int> bool is_odd(INT i) { return !is_even<INT>(i); }
@@ -3881,7 +3879,7 @@ create_icosahedron(typename t_vec::value_type l = 1)
 requires is_vec<t_vec>
 {
 	using T = typename t_vec::value_type;
-	const T g = golden<T>;
+	const T g = std::numbers::phi_v<T>;
 
 	t_cont<t_vec> vertices =
 	{
@@ -3941,7 +3939,7 @@ create_dodecahedron(typename t_vec::value_type l = 1)
 requires is_vec<t_vec>
 {
 	using T = typename t_vec::value_type;
-	const T g = golden<T>;
+	const T g = std::numbers::phi_v<T>;
 
 	t_cont<t_vec> vertices =
 	{
