@@ -6,8 +6,6 @@
  * @desc Forked on 18/July/2020 from my privately developed "matrix_calc" project (https://github.com/t-weber/matrix_calc).
  */
 
-#include <cstdio>
-#include <cstdlib>
 #include <cstdint>
 #include <cfloat>
 #include <vector>
@@ -39,13 +37,16 @@ static std::unordered_set<void*> heap;
 
 void* ext_heap_alloc(uint64_t num, uint64_t elemsize)
 {
-	void *mem = calloc(num, elemsize);
+	void *mem = new uint8_t[num * elemsize];
 	heap.insert(mem);
 
 	if(g_debug)
 	{
-		printf("%s: count=%lu, elem_size=%lu, mem=%08lx.\n",
-			__func__, num, elemsize, (uint64_t)mem);
+		std::cerr << __func__
+			<< ": count=" << num
+			<< ", elem_size=" << elemsize
+			<< ", mem=" << std::setw(8) << std::setfill('0') << std::hex << mem
+			<< std::endl;
 	}
 
 	return mem;
@@ -57,11 +58,15 @@ void ext_heap_free(void* mem)
 	if(!mem)
 		return;
 
-	free(mem);
+	delete[] reinterpret_cast<uint8_t*>(mem);
 	heap.erase(mem);
 
 	if(g_debug)
-		printf("%s: mem=%08lx.\n", __func__, (uint64_t)mem);
+	{
+		std::cerr << __func__
+			<< ": mem=" << std::setw(8) << std::setfill('0') << std::hex << mem
+			<< std::endl;
+	}
 }
 
 
@@ -75,12 +80,14 @@ void ext_deinit()
 {
 	if(g_debug)
 	{
-		printf("%s: %lu memory leaks detected.\n", __func__, heap.size());
+		std::cerr << __func__ << ": " << heap.size() << " memory leaks detected." << std::endl;
 
 		auto iter = heap.begin();
 		for(std::size_t i=0; i<heap.size(); ++i)
 		{
-			printf("Leak %lu: mem=%08lx.\n", i, (uint64_t)*iter);
+			std::cerr << "Leak " << i << ": "
+				<< ", mem=" << std::setw(8) << std::setfill('0') << std::hex << (void*)*iter
+				<< std::endl;
 			++iter;
 		}
 	}
