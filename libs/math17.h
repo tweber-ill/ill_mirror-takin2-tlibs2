@@ -1629,6 +1629,7 @@ matrix_type rotation_matrix_3d_z(typename matrix_type::value_type angle)
 
 /**
  * cross-product in matrix form
+ * @see https://en.wikipedia.org/wiki/Skew-symmetric_matrix
  */
 template<class matrix_type = ublas::matrix<double>,
 	class vector_type = ublas::vector<typename matrix_type::value_type>>
@@ -1844,6 +1845,7 @@ bool is_centering_matrix(const t_mat& mat)
 /**
  * Euler-Rodrigues formula
  * @see e.g.: https://en.wikipedia.org/wiki/Rodrigues%27_rotation_formula
+ * @see (Arens 2015), p. 718 and p. 816
  */
 template<class mat_type = ublas::matrix<double>,
 	class vec_type = ublas::vector<typename mat_type::value_type>,
@@ -6795,6 +6797,7 @@ bool qr(const ublas::matrix<T>& M,
 
 /**
  * solve M^T M x = M^T v for x
+ * @see e.g. (Arens 2015), p. 793
  */
 template<typename T = double>
 bool solve_linear_approx(const ublas::matrix<T>& M, const ublas::vector<T>& v, ublas::vector<T>& x)
@@ -7770,6 +7773,7 @@ T epsilon_tensor(const t_mat& matGcov, const t_lst& idx, bool bCov = 1)
 
 /**
  * creates a metric tensor
+ * @see (Arens 2015), p. 808
  */
 template<class t_mat = ublas::matrix<double>,
 	class t_vec = ublas::vector<double>,
@@ -7811,6 +7815,7 @@ typename t_vec::value_type inner_prod(const t_mat& matGCov,
 
 /**
  * vector length
+ * @see e.g.: (Arens 2015), p. 808
  */
 template<class t_mat = ublas::matrix<double>,
 	class t_vec = ublas::vector<double>>
@@ -7826,6 +7831,7 @@ typename t_vec::value_type vec_len(const t_mat& matGCov,
 
 /**
  * angle between vectors
+ * @see e.g.: (Arens 2015), p. 808
  */
 template<class t_mat = ublas::matrix<double>,
 	class t_vec = ublas::vector<double>>
