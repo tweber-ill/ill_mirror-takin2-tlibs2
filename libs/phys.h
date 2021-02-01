@@ -29,7 +29,7 @@ namespace tl2 {
 
 
 template<class T=double> constexpr T KSQ2E = T(0.5) * hbar<T>/angstrom<T>/m_n<T> * hbar<T>/angstrom<T>/meV<T>;
-template<class T=double> constexpr T E2KSQ = T(1)/KSQ2E<T>;
+template<class T=double> constexpr T E2KSQ = T(1) / KSQ2E<T>;
 
 
 // --------------------------------------------------------------------------------
@@ -268,7 +268,7 @@ t_wavenumber<Sys,Y> d2G(const t_length<Sys,Y>& d)
 // --------------------------------------------------------------------------------
 /**
  * differentiated Bragg equation:
- * n lam = 2d sin(th)						| diff
+ * n lam = 2d sin(th)				| diff
  * n dlam = 2dd sin(th) + 2d cos(th) dth	| / Bragg equ
  * dlam/lam = dd/d + cos(th)/sin(th) dth
  *
@@ -292,7 +292,7 @@ Y bragg_diff(Y dDoverD, const t_angle<Sys,Y>& theta, Y dTheta)
 
 /**
  * kinematic plane
- * see e.g. (ILL Neutron Data Booklet), sec. 2.6-2
+ * @see e.g. (ILL Neutron Data Booklet), sec. 2.6-2
  *
  * Q_vec = ki_vec - kf_vec
  * Q^2 = ki^2 + kf^2 - 2ki kf cos 2th	| * hbar^2 / (2 mn)
@@ -334,7 +334,7 @@ t_wavenumber<Sys,Y> kinematic_plane(bool bFixedKi,
 
 /**
  * kinematic plane
- * see e.g. (ILL Neutron Data Booklet), sec. 2.6-2
+ * @see e.g. (ILL Neutron Data Booklet), sec. 2.6-2
  *
  * solving the above equation for dE using sage:
  *   Q, Ei, dE, ctt, c = var("Q, Ei, dE, ctt, c")
@@ -462,7 +462,7 @@ t_wavenumber<Sys,Y> get_mono_k(const t_angle<Sys,Y>& _theta,
 /**
  * Q_vec = ki_vec - kf_vec
  * Q^2 = ki^2 + kf^2 - 2ki kf cos 2th
- *cos 2th = (-Q^2 + ki^2 + kf^2) / (2ki kf)
+ * cos 2th = (-Q^2 + ki^2 + kf^2) / (2ki kf)
  */
 template<class Sys, class Y>
 t_angle<Sys,Y> get_sample_twotheta(const t_wavenumber<Sys,Y>& ki,
@@ -497,7 +497,6 @@ get_sample_Q(const t_wavenumber<Sys,Y>& ki,
 	if(Y(Qsq*angstrom<Y>*angstrom<Y>) < Y(0.))
 	{
 		// TODO
-
 		Qsq = -Qsq;
 	}
 
@@ -543,7 +542,8 @@ t_wavenumber<Sys,Y> get_other_k(const t_energy<Sys,Y>& E,
 // --------------------------------------------------------------------------------
 
 /**
- * kf^3 mono/ana reflectivity factor, see e.g. (Shirane 2002) p. 125
+ * kf^3 mono/ana reflectivity factor
+ * @see e.g. (Shirane 2002) p. 125
  */
 template<class Sys, class Y>
 Y ana_effic_factor(const t_wavenumber<Sys, Y>& kf, const t_angle<Sys, Y>& theta)
@@ -552,7 +552,8 @@ Y ana_effic_factor(const t_wavenumber<Sys, Y>& kf, const t_angle<Sys, Y>& theta)
 }
 
 /**
- * kf^3 mono/ana reflectivity factor, see e.g. (Shirane 2002) p. 125
+ * kf^3 mono/ana reflectivity factor,
+ * @see e.g. (Shirane 2002) p. 125
  */
 template<class Sys, class Y>
 Y ana_effic_factor(const t_wavenumber<Sys, Y>& kf, const t_length<Sys, Y>& d)
@@ -567,7 +568,7 @@ Y ana_effic_factor(const t_wavenumber<Sys, Y>& kf, const t_length<Sys, Y>& d)
 
 /**
  * Bose distribution
- * see e.g.: (Shirane 2002), p. 28
+ * @see e.g.: (Shirane 2002), p. 28
  */
 template<class t_real=double>
 t_real bose(t_real E, t_real T)
@@ -613,7 +614,7 @@ Y bose(const t_energy<Sys,Y>& E, const t_temperature<Sys,Y>& T,
 
 
 /**
- * see: B. Fak, B. Dorner, Physica B 234-236 (1997) pp. 1107-1108
+ * @see: B. Fak, B. Dorner, Physica B 234-236 (1997) pp. 1107-1108
  */
 template<class t_real=double>
 t_real DHO_model(t_real E, t_real T, t_real E0, t_real hwhm, t_real amp, t_real offs)
@@ -673,8 +674,8 @@ t_length<Sys, Y> focal_len(const t_length<Sys, Y>& lenBefore, const t_length<Sys
 
 
 /**
- * optimal mono/ana curvature, 
- * see e.g. 
+ * optimal mono/ana curvature,
+ * see e.g.
  * 	- (Shirane 2002) p. 66
  * 	- or nicos/nicos-core.git/tree/nicos/devices/tas/mono.py in nicos
  *  - or Monochromator_curved.comp in McStas
@@ -697,16 +698,17 @@ t_length<Sys, Y> foc_curv(const t_length<Sys, Y>& lenBefore, const t_length<Sys,
 
 // --------------------------------------------------------------------------------
 /**
- * @brief disc chopper burst time, see: NIMA 492, pp. 97-104 (2002)
+ * @brief disc chopper burst time
  * @param r chopper radius
  * @param L chopper window length
  * @param om chopper frequency
  * @param bCounterRot single disc or two counter-rotating discs?
  * @param bSigma burst time in sigma or fwhm?
  * @return burst time
+ * @see: NIMA 492, pp. 97-104 (2002)
  */
 template<class Sys, class Y=double>
-t_time<Sys,Y> burst_time(const t_length<Sys,Y>& r, 
+t_time<Sys,Y> burst_time(const t_length<Sys,Y>& r,
 	const t_length<Sys,Y>& L, const t_freq<Sys,Y>& om, bool bCounterRot,
 	bool bSigma=1)
 {
