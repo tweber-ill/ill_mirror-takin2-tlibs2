@@ -6,6 +6,7 @@
  * @license GPLv3, see 'LICENSE' file
  * @desc The present version was forked on 8-Nov-2018 from my privately developed "magtools" project (https://github.com/t-weber/magtools).
  * @desc Additional functions forked on 7-Nov-2018 from my privately and TUM-PhD-developed "tlibs" project (https://github.com/t-weber/tlibs).
+ * @desc Forked on 1-Feb-2021 from my privately developed "geo" project (https://github.com/t-weber/geo).
  */
 
 #ifndef __TLIBS2_CXX20_MATH_ALGOS_H__
@@ -1423,6 +1424,35 @@ requires is_scalar<T>
 	return std::abs(t1 - t2) <= eps;
 }
 
+
+/**
+ * mod operation, keeping result positive
+ */
+template<class t_real>
+t_real mod_pos(t_real val, t_real tomod=t_real{2}*pi<t_real>)
+requires is_scalar<t_real>
+{
+	val = std::fmod(val, tomod);
+	if(val < t_real(0))
+		val += tomod;
+	
+	return val;
+}
+
+/**
+ * are two angles equal within an epsilon range?
+ */
+template<class T>
+bool angle_equals(T t1, T t2, T eps = std::numeric_limits<T>::epsilon(), T tomod=T{2}*pi<T>)
+requires is_scalar<T>
+{
+	t1 = mod_pos<T>(t1, tomod);
+	t2 = mod_pos<T>(t2, tomod);
+	
+	return std::abs(t1 - t2) <= eps;
+}
+
+
 /**
  * are two complex numbers equal within an epsilon range?
  */
@@ -1434,6 +1464,7 @@ requires is_complex<T>
 	return (std::abs(t1.real() - t2.real()) <= eps) &&
 		(std::abs(t1.imag() - t2.imag()) <= eps);
 }
+
 
 /**
  * are two vectors equal within an epsilon range?
@@ -1471,6 +1502,7 @@ requires is_basic_vec<t_vec>
 
 	return true;
 }
+
 
 /**
  * are two matrices equal within an epsilon range?
@@ -2154,6 +2186,21 @@ requires is_basic_vec<t_vec>
 
 
 /**
+ * n-norm
+ */
+template<class t_vec, class t_real = typename t_vec::value_type>
+typename t_vec::value_type norm(const t_vec& vec, t_real n)
+requires is_basic_vec<t_vec>
+{
+	t_real d = t_real{0};
+	for(std::size_t i=0; i<vec.size(); ++i)
+		d += std::pow(std::abs(vec[i]), n);
+	n = std::pow(d, t_real(1)/n);
+	return n;
+}
+
+
+/**
  * outer product
  */
 template<class t_mat, class t_vec>
@@ -2343,8 +2390,8 @@ requires is_vec<t_vec>
 
 /**
  * project vector vec onto the line lineOrigin + lam*lineDir
- * shift line to go through origin, calculate projection and shift back
- * returns [closest point, distance]
+ * (shifts line to go through origin, calculate projection and shift back)
+ * @returns [closest point, distance]
  */
 template<class t_vec>
 std::tuple<t_vec, typename t_vec::value_type> project_line(const t_vec& vec,
@@ -2357,6 +2404,52 @@ requires is_vec<t_vec>
 
 	const typename t_vec::value_type dist = norm<t_vec>(vec - ptNearest);
 	return std::make_tuple(ptNearest, dist);
+}
+
+
+/**
+ * distance between point and line
+ */
+template<class t_vec, class t_real = typename t_vec::value_type>
+t_real dist_pt_line(const t_vec& pt,
+	const t_vec& linePt1, const t_vec& linePt2,
+	bool bLineIsFinite=true)
+requires is_vec<t_vec>
+{
+	const std::size_t dim = linePt1.size();
+	
+	const t_vec lineDir = linePt2 - linePt1;
+	const auto [nearestPt, dist] = project_line<t_vec>(pt, linePt1, lineDir, false);
+	
+	
+	// get point component with max. difference
+	t_real diff = -1.;
+	std::size_t compidx = 0;
+	for(std::size_t i=0; i<dim; ++i)
+	{
+		t_real newdiff = std::abs(linePt2[i] - linePt1[i]);
+		if(newdiff > diff)
+		{
+			diff = newdiff;
+			compidx = i;
+		}
+	}
+	
+	
+	t_real t = (nearestPt[compidx]-linePt1[compidx]) / (linePt2[compidx]-linePt1[compidx]);
+	if(bLineIsFinite && t>=t_real{0} && t<=t_real{1})
+	{
+		// projection is on line -> use distance between point and projection
+		return dist;
+	}
+	else
+	{
+		// projection is not on line -> use distance between point and closest line end point
+		if(std::abs(t-t_real{0}) < std::abs(t-t_real{1}))
+			return norm<t_vec>(linePt1 - pt);
+			else
+				return norm<t_vec>(linePt2 - pt);
+	}
 }
 
 
