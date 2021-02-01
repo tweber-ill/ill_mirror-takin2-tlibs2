@@ -4,6 +4,10 @@
  * @date 2017-2020
  * @license GPLv3, see 'LICENSE' file
  * @desc The present version was forked on 8-Nov-2018 from my privately developed "magtools" project (https://github.com/t-weber/magtools).
+ *
+ * References:
+ *   - http://doc.qt.io/qt-5/qopenglwidget.html#details
+ *   - http://code.qt.io/cgit/qt/qtbase.git/tree/examples/opengl/threadedqopenglwidget
  */
 
 #ifndef __MAG_GL_PLOT_H__

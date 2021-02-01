@@ -486,6 +486,9 @@ void tl2_vec_mean(const struct tl2_list* veclist, const struct tl2_list* problis
 
 /**
  * covariance matrix
+ * @see e.g.: http://www.itl.nist.gov/div898/handbook/pmc/section5/pmc541.htm
+ * @see e.g.: (Arfken 2013) p. 1142
+ * @see e.g.: (Arens 2015), p. 795
  */
 void tl2_covariance(const struct tl2_list* veclist, const struct tl2_list* problist,
 	double* COV, double* mean, int N)
@@ -550,6 +553,7 @@ void tl2_mat_trafo(const double* M, const double* T, double* RES, int N, int ort
 
 /**
  * resolution matrix
+ * @see e.g.: (Arens 2015), p. 795.
  */
 void tl2_reso(const struct tl2_list* veclist, const struct tl2_list* problist,
 	double* COV, double* RESO)
