@@ -4266,12 +4266,6 @@ requires is_vec<t_vec>
 	}
 
 	rad = std::sqrt(rad);
-
-/*	std::cout << "rad = " << rad << std::endl;
-	std::cout << "center = ";
-	for(std::size_t i=0; i<center.size(); ++i)
-		std::cout << center[i] << ", ";
-	std::cout << std::endl;*/
 	return std::make_tuple(center, rad);
 }
 
@@ -4548,6 +4542,7 @@ requires is_complex<typename t_mat_cplx::value_type> && is_mat<t_mat_cplx> && is
 
 /**
  * SU(2) generators, pauli matrices sig_i = 2*S_i
+ * see e.g. (Arfken 2013), p. 110
  */
 template<class t_mat>
 const t_mat& su2_matrix(std::size_t which)
@@ -4571,6 +4566,7 @@ requires is_mat<t_mat> && is_complex<typename t_mat::value_type>
 
 /**
  * get a vector of pauli matrices
+ * see e.g. (Arfken 2013), p. 110
  */
 template<class t_vec>
 t_vec su2_matrices(bool bIncludeUnit = false)
@@ -4755,6 +4751,9 @@ requires is_mat<t_mat> && is_vec<t_vec>
  * Rs: atomic positions
  * Q: scattering vector G for nuclear scattering or G+k for magnetic scattering with propagation vector k
  * fs: optional magnetic form factors
+ *
+ * @desc see: (Shirane 2002), p. 40, equ. 2.81 for magnetic structure factor
+ * @desc see: (Shirane 2002), p. 25, equ. 2.26 for nuclear structure factor
  */
 template<class t_vec, class T = t_vec, template<class...> class t_cont = std::vector,
 	class t_cplx = std::complex<double>>
@@ -5903,16 +5902,16 @@ requires is_mat<t_mat>
  * least-squares regression, solves for parameters v
  *
  * exact equation:
- * 		X v = y
+ * 	X v = y
  *
  * approx. equation:
- * 		X^t X v = X^t y
- * 		v = inv(X^t X) X^t y
+ * 	X^t X v = X^t y
+ * 	v = inv(X^t X) X^t y
  *
- * 		(QR)^t QR v = X^t y
- * 		R^tQ^t QR v = X^t y
- * 		R^tR v = X^t y
- * 		v = inv(R^tR) X^t y
+ * 	(QR)^t QR v = X^t y
+ * 	R^tQ^t QR v = X^t y
+ * 	R^tR v = X^t y
+ * 	v = inv(R^tR) X^t y
  */
 template<class t_vec, class t_mat = mat<typename t_vec::value_type, std::vector>>
 std::tuple<t_vec, bool> leastsq(const t_vec& x, const t_vec& y, std::size_t order,
@@ -6322,7 +6321,7 @@ requires is_quat<t_quat> && is_mat<t_mat>
 			}
 
 			if(iComp>=2)
-				throw std::runtime_error("rot3_to_quat: Invalid condition.");
+				throw std::runtime_error("rot3_to_quat: invalid condition.");
 		}
 	}
 
