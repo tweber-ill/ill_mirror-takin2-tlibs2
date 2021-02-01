@@ -3154,7 +3154,8 @@ t_vec proj_vec(t_vec vec1, t_vec vec2)
 
 /**
  * Gram-Schmidt orthogonalisation of basis vectors
- * @see e.g.: https://en.wikipedia.org/wiki/Gram%E2%80%93Schmidt_process
+ * @see e.g. https://en.wikipedia.org/wiki/Gram%E2%80%93Schmidt_process
+ * @see e.g. (Arens 2015), p. 744
  */
 template<typename t_vec /*= ublas::vector<double>*/,
 	typename T /*= typename t_vec::value_type*/ >
@@ -5084,6 +5085,7 @@ public:
 
 	/**
 	 * "Lotfußpunkt"
+	 * @see https://de.wikipedia.org/wiki/Lot_(Mathematik)
 	 */
 	t_vec GetDroppedPerp(const t_vec& vecP, T *pdDist=0) const
 	{
@@ -7802,6 +7804,7 @@ t_mat make_metric_cov(const t_lst<t_vec>& lstVecsCov)
 
 /**
  * inner product using metric matGCov
+ * @see e.g.: (Arens 2015), p. 808
  */
 template<class t_mat = ublas::matrix<double>,
 	class t_vec = ublas::vector<double>>

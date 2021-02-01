@@ -2616,6 +2616,8 @@ requires is_vec<t_vec>
 /**
  * find orthonormal substitute basis for vector space (Gram-Schmidt algo)
  * remove orthogonal projections to all other base vectors: |i'> = (1 - sum_{j<i} |j><j|) |i>
+ * @see e.g. https://en.wikipedia.org/wiki/Gram%E2%80%93Schmidt_process
+ * @see e.g. (Arens 2015), p. 744
  */
 template<class t_vec,
 	template<class...> class t_cont_in = std::initializer_list,
@@ -2640,7 +2642,6 @@ requires is_vec<t_vec>
 
 	return newsys;
 }
-
 
 
 /**
