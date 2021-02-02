@@ -628,7 +628,8 @@ vec3 get_campos()
 
 
 /**
- * phong lighting model, see: https://en.wikipedia.org/wiki/Phong_reflection_model
+ * phong lighting model
+ * @see: https://en.wikipedia.org/wiki/Phong_reflection_model
  */
 float lighting(vec4 objVert, vec4 objNorm)
 {

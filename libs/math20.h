@@ -3310,7 +3310,7 @@ requires is_vec<t_vec> && is_mat<t_mat>
 	using t_real = typename t_vec::value_type;
 	constexpr t_real eps = 1e-6;
 
-	// rotation axis
+	// get rotation axis from cross product
 	t_vec axis = cross<t_vec>({ vec1, vec2 });
 	const t_real lenaxis = norm<t_vec>(axis);
 
@@ -3321,6 +3321,7 @@ requires is_vec<t_vec> && is_mat<t_mat>
 	// collinear vectors?
 	if(equals<t_real>(angle, 0, eps))
 		return unit<t_mat>(vec1.size());
+
 	// antiparallel vectors?
 	if(equals<t_real>(std::abs(angle), pi<t_real>, eps))
 	{
@@ -3339,7 +3340,6 @@ requires is_vec<t_vec> && is_mat<t_mat>
 	t_mat mat = rotation<t_mat, t_vec>(axis, angle, true);
 	return mat;
 }
-
 
 
 /**
@@ -6415,6 +6415,7 @@ requires tl2::is_vec<t_vec>
 namespace tl2 {
 // ----------------------------------------------------------------------------
 // Quaternions
+// @see (Kuipers 2002) for infos
 // ----------------------------------------------------------------------------
 
 template<class t_quat> t_quat unit_quat() requires is_quat<t_quat>
@@ -6480,7 +6481,7 @@ requires is_quat<t_quat> && is_mat<t_mat>
 	{
 		for(std::size_t iComp=0; iComp<3; ++iComp)	// find largest vector component
 		{
-			const std::size_t iM = iComp;			// major comp.
+			const std::size_t iM = iComp;		// major comp.
 			const std::size_t im1 = (iComp+1)%3;	// minor comp. 1
 			const std::size_t im2 = (iComp+2)%3;	// minor comp. 2
 
@@ -6663,13 +6664,16 @@ requires is_quat<t_quat> && is_vec<t_vec>
 		return rotation_quat<t_quat, t_vec, T>(vecPerp, pi<T>);
 	}
 
-	t_vec veccross = cross<t_vec>({vec0, vec1});
+	// rotation axis from cross product
+	t_vec vecaxis = cross<t_vec>({vec0, vec1});
 
 	T dC = inner<t_vec>(vec0, vec1);
-	T dS = norm<t_vec>(veccross);
+	T dS = norm<t_vec>(vecaxis);
+
+	// rotation angle
 	T dAngle = std::atan2(dS, dC);
 
-	return rotation_quat<t_vec, t_quat>(veccross, dAngle);
+	return rotation_quat<t_vec, t_quat>(vecaxis, dAngle);
 }
 
 
@@ -6703,7 +6707,7 @@ requires is_quat<t_quat>
 
 /**
  * XYZ euler angles -> quat
- * @see (Kuipers 2002), pp. 166, 167
+ * @see (Kuipers 2002), pp. 166-167
  */
 template<class t_quat>
 t_quat euler_to_quat_xyz(
@@ -6720,7 +6724,7 @@ requires is_quat<t_quat>
 
 /**
  * ZXZ euler angles -> quat
- * @see (Kuipers 2002), pp. 166, 167
+ * @see (Kuipers 2002), pp. 166-167
  */
 template<class t_quat>
 t_quat euler_to_quat_zxz(
