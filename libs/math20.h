@@ -5847,6 +5847,14 @@ requires tl2::is_mat<t_mat>
 }
 
 
+/**
+ * pseudoinverse M+ of a matrix
+ * @see https://de.wikipedia.org/wiki/Pseudoinverse#Berechnung
+ * @see (Arens 2015), pp. 788-792
+ *
+ * M  = U D (V*)^h
+ * M+ = V D+ (U*)^h
+ */
 template<class t_mat>
 std::tuple<t_mat, bool> pseudoinv(const t_mat& mat)
 requires tl2::is_mat<t_mat>
@@ -5868,6 +5876,7 @@ requires tl2::is_mat<t_mat>
 	auto diag = tl2::diag<t_mat>(vals);
 	return std::make_tuple(tl2::prod<t_mat>(V, tl2::prod(diag, Uh)), ok);
 }
+
 
 
 // ----------------------------------------------------------------------------
@@ -6069,7 +6078,7 @@ requires is_mat<t_mat>
  * exact equation:
  * 	X v = y
  *
- * approx. equation:
+ * approx. equation (normal equation):
  * 	X^t X v = X^t y
  * 	v = inv(X^t X) X^t y
  *

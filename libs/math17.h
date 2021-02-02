@@ -6808,7 +6808,7 @@ bool qr(const ublas::matrix<T>& M,
 
 
 /**
- * solve M^T M x = M^T v for x
+ * solve normal equation M^T M x = M^T v for x
  * @see e.g. (Arens 2015), p. 793
  */
 template<typename T = double>
