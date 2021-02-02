@@ -1503,7 +1503,7 @@ requires is_scalar<T>
 {
 	t1 = mod_pos<T>(t1, tomod);
 	t2 = mod_pos<T>(t2, tomod);
-	
+
 	return std::abs(t1 - t2) <= eps;
 }
 
@@ -2473,11 +2473,11 @@ t_real dist_pt_line(const t_vec& pt,
 requires is_vec<t_vec>
 {
 	const std::size_t dim = linePt1.size();
-	
+
 	const t_vec lineDir = linePt2 - linePt1;
 	const auto [nearestPt, dist] = project_line<t_vec>(pt, linePt1, lineDir, false);
-	
-	
+
+
 	// get point component with max. difference
 	t_real diff = -1.;
 	std::size_t compidx = 0;
@@ -2490,8 +2490,8 @@ requires is_vec<t_vec>
 			compidx = i;
 		}
 	}
-	
-	
+
+
 	t_real t = (nearestPt[compidx]-linePt1[compidx]) / (linePt2[compidx]-linePt1[compidx]);
 	if(bLineIsFinite && t>=t_real{0} && t<=t_real{1})
 	{
