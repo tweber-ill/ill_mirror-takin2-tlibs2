@@ -6201,15 +6201,19 @@ requires is_vec<t_vec>
 	}
 	if(vec0.size() == 3)
 	{
-		t_real dC = inner(vec0, vec1);
+		// cross product gives sine
 		t_vec veccross = cross<t_vec>({vec0, vec1});
 		t_real dS = norm(veccross);
 
+		// dot product gives cosine
+		t_real dC = inner(vec0, vec1);
 		t_real dAngle = std::atan2(dS, dC);
 
 		// get signed angle
 		if(pvec_norm)
 		{
+			// see if the cross product points along the direction
+			// of the given normal
 			if(inner(veccross, *pvec_norm) < t_real{0})
 				dAngle = -dAngle;
 		}
