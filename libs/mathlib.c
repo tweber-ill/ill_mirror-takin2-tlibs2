@@ -177,6 +177,7 @@ void tl2_submat(const double* M, int N, double* M_new, int iremove, int jremove)
 
 /**
  * calculates the determinant
+ * @see e.g.: (Merziger 2006), p. 185
  */
 double tl2_determinant(const double* M, int N)
 {

@@ -2183,6 +2183,10 @@ matrix_type column_matrix(const container_type& vecs)
 // ----------------------------------------------------------------------------
 
 
+/**
+ * determinant
+ * @see e.g.: (Merziger 2006), p. 185
+ */
 template<class t_mat/*=ublas::matrix<double>*/>
 typename t_mat::value_type determinant(const t_mat& mat)
 {
@@ -5231,6 +5235,7 @@ public:
 
 	/**
 	 * distance to a point
+	 * @see e.g.: (Arens 2015), p. 711
 	 */
 	T GetDist(const t_vec& vecPt) const
 	{
@@ -5250,6 +5255,7 @@ public:
 
 	/**
 	 * distance to line l1
+	 * @see e.g.: (Arens 2015), p. 711
 	 */
 	T GetDist(const Line<T>& l1) const
 	{
