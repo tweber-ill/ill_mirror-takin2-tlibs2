@@ -1843,9 +1843,10 @@ bool is_centering_matrix(const t_mat& mat)
 
 
 /**
- * Euler-Rodrigues formula
+ * Rodrigues' formula
  * @see e.g.: https://en.wikipedia.org/wiki/Rodrigues%27_rotation_formula
  * @see (Arens 2015), p. 718 and p. 816
+ * @see (Merziger 2006), p. 208
  */
 template<class mat_type = ublas::matrix<double>,
 	class vec_type = ublas::vector<typename mat_type::value_type>,

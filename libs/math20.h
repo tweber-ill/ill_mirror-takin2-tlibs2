@@ -3246,16 +3246,17 @@ requires is_basic_vec<t_vec> && is_mat<t_mat>
 		mat = unit<t_mat>(mat.size1(), mat.size2());
 
 	mat(0,0) = 0; 		mat(0,1) = -vec[2]; 	mat(0,2) = vec[1];
-	mat(1,0) = vec[2]; 	mat(1,1) = 0; 			mat(1,2) = -vec[0];
-	mat(2,0) = -vec[1]; mat(2,1) = vec[0]; 		mat(2,2) = 0;
+	mat(1,0) = vec[2]; 	mat(1,1) = 0; 		mat(1,2) = -vec[0];
+	mat(2,0) = -vec[1]; 	mat(2,1) = vec[0]; 	mat(2,2) = 0;
 
 	return mat;
 }
 
 
 /**
- * SO(3) matrix to rotate around an axis
+ * SO(3) matrix to rotate around an axis (Rodrigues' formula)
  * @see (Arens 2015), p. 718 and p. 816
+ * @see (Merziger 2006), p. 208
  * @see https://en.wikipedia.org/wiki/Rodrigues%27_rotation_formula
  */
 template<class t_mat, class t_vec>
