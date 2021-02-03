@@ -6023,6 +6023,8 @@ requires is_mat<t_mat> && is_vec<t_vec>
 
 /**
  * inverted matrix
+ * @see https://en.wikipedia.org/wiki/Invertible_matrix#In_relation_to_its_adjugate
+ * @see https://en.wikipedia.org/wiki/Adjugate_matrix
  */
 template<class t_mat>
 std::tuple<t_mat, bool> inv(const t_mat& mat)

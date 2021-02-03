@@ -3594,6 +3594,7 @@ t_quat unit_quat()
 	return t_quat(1, 0,0,0);
 }
 
+
 /**
  * calculates the quaternion inverse
  * @see e.g.: (Bronstein 2008), Ch. 4
@@ -3604,6 +3605,7 @@ t_quat quat_inverse(const t_quat& q)
 	t_quat qc = math::conj(q);
 	return qc / (q*qc);
 }
+
 
 /**
  * quaternion product
