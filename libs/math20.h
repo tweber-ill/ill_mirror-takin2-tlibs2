@@ -1799,7 +1799,6 @@ requires is_vec<t_vec> && is_mat<t_mat>
 }
 
 
-
 /**
  * tests for zero vector
  */
@@ -5327,8 +5326,8 @@ requires tl2::is_mat<t_mat>
 
 /**
  * LU decomposition of a matrix, mat = P * L * U
- * @see http://www.math.utah.edu/software/lapack/lapack-d/dgetrf.html
  * @returns [ok, P, L, U]
+ * @see http://www.math.utah.edu/software/lapack/lapack-d/dgetrf.html
  */
 template<class t_mat, template<class...> class t_vec = std::vector>
 std::tuple<bool, t_mat, t_mat, t_mat> lu(const t_mat& mat)
@@ -5422,8 +5421,8 @@ requires tl2::is_mat<t_mat>
 
 /**
  * QR decomposition of a matrix, mat = QR
- * @see http://www.math.utah.edu/software/lapack/lapack-d/dgeqrf.html
  * @returns [ok, Q, R]
+ * @see http://www.math.utah.edu/software/lapack/lapack-d/dgeqrf.html
  */
 template<class t_mat, class t_vec = std::vector<typename t_mat::value_type>>
 std::tuple<bool, t_mat, t_mat> qr(const t_mat& mat)

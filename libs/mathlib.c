@@ -232,6 +232,7 @@ double tl2_determinant(const double* M, int N)
 
 /**
  * inverted matrix
+ * @see https://en.wikipedia.org/wiki/Invertible_matrix#In_relation_to_its_adjugate
  */
 int tl2_inverse(const double* M, double* I, int N)
 {
