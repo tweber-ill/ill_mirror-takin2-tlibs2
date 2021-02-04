@@ -2348,7 +2348,6 @@ typename t_mat::value_type determinant(const t_mat& mat)
 		ublas::permutation_matrix<typename t_mat::size_type> perm(N);
 
 		ublas::lu_factorize(lu, perm);
-
 		t_mat L = ublas::triangular_adaptor<t_mat, ublas::unit_lower>(lu);
 		t_mat U = ublas::triangular_adaptor<t_mat, ublas::upper>(lu);
 
