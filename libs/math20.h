@@ -2,11 +2,14 @@
  * tlibs2
  * (container-agnostic) math library
  * @author Tobias Weber <tobias.weber@tum.de>, <tweber@ill.fr>
- * @date 2017-2020
+ * @date 2017-2021
  * @license GPLv3, see 'LICENSE' file
+ *
  * @desc The present version was forked on 8-Nov-2018 from my privately developed "magtools" project (https://github.com/t-weber/magtools).
  * @desc Additional functions forked on 7-Nov-2018 from my privately and TUM-PhD-developed "tlibs" project (https://github.com/t-weber/tlibs).
  * @desc Forked on 1-Feb-2021 from my privately developed "geo" project (https://github.com/t-weber/geo).
+ *
+ * @desc for the references, see the 'LITERATURE' file
  */
 
 #ifndef __TLIBS2_CXX20_MATH_ALGOS_H__
@@ -6851,7 +6854,7 @@ requires is_quat<t_quat>
  *
  * @see e.g.: http://www.itl.nist.gov/div898/handbook/pmc/section5/pmc541.htm
  * @see e.g.: (Arfken 2013) p. 1142
- * @see e.g.: (Arens 2015), p. 795
+ * @see e.g.: (Arens 2015), p. 795 and p. 1372
  */
 template<class t_mat, class t_vec, class T=typename t_vec::value_type>
 std::tuple<t_mat, t_mat>
