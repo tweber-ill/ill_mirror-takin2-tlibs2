@@ -500,7 +500,7 @@ std::complex<T> faddeeva(const std::complex<T>& z)
 
 /**
  * Voigt profile
- * @see e.g.: https://en.wikipedia.org/wiki/Voigt_profile
+ * @see https://en.wikipedia.org/wiki/Voigt_profile
  */
 template<class T=double>
 T voigt_model(T x, T x0, T sigma, T gamma, T amp, T offs)
@@ -2332,7 +2332,7 @@ requires is_basic_mat<t_mat> && is_basic_vec<t_vec>
 
 /**
  * lower index using metric
- * @see e.g.: (Arens 2015), p. 808
+ * @see (Arens 2015), p. 808
  */
 template<class t_mat, class t_vec>
 t_vec lower_index(const t_mat& metric_co, const t_vec& vec_contra)
@@ -2351,7 +2351,7 @@ requires is_basic_mat<t_mat> && is_basic_vec<t_vec>
 
 /**
  * raise index using metric
- * @see e.g.: (Arens 2015), p. 808
+ * @see (Arens 2015), p. 808
  */
 template<class t_mat, class t_vec>
 t_vec raise_index(const t_mat& metric_contra, const t_vec& vec_co)
@@ -2370,7 +2370,7 @@ requires is_basic_mat<t_mat> && is_basic_vec<t_vec>
 
 /**
  * inner product using metric
- * @see e.g.: (Arens 2015), p. 808
+ * @see (Arens 2015), p. 808
  */
 template<class t_mat, class t_vec>
 typename t_vec::value_type inner(const t_mat& metric_co, const t_vec& vec1_contra, const t_vec& vec2_contra)
@@ -2383,7 +2383,7 @@ requires is_basic_mat<t_mat> && is_basic_vec<t_vec>
 
 /**
  * 2-norm using metric
- * @see e.g.: (Arens 2015), p. 808
+ * @see (Arens 2015), p. 808
  */
 template<class t_mat, class t_vec>
 typename t_vec::value_type norm(const t_mat& metric_co, const t_vec& vec_contra)
@@ -2402,7 +2402,7 @@ requires is_basic_vec<t_vec>
 /**
  * matrix to project onto vector: P = |v><v|
  * from: |x'> = <v|x> * |v> = |v><v|x> = |v><v| * |x>
- * @see e.g.: (Arens 2015), p. 814 for the projection tensor
+ * @see (Arens 2015), p. 814 for the projection tensor
  */
 template<class t_mat, class t_vec>
 t_mat projector(const t_vec& vec, bool bIsNormalised = true)
@@ -2427,7 +2427,7 @@ requires is_vec<t_vec> && is_mat<t_mat>
  * proj_op = |vec2><vec2¦/ len(vec2)^2,  len(vec2) = sqrt(<vec2|vec2>)
  * proj = proj_op * vec1 = |vec2> * <vec2|vec1> / <vec2|vec2>
  *
- * @see e.g.: (Arens 2015), p. 814 for the projection tensor
+ * @see (Arens 2015), p. 814 for the projection tensor
  */
 template<class t_vec>
 t_vec project(const t_vec& vec, const t_vec& vecProj, bool bIsNormalised = true)
@@ -2489,7 +2489,7 @@ requires is_vec<t_vec>
 
 /**
  * distance between point and line
- * @see e.g.: (Arens 2015), p. 711
+ * @see (Arens 2015), p. 711
  */
 template<class t_vec, class t_real = typename t_vec::value_type>
 t_real dist_pt_line(const t_vec& pt,
@@ -2538,7 +2538,7 @@ requires is_vec<t_vec>
  * matrix to project onto orthogonal complement (plane perpendicular to vector): P = 1-|v><v|
  * from completeness relation: 1 = sum_i |v_i><v_i| = |x><x| + |y><y| + |z><z|
  *
- * @see e.g.: (Arens 2015), p. 814 for the projection tensor
+ * @see (Arens 2015), p. 814 for the projection tensor
  */
 template<class t_mat, class t_vec>
 t_mat ortho_projector(const t_vec& vec, bool bIsNormalised = true)
@@ -2554,7 +2554,7 @@ requires is_vec<t_vec> && is_mat<t_mat>
  * matrix to mirror on plane perpendicular to vector: P = 1 - 2*|v><v|
  * subtracts twice its projection onto the plane normal from the vector
  *
- * @see e.g.: (Arens 2015), p. 710
+ * @see (Arens 2015), p. 710
  */
 template<class t_mat, class t_vec>
 t_mat ortho_mirror_op(const t_vec& vec, bool bIsNormalised = true)
@@ -2630,7 +2630,7 @@ requires is_vec<t_vec>
 /**
  * mirror a vector on a plane perpendicular to vector vecNorm with distance d
  * vecNorm has to be normalised and plane in Hessian form: x*vecNorm = d
- * @see e.g.: (Arens 2015), p. 710
+ * @see (Arens 2015), p. 710
  */
 template<class t_vec>
 t_vec ortho_mirror_plane(const t_vec& vec,
@@ -2648,8 +2648,8 @@ requires is_vec<t_vec>
  * find orthonormal substitute basis for vector space (Gram-Schmidt algo)
  * remove orthogonal projections to all other base vectors: |i'> = (1 - sum_{j<i} |j><j|) |i>
  *
- * @see e.g. https://en.wikipedia.org/wiki/Gram%E2%80%93Schmidt_process
- * @see e.g. (Arens 2015), p. 744
+ * @see https://en.wikipedia.org/wiki/Gram%E2%80%93Schmidt_process
+ * @see (Arens 2015), p. 744
  */
 template<class t_vec,
 	template<class...> class t_cont_in = std::initializer_list,
@@ -2729,7 +2729,7 @@ requires is_basic_vec<t_vec>
 
 /**
  * determinant from a square matrix stored in a vector container
- * @see e.g.: (Merziger 2006), p. 185
+ * @see (Merziger 2006), p. 185
  */
 template<class t_vec>
 typename t_vec::value_type flat_det(const t_vec& mat, std::size_t iN)
@@ -3076,7 +3076,7 @@ requires is_vec<t_vec> && is_mat<t_mat>
  * (dir2 | -dir1)^T * (|org1> - |org2>)  =  (dir2 | -dir1)^T * (dir2 | -dir1) * |lam2 lam1>
  * |lam2 lam1> = ((dir2 | -dir1)^T * (dir2 | -dir1))^(-1) * (dir2 | -dir1)^T * (|org1> - |org2>)
  *
- * @see e.g.: https://en.wikipedia.org/wiki/Line%E2%80%93line_intersection
+ * @see https://en.wikipedia.org/wiki/Line%E2%80%93line_intersection
  */
 template<class t_vec>
 std::tuple<t_vec, t_vec, bool, typename t_vec::value_type, typename t_vec::value_type, typename t_vec::value_type>
@@ -4008,7 +4008,7 @@ requires is_vec<t_vec>
 /**
  * create the faces of a cube
  * @returns [vertices, face vertex indices, face normals, face uvs]
- * @see e.g.: https://en.wikipedia.org/wiki/Platonic_solid
+ * @see https://en.wikipedia.org/wiki/Platonic_solid
  */
 template<class t_vec, template<class...> class t_cont = std::vector>
 std::tuple<t_cont<t_vec>, t_cont<t_cont<std::size_t>>, t_cont<t_vec>, t_cont<t_cont<t_vec>>>
@@ -4065,7 +4065,7 @@ requires is_vec<t_vec>
 /**
  * create the faces of a icosahedron
  * @returns [vertices, face vertex indices, face normals, face uvs]
- * @see e.g.: https://en.wikipedia.org/wiki/Platonic_solid
+ * @see https://en.wikipedia.org/wiki/Platonic_solid
  */
 template<class t_vec, template<class...> class t_cont = std::vector>
 std::tuple<t_cont<t_vec>, t_cont<t_cont<std::size_t>>, t_cont<t_vec>, t_cont<t_cont<t_vec>>>
@@ -4126,7 +4126,7 @@ requires is_vec<t_vec>
 /**
  * create the faces of a dodecahedron
  * @returns [vertices, face vertex indices, face normals, face uvs]
- * @see e.g.: https://en.wikipedia.org/wiki/Platonic_solid
+ * @see https://en.wikipedia.org/wiki/Platonic_solid
  */
 template<class t_vec, template<class...> class t_cont = std::vector>
 std::tuple<t_cont<t_vec>, t_cont<t_cont<std::size_t>>, t_cont<t_vec>, t_cont<t_cont<t_vec>>>
@@ -4193,7 +4193,7 @@ requires is_vec<t_vec>
 /**
  * create the faces of a octahedron
  * @returns [vertices, face vertex indices, face normals, face uvs]
- * @see e.g.: https://en.wikipedia.org/wiki/Platonic_solid
+ * @see https://en.wikipedia.org/wiki/Platonic_solid
  */
 template<class t_vec, template<class...> class t_cont = std::vector>
 std::tuple<t_cont<t_vec>, t_cont<t_cont<std::size_t>>, t_cont<t_vec>, t_cont<t_cont<t_vec>>>
@@ -4255,7 +4255,7 @@ requires is_vec<t_vec>
 /**
  * create the faces of a tetrahedron
  * @returns [vertices, face vertex indices, face normals, face uvs]
- * @see e.g.: https://en.wikipedia.org/wiki/Platonic_solid
+ * @see https://en.wikipedia.org/wiki/Platonic_solid
  */
 template<class t_vec, template<class...> class t_cont = std::vector>
 std::tuple<t_cont<t_vec>, t_cont<t_cont<std::size_t>>, t_cont<t_vec>, t_cont<t_cont<t_vec>>>
@@ -4474,7 +4474,7 @@ requires is_vec<t_vec>
 /**
  * project a homogeneous vector to screen coordinates
  * @returns [vecPersp, vecScreen]
- * @see e.g. https://www.khronos.org/registry/OpenGL-Refpages/gl2.1/xhtml/gluProject.xml
+ * @see https://www.khronos.org/registry/OpenGL-Refpages/gl2.1/xhtml/gluProject.xml
  */
 template<class t_mat, class t_vec>
 std::tuple<t_vec, t_vec> hom_to_screen_coords(const t_vec& vec4,
@@ -4501,7 +4501,7 @@ requires is_vec<t_vec> && is_mat<t_mat>
 /**
  * calculate world coordinates from screen coordinates
  * (vary zPlane to get the points of the z-line at constant (x,y))
- * @see e.g.: https://www.khronos.org/registry/OpenGL-Refpages/gl2.1/xhtml/gluUnProject.xml
+ * @see https://www.khronos.org/registry/OpenGL-Refpages/gl2.1/xhtml/gluUnProject.xml
  */
 template<class t_mat, class t_vec>
 t_vec hom_from_screen_coords(
@@ -4527,7 +4527,7 @@ requires is_vec<t_vec> && is_mat<t_mat>
 /**
  * calculate line from screen coordinates
  * @returns [pos, dir]
- * @see e.g.: https://www.khronos.org/registry/OpenGL-Refpages/gl2.1/xhtml/gluUnProject.xml
+ * @see https://www.khronos.org/registry/OpenGL-Refpages/gl2.1/xhtml/gluUnProject.xml
  */
 template<class t_mat, class t_vec>
 std::tuple<t_vec, t_vec> hom_line_from_screen_coords(
@@ -4739,7 +4739,7 @@ requires is_complex<typename t_mat_cplx::value_type> && is_mat<t_mat_cplx> && is
 
 /**
  * SU(2) generators, pauli matrices sig_i = 2*S_i
- * @see e.g.: (Arfken 2013), p. 110
+ * @see (Arfken 2013), p. 110
  */
 template<class t_mat>
 const t_mat& su2_matrix(std::size_t which)
@@ -4763,7 +4763,7 @@ requires is_mat<t_mat> && is_complex<typename t_mat::value_type>
 
 /**
  * get a vector of pauli matrices
- * @see e.g.: (Arfken 2013), p. 110
+ * @see (Arfken 2013), p. 110
  */
 template<class t_vec>
 t_vec su2_matrices(bool bIncludeUnit = false)
@@ -5931,7 +5931,7 @@ requires tl2::is_mat<t_mat>
 
 /**
  * system of ODEs with constant coefficients C
- * @see e.g. (Arens 2015), pp. 1049-1051
+ * @see (Arens 2015), pp. 1049-1051
  *
  * f'(x) = C f(x) and f(x0) = f0
  * => f(x) = f0 * exp(C(x-x0)) = sum_i norm_i * evec_i * exp(eval_i * (x-x0))
@@ -6121,8 +6121,8 @@ requires is_mat<t_mat>
 
 /**
  * least-squares regression, solves for parameters v
- * @see e.g.: https://en.wikipedia.org/wiki/Least_squares
- * @see e.g. (Arens 2015), p. 793
+ * @see https://en.wikipedia.org/wiki/Least_squares
+ * @see (Arens 2015), p. 793
  *
  * exact equation:
  * 	X v = y
@@ -6816,7 +6816,7 @@ requires is_quat<t_quat>
 
 
 /**
- * @see e.g.: (Bronstein 2008), formula (4.217)
+ * @see (Bronstein 2008), formula (4.217)
  */
 template<class t_quat>
 t_quat stereo_proj(const t_quat& quat)
@@ -6828,7 +6828,7 @@ requires is_quat<t_quat>
 
 
 /**
- * @see e.g.: (Bronstein 2008), formula (4.217)
+ * @see (Bronstein 2008), formula (4.217)
  */
 template<class t_quat>
 t_quat stereo_proj_inv(const t_quat& quat)
@@ -6852,9 +6852,9 @@ requires is_quat<t_quat>
  * covariance: C_ij = cov(X_i, X_j) = < (X_i - <X_i>) * (X_j - <X_j>) >
  * correlation: K_ij = C_ij / (sigma_i sigma_j)
  *
- * @see e.g.: http://www.itl.nist.gov/div898/handbook/pmc/section5/pmc541.htm
- * @see e.g.: (Arfken 2013) pp. 1142-1144
- * @see e.g.: (Arens 2015), p. 795 and p. 1372
+ * @see http://www.itl.nist.gov/div898/handbook/pmc/section5/pmc541.htm
+ * @see (Arfken 2013) pp. 1142-1144
+ * @see (Arens 2015), p. 795 and p. 1372
  */
 template<class t_mat, class t_vec, class T=typename t_vec::value_type>
 std::tuple<t_mat, t_mat>
@@ -6925,7 +6925,7 @@ requires is_mat<t_mat> && is_vec<t_vec>
  * calculates chi^2 distance of a function model to data points
  * chi^2 = sum( (y_i - f(x_i))^2 / sigma_i^2 )
  *
- * @see e.g.: (Arfken 2013), p. 1170
+ * @see (Arfken 2013), p. 1170
  */
 template<class T, class t_func, class t_iter_dat=T*>
 T chi2(const t_func& func, std::size_t N,
@@ -6953,7 +6953,7 @@ T chi2(const t_func& func, std::size_t N,
 /**
  * chi^2 for vector types
  *
- * @see e.g.: (Merziger 2006), p. 185
+ * @see (Merziger 2006), p. 185
  */
 template<class t_vec, class t_func>
 typename t_vec::value_type chi2(const t_func& func,
@@ -6968,7 +6968,7 @@ requires is_vec<t_vec>
 
 /**
  * chi^2 which doesn't use an x value, but an index instead: y[idx] - func(idx)
- * @see e.g.: (Arfken 2013), p. 1170
+ * @see (Arfken 2013), p. 1170
  */
 template<class T, class t_func, class t_iter_dat=T*>
 T chi2_idx(const t_func& func, std::size_t N, const t_iter_dat y, const t_iter_dat dy)
@@ -6994,7 +6994,7 @@ T chi2_idx(const t_func& func, std::size_t N, const t_iter_dat y, const t_iter_d
 
 /**
  * direct chi^2 calculation with a model array instead of a model function
- * @see e.g.: (Arfken 2013), p. 1170
+ * @see (Arfken 2013), p. 1170
  */
 template<class T, class t_iter_dat=T*>
 T chi2_direct(std::size_t N, const t_iter_dat func_y, const t_iter_dat y, const t_iter_dat dy)
@@ -7021,7 +7021,7 @@ T chi2_direct(std::size_t N, const t_iter_dat func_y, const t_iter_dat y, const 
 
 /**
  * multi-dimensional chi^2 function
- * @see e.g.: (Arfken 2013), p. 1170
+ * @see (Arfken 2013), p. 1170
  */
 template<class T, class T_dat, class t_func, template<class...> class t_vec=std::vector>
 T chi2_nd(const t_func& func,
