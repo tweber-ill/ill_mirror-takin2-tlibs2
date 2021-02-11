@@ -4890,7 +4890,7 @@ template<class t_real> using t_hypergeo_dist = Distr<math::hypergeometric_distri
  * correlation: K_ij = C_ij / (sigma_i sigma_j)
  *
  * @see e.g.: http://www.itl.nist.gov/div898/handbook/pmc/section5/pmc541.htm
- * @see e.g.: (Arfken 2013) p. 1142
+ * @see e.g.: (Arfken 2013) p. 1142-1144
  */
 template<typename T=double>
 std::tuple<ublas::matrix<T>, ublas::matrix<T>>

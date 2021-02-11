@@ -6853,7 +6853,7 @@ requires is_quat<t_quat>
  * correlation: K_ij = C_ij / (sigma_i sigma_j)
  *
  * @see e.g.: http://www.itl.nist.gov/div898/handbook/pmc/section5/pmc541.htm
- * @see e.g.: (Arfken 2013) p. 1142
+ * @see e.g.: (Arfken 2013) pp. 1142-1144
  * @see e.g.: (Arens 2015), p. 795 and p. 1372
  */
 template<class t_mat, class t_vec, class T=typename t_vec::value_type>
