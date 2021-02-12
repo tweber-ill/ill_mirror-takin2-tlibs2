@@ -89,13 +89,14 @@ inline std::size_t get_file_size(const std::basic_string<typename fs::path::valu
 /**
  * loads a file into a string
  */
-std::tuple<bool, std::string> load_file(const std::string& file)
+template<class t_str = std::string>
+std::tuple<bool, t_str> load_file(const t_str& file)
 {
 	std::ifstream ifstr(file);
 	if(!ifstr)
 		return std::make_tuple(false, "");
 
-	std::string contents;
+	t_str contents;
 	auto filesize = get_file_size(ifstr);
 
 	contents.resize(filesize);
