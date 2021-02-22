@@ -139,6 +139,7 @@ struct GlRenderObj
 
 	std::shared_ptr<QOpenGLBuffer> m_pvertexbuf;
 	std::shared_ptr<QOpenGLBuffer> m_pnormalsbuf;
+	std::shared_ptr<QOpenGLBuffer> m_puvbuf;
 	std::shared_ptr<QOpenGLBuffer> m_pcolorbuf;
 
 	std::vector<t_vec3_gl> m_vertices, m_triangles;
@@ -180,8 +181,9 @@ extern qgl_funcs* get_gl_functions(QOpenGLWidget *pGLWidget);
 // create a triangle-based object
 extern bool create_triangle_object(QOpenGLWidget* pGLWidget, GlRenderObj& obj,
 	const std::vector<t_vec3_gl>& verts, const std::vector<t_vec3_gl>& triagverts,
-	const std::vector<t_vec3_gl>& norms, const t_vec_gl& color, bool bUseVertsAsNorm,
-	GLint attrVertex, GLint attrVertexNormal, GLint attrVertexColor);
+	const std::vector<t_vec3_gl>& norms, const std::vector<t_vec3_gl>& uvs, const t_vec_gl& color,
+	bool bUseVertsAsNorm, GLint attrVertex, GLint attrVertexNormal, GLint attrVertexColor, 
+	GLint attrTextureCoords=-1);
 
 // create a line-based object
 extern bool create_line_object(QOpenGLWidget* pGLWidget, GlRenderObj& obj,

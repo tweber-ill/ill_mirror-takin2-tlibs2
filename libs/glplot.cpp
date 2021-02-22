@@ -79,8 +79,9 @@ qgl_funcs* get_gl_functions(QOpenGLWidget *pGLWidget)
  */
 bool create_triangle_object(QOpenGLWidget* pGLWidget, GlRenderObj& obj,
 	const std::vector<t_vec3_gl>& verts, const std::vector<t_vec3_gl>& triagverts,
-	const std::vector<t_vec3_gl>& norms, const t_vec_gl& color, bool bUseVertsAsNorm,
-	GLint attrVertex, GLint attrVertexNormal, GLint attrVertexColor)
+	const std::vector<t_vec3_gl>& norms, const std::vector<t_vec3_gl>& uvs,
+	const t_vec_gl& color, bool bUseVertsAsNorm,
+	GLint attrVertex, GLint attrVertexNormal, GLint attrVertexColor, GLint attrTextureCoords)
 {
 	// TODO: move context to calling thread
 	pGLWidget->makeCurrent();
@@ -115,7 +116,9 @@ bool create_triangle_object(QOpenGLWidget* pGLWidget, GlRenderObj& obj,
 	pGl->glGenVertexArrays(1, &obj.m_vertexarr);
 	pGl->glBindVertexArray(obj.m_vertexarr);
 
-	{	// vertices
+	// vertices
+	if(attrVertex >= 0)
+	{
 		obj.m_pvertexbuf = std::make_shared<QOpenGLBuffer>(QOpenGLBuffer::VertexBuffer);
 
 		if(!obj.m_pvertexbuf->create())
@@ -124,24 +127,28 @@ bool create_triangle_object(QOpenGLWidget* pGLWidget, GlRenderObj& obj,
 			std::cerr << "Cannot bind vertex buffer." << std::endl;
 		BOOST_SCOPE_EXIT(&obj) { obj.m_pvertexbuf->release(); } BOOST_SCOPE_EXIT_END
 
-		auto vecVerts = to_float_array(triagverts, 1,3, false);
+		auto vecVerts = to_float_array(triagverts, 1, 3, false);
 		obj.m_pvertexbuf->allocate(vecVerts.data(), vecVerts.size()*sizeof(typename decltype(vecVerts)::value_type));
 		pGl->glVertexAttribPointer(attrVertex, 3, GL_FLOAT, 0, 0, nullptr);
 	}
 
-	{	// normals
+	// normals
+	if(attrVertexNormal >= 0)
+	{
 		obj.m_pnormalsbuf = std::make_shared<QOpenGLBuffer>(QOpenGLBuffer::VertexBuffer);
 
 		obj.m_pnormalsbuf->create();
 		obj.m_pnormalsbuf->bind();
 		BOOST_SCOPE_EXIT(&obj) { obj.m_pnormalsbuf->release(); } BOOST_SCOPE_EXIT_END
 
-		auto vecNorms = bUseVertsAsNorm ? to_float_array(triagverts, 1,3, true) : to_float_array(norms, 3,3, false);
+		auto vecNorms = bUseVertsAsNorm ? to_float_array(triagverts, 1, 3, true) : to_float_array(norms, 3, 3, false);
 		obj.m_pnormalsbuf->allocate(vecNorms.data(), vecNorms.size()*sizeof(typename decltype(vecNorms)::value_type));
 		pGl->glVertexAttribPointer(attrVertexNormal, 3, GL_FLOAT, 0, 0, nullptr);
 	}
 
-	{	// colours
+	// colours
+	if(attrVertexColor >= 0)
+	{
 		obj.m_pcolorbuf = std::make_shared<QOpenGLBuffer>(QOpenGLBuffer::VertexBuffer);
 
 		obj.m_pcolorbuf->create();
@@ -158,6 +165,20 @@ bool create_triangle_object(QOpenGLWidget* pGLWidget, GlRenderObj& obj,
 
 		obj.m_pcolorbuf->allocate(vecCols.data(), vecCols.size()*sizeof(typename decltype(vecCols)::value_type));
 		pGl->glVertexAttribPointer(attrVertexColor, 4, GL_FLOAT, 0, 0, nullptr);
+	}
+
+	// texture uv coordinates
+	if(attrTextureCoords >= 0)
+	{
+		obj.m_puvbuf = std::make_shared<QOpenGLBuffer>(QOpenGLBuffer::VertexBuffer);
+
+		obj.m_puvbuf->create();
+		obj.m_puvbuf->bind();
+		BOOST_SCOPE_EXIT(&obj) { obj.m_puvbuf->release(); } BOOST_SCOPE_EXIT_END
+
+		auto vecUVs = to_float_array(uvs, 1, 2);
+		obj.m_puvbuf->allocate(vecUVs.data(), vecUVs.size()*sizeof(typename decltype(vecUVs)::value_type));
+		pGl->glVertexAttribPointer(attrTextureCoords, 2, GL_FLOAT, 0, 0, nullptr);
 	}
 
 
@@ -342,8 +363,8 @@ GlPlotObj GlPlot_impl::CreateTriangleObject(const std::vector<t_vec3_gl>& verts,
 	const t_vec_gl& color, bool bUseVertsAsNorm)
 {
 	GlPlotObj obj;
-	create_triangle_object(m_pPlot, obj, verts, triagverts, norms, color, 
-		bUseVertsAsNorm, m_attrVertex, m_attrVertexNorm, m_attrVertexCol);
+	create_triangle_object(m_pPlot, obj, verts, triagverts, norms, {}, color, 
+		bUseVertsAsNorm, m_attrVertex, m_attrVertexNorm, m_attrVertexCol, -1);
 	return obj;
 }
 
