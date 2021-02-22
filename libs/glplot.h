@@ -120,18 +120,20 @@ class GlPlot;
 
 // ----------------------------------------------------------------------------
 // plotter objects
-enum class GlPlotObjType
+enum class GlRenderObjType
 {
 	TRIANGLES,
 	LINES
 };
 
 
-struct GlPlotObj
-{
-	// does not define a geometry itself, but just links to another object
-	std::optional<std::size_t> linkedObj;
+#ifndef GlPlotObjType
+	#define GlPlotObjType GlRenderObjType
+#endif
 
+
+struct GlRenderObj
+{
 	GlPlotObjType m_type = GlPlotObjType::TRIANGLES;
 	GLuint m_vertexarr = 0;
 
@@ -141,6 +143,13 @@ struct GlPlotObj
 
 	std::vector<t_vec3_gl> m_vertices, m_triangles;
 	t_vec_gl m_color = tl2::create<t_vec_gl>({ 0., 0., 1., 1. });	// rgba
+};
+
+
+struct GlPlotObj : public GlRenderObj
+{
+	// does not define a geometry itself, but just links to another object
+	std::optional<std::size_t> linkedObj;
 
 	t_mat_gl m_mat = tl2::unit<t_mat_gl>();
 
@@ -169,12 +178,13 @@ extern void set_gl_format(bool bCore=true, int iMajorVer=3, int iMinorVer=3, int
 extern qgl_funcs* get_gl_functions(QOpenGLWidget *pGLWidget);
 
 // create a triangle-based object
-extern GlPlotObj create_triangle_object(QOpenGLWidget* pGLWidget,
+extern bool create_triangle_object(QOpenGLWidget* pGLWidget, GlRenderObj& obj,
 	const std::vector<t_vec3_gl>& verts, const std::vector<t_vec3_gl>& triagverts,
 	const std::vector<t_vec3_gl>& norms, const t_vec_gl& color, bool bUseVertsAsNorm,
 	GLint attrVertex, GLint attrVertexNormal, GLint attrVertexColor);
 
-extern GlPlotObj create_line_object(QOpenGLWidget* pGLWidget, 
+// create a line-based object
+extern bool create_line_object(QOpenGLWidget* pGLWidget, GlRenderObj& obj,
 	const std::vector<t_vec3_gl>& verts, const t_vec_gl& color,
 	GLint attrVertex, GLint attrVertexColor);
 // ----------------------------------------------------------------------------

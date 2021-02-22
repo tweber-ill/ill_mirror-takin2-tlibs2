@@ -77,7 +77,7 @@ qgl_funcs* get_gl_functions(QOpenGLWidget *pGLWidget)
 /**
  * creates a triangle-based 3d object
  */
-GlPlotObj create_triangle_object(QOpenGLWidget* pGLWidget, 
+bool create_triangle_object(QOpenGLWidget* pGLWidget, GlRenderObj& obj,
 	const std::vector<t_vec3_gl>& verts, const std::vector<t_vec3_gl>& triagverts,
 	const std::vector<t_vec3_gl>& norms, const t_vec_gl& color, bool bUseVertsAsNorm,
 	GLint attrVertex, GLint attrVertexNormal, GLint attrVertexColor)
@@ -87,9 +87,9 @@ GlPlotObj create_triangle_object(QOpenGLWidget* pGLWidget,
 	BOOST_SCOPE_EXIT(pGLWidget) { pGLWidget->doneCurrent(); } BOOST_SCOPE_EXIT_END
 
 	qgl_funcs* pGl = get_gl_functions(pGLWidget);
+	if(!pGl) return false;
 
-	GlPlotObj obj;
-	obj.m_type = GlPlotObjType::TRIANGLES;
+	obj.m_type = GlRenderObjType::TRIANGLES;
 	obj.m_color = color;
 
 	// flatten vertex array into raw float array
@@ -165,14 +165,14 @@ GlPlotObj create_triangle_object(QOpenGLWidget* pGLWidget,
 	obj.m_triangles = std::move(triagverts);
 	LOGGLERR(pGl)
 
-	return obj;
+	return true;
 }
 
 
 /**
  * creates a line-based 3d object
  */
-GlPlotObj create_line_object(QOpenGLWidget* pGLWidget, 
+bool create_line_object(QOpenGLWidget* pGLWidget, GlRenderObj& obj,
 	const std::vector<t_vec3_gl>& verts, const t_vec_gl& color,
 	GLint attrVertex, GLint attrVertexColor)
 {
@@ -181,12 +181,12 @@ GlPlotObj create_line_object(QOpenGLWidget* pGLWidget,
 	BOOST_SCOPE_EXIT(pGLWidget) { pGLWidget->doneCurrent(); } BOOST_SCOPE_EXIT_END
 
 	qgl_funcs* pGl = get_gl_functions(pGLWidget);
+	if(!pGl) return false;
 
 	//GLint attrVertex = m_attrVertex;
 	//GLint attrVertexColor = m_attrVertexCol;
 
-	GlPlotObj obj;
-	obj.m_type = GlPlotObjType::LINES;
+	obj.m_type = GlRenderObjType::LINES;
 	obj.m_color = color;
 
 	// flatten vertex array into raw float array
@@ -243,7 +243,7 @@ GlPlotObj create_line_object(QOpenGLWidget* pGLWidget,
 	obj.m_vertices = std::move(verts);
 	LOGGLERR(pGl)
 
-	return obj;
+	return true;
 }
 // ----------------------------------------------------------------------------
 
@@ -341,14 +341,18 @@ GlPlotObj GlPlot_impl::CreateTriangleObject(const std::vector<t_vec3_gl>& verts,
 	const std::vector<t_vec3_gl>& triagverts, const std::vector<t_vec3_gl>& norms,
 	const t_vec_gl& color, bool bUseVertsAsNorm)
 {
-	return create_triangle_object(m_pPlot, verts, triagverts, norms, color, 
+	GlPlotObj obj;
+	create_triangle_object(m_pPlot, obj, verts, triagverts, norms, color, 
 		bUseVertsAsNorm, m_attrVertex, m_attrVertexNorm, m_attrVertexCol);
+	return obj;
 }
 
 
 GlPlotObj GlPlot_impl::CreateLineObject(const std::vector<t_vec3_gl>& verts, const t_vec_gl& color)
 {
-	return create_line_object(m_pPlot, verts, color, m_attrVertex, m_attrVertexCol);
+	GlPlotObj obj;
+	create_line_object(m_pPlot, obj, verts, color, m_attrVertex, m_attrVertexCol);
+	return obj;
 }
 
 
