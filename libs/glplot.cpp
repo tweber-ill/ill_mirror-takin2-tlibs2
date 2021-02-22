@@ -26,9 +26,13 @@
 namespace algo = boost::algorithm;
 
 
-#pragma message("Compiling for GL version " BOOST_PP_STRINGIZE(_GL_MAJ_VER) "." BOOST_PP_STRINGIZE(_GL_MIN_VER) " and GLSL version " BOOST_PP_STRINGIZE(_GLSL_MAJ_VER) BOOST_PP_STRINGIZE(_GLSL_MIN_VER) "0.")
+#pragma message("Compiling for GL version " BOOST_PP_STRINGIZE(_GL_MAJ_VER) "." BOOST_PP_STRINGIZE(_GL_MIN_VER) \
+	" and GLSL version " BOOST_PP_STRINGIZE(_GLSL_MAJ_VER) BOOST_PP_STRINGIZE(_GLSL_MIN_VER) "0.")
 
 
+
+// ----------------------------------------------------------------------------
+// functions
 // ----------------------------------------------------------------------------
 void set_gl_format(bool bCore, int iMajorVer, int iMinorVer, int iSamples)
 {
@@ -49,71 +53,19 @@ void set_gl_format(bool bCore, int iMajorVer, int iMinorVer, int iSamples)
 
 	QSurfaceFormat::setDefaultFormat(surf);
 }
-// ----------------------------------------------------------------------------
 
 
-
-
-// ----------------------------------------------------------------------------
-// GL plot implementation
-
-GlPlot_impl::GlPlot_impl(GlPlot *pPlot) : m_pPlot{pPlot}
+/**
+ * return gl functions for current version
+ */
+qgl_funcs* get_gl_functions(QOpenGLWidget *pGLWidget)
 {
-	if constexpr(m_usetimer)
-	{
-		connect(&m_timer, &QTimer::timeout,
-			this, static_cast<void (GlPlot_impl::*)()>(&GlPlot_impl::tick));
-		m_timer.start(std::chrono::milliseconds(1000 / 60));
-	}
-
-	UpdateCam();
-}
-
-
-GlPlot_impl::~GlPlot_impl()
-{
-	if constexpr(m_usetimer)
-		m_timer.stop();
-
-	// get context
-	if constexpr(m_isthreaded)
-	{
-		m_pPlot->context()->moveToThread(qGuiApp->thread());
-	}
-
-	m_pPlot->makeCurrent();
-	BOOST_SCOPE_EXIT(m_pPlot) { m_pPlot->doneCurrent(); } BOOST_SCOPE_EXIT_END
-
-	// delete gl objects within current gl context
-	m_pShaders.reset();
-
-	qgl_funcs* pGl = GetGlFunctions();
-	for(auto &obj : m_objs)
-	{
-		obj.m_pvertexbuf.reset();
-		obj.m_pnormalsbuf.reset();
-		obj.m_pcolorbuf.reset();
-		if(pGl) pGl->glDeleteVertexArrays(1, &obj.m_vertexarr);
-	}
-
-	m_objs.clear();
-	LOGGLERR(pGl)
-}
-
-
-void GlPlot_impl::startedThread() { }
-void GlPlot_impl::stoppedThread() { }
-
-
-qgl_funcs* GlPlot_impl::GetGlFunctions(QOpenGLWidget *pWidget)
-{
-	if(!pWidget) pWidget = (QOpenGLWidget*)m_pPlot;
 	qgl_funcs *pGl = nullptr;
 
 	if constexpr(std::is_same_v<qgl_funcs, QOpenGLFunctions>)
-		pGl = (qgl_funcs*)pWidget->context()->functions();
+		pGl = (qgl_funcs*)pGLWidget->context()->functions();
 	else
-		pGl = (qgl_funcs*)pWidget->context()->versionFunctions<qgl_funcs>();
+		pGl = (qgl_funcs*)pGLWidget->context()->versionFunctions<qgl_funcs>();
 
 	if(!pGl)
 		std::cerr << "No suitable GL interface found." << std::endl;
@@ -122,55 +74,19 @@ qgl_funcs* GlPlot_impl::GetGlFunctions(QOpenGLWidget *pWidget)
 }
 
 
-QPointF GlPlot_impl::GlToScreenCoords(const t_vec_gl& vec4, bool *pVisible)
-{
-	auto [ vecPersp, vec ] =
-		tl2::hom_to_screen_coords<t_mat_gl, t_vec_gl>
-			(vec4, m_matCam, m_matPerspective, m_matViewport, true);
-
-	// position not visible -> return a point outside the viewport
-	if(vecPersp[2] > 1.)
-	{
-		if(pVisible) *pVisible = false;
-		return QPointF(-1*m_iScreenDims[0], -1*m_iScreenDims[1]);
-	}
-
-	if(pVisible) *pVisible = true;
-	return QPointF(vec[0], vec[1]);
-}
-
-
-t_mat_gl GlPlot_impl::GetArrowMatrix(const t_vec_gl& vecTo, t_real_gl postscale, const t_vec_gl& vecPostTrans,
-	const t_vec_gl& vecFrom, t_real_gl prescale, const t_vec_gl& vecPreTrans)
-{
-	t_mat_gl mat = tl2::unit<t_mat_gl>(4);
-
-	mat *= tl2::hom_translation<t_mat_gl>(vecPreTrans[0], vecPreTrans[1], vecPreTrans[2]);
-	mat *= tl2::hom_scaling<t_mat_gl>(prescale, prescale, prescale);
-
-	mat *= tl2::rotation<t_mat_gl, t_vec_gl>(vecFrom, vecTo);
-
-	mat *= tl2::hom_scaling<t_mat_gl>(postscale, postscale, postscale);
-	mat *= tl2::hom_translation<t_mat_gl>(vecPostTrans[0], vecPostTrans[1], vecPostTrans[2]);
-
-	return mat;
-}
-
-
-GlPlotObj GlPlot_impl::CreateTriangleObject(const std::vector<t_vec3_gl>& verts,
-	const std::vector<t_vec3_gl>& triagverts, const std::vector<t_vec3_gl>& norms,
-	const t_vec_gl& color, bool bUseVertsAsNorm)
+/**
+ * creates a triangle-based 3d object
+ */
+GlPlotObj create_triangle_object(QOpenGLWidget* pGLWidget, 
+	const std::vector<t_vec3_gl>& verts, const std::vector<t_vec3_gl>& triagverts,
+	const std::vector<t_vec3_gl>& norms, const t_vec_gl& color, bool bUseVertsAsNorm,
+	GLint attrVertex, GLint attrVertexNormal, GLint attrVertexColor)
 {
 	// TODO: move context to calling thread
-	m_pPlot->makeCurrent();
-	BOOST_SCOPE_EXIT(m_pPlot) { m_pPlot->doneCurrent(); } BOOST_SCOPE_EXIT_END
+	pGLWidget->makeCurrent();
+	BOOST_SCOPE_EXIT(pGLWidget) { pGLWidget->doneCurrent(); } BOOST_SCOPE_EXIT_END
 
-
-	qgl_funcs* pGl = GetGlFunctions();
-
-	GLint attrVertex = m_attrVertex;
-	GLint attrVertexNormal = m_attrVertexNorm;
-	GLint attrVertexColor = m_attrVertexCol;
+	qgl_funcs* pGl = get_gl_functions(pGLWidget);
 
 	GlPlotObj obj;
 	obj.m_type = GlPlotObjType::TRIANGLES;
@@ -225,7 +141,7 @@ GlPlotObj GlPlot_impl::CreateTriangleObject(const std::vector<t_vec3_gl>& verts,
 		pGl->glVertexAttribPointer(attrVertexNormal, 3, GL_FLOAT, 0, 0, nullptr);
 	}
 
-	{	// colors
+	{	// colours
 		obj.m_pcolorbuf = std::make_shared<QOpenGLBuffer>(QOpenGLBuffer::VertexBuffer);
 
 		obj.m_pcolorbuf->create();
@@ -253,16 +169,21 @@ GlPlotObj GlPlot_impl::CreateTriangleObject(const std::vector<t_vec3_gl>& verts,
 }
 
 
-GlPlotObj GlPlot_impl::CreateLineObject(const std::vector<t_vec3_gl>& verts, const t_vec_gl& color)
+/**
+ * creates a line-based 3d object
+ */
+GlPlotObj create_line_object(QOpenGLWidget* pGLWidget, 
+	const std::vector<t_vec3_gl>& verts, const t_vec_gl& color,
+	GLint attrVertex, GLint attrVertexColor)
 {
 	// TODO: move context to calling thread
-	m_pPlot->makeCurrent();
-	BOOST_SCOPE_EXIT(m_pPlot) { m_pPlot->doneCurrent(); } BOOST_SCOPE_EXIT_END
+	pGLWidget->makeCurrent();
+	BOOST_SCOPE_EXIT(pGLWidget) { pGLWidget->doneCurrent(); } BOOST_SCOPE_EXIT_END
 
+	qgl_funcs* pGl = get_gl_functions(pGLWidget);
 
-	qgl_funcs* pGl = GetGlFunctions();
-	GLint attrVertex = m_attrVertex;
-	GLint attrVertexColor = m_attrVertexCol;
+	//GLint attrVertex = m_attrVertex;
+	//GLint attrVertexColor = m_attrVertexCol;
 
 	GlPlotObj obj;
 	obj.m_type = GlPlotObjType::LINES;
@@ -299,7 +220,7 @@ GlPlotObj GlPlot_impl::CreateLineObject(const std::vector<t_vec3_gl>& verts, con
 		pGl->glVertexAttribPointer(attrVertex, 3, GL_FLOAT, 0, 0, nullptr);
 	}
 
-	{	// colors
+	{	// colours
 		obj.m_pcolorbuf = std::make_shared<QOpenGLBuffer>(QOpenGLBuffer::VertexBuffer);
 
 		obj.m_pcolorbuf->create();
@@ -323,6 +244,111 @@ GlPlotObj GlPlot_impl::CreateLineObject(const std::vector<t_vec3_gl>& verts, con
 	LOGGLERR(pGl)
 
 	return obj;
+}
+// ----------------------------------------------------------------------------
+
+
+
+
+// ----------------------------------------------------------------------------
+// GL plot implementation
+// ----------------------------------------------------------------------------
+
+GlPlot_impl::GlPlot_impl(GlPlot *pPlot) : m_pPlot{pPlot}
+{
+	if constexpr(m_usetimer)
+	{
+		connect(&m_timer, &QTimer::timeout,
+			this, static_cast<void (GlPlot_impl::*)()>(&GlPlot_impl::tick));
+		m_timer.start(std::chrono::milliseconds(1000 / 60));
+	}
+
+	UpdateCam();
+}
+
+
+GlPlot_impl::~GlPlot_impl()
+{
+	if constexpr(m_usetimer)
+		m_timer.stop();
+
+	// get context
+	if constexpr(m_isthreaded)
+	{
+		m_pPlot->context()->moveToThread(qGuiApp->thread());
+	}
+
+	m_pPlot->makeCurrent();
+	BOOST_SCOPE_EXIT(m_pPlot) { m_pPlot->doneCurrent(); } BOOST_SCOPE_EXIT_END
+
+	// delete gl objects within current gl context
+	m_pShaders.reset();
+
+	qgl_funcs* pGl = GetGlFunctions();
+	for(auto &obj : m_objs)
+	{
+		obj.m_pvertexbuf.reset();
+		obj.m_pnormalsbuf.reset();
+		obj.m_pcolorbuf.reset();
+		if(pGl) pGl->glDeleteVertexArrays(1, &obj.m_vertexarr);
+	}
+
+	m_objs.clear();
+	LOGGLERR(pGl)
+}
+
+
+void GlPlot_impl::startedThread() { }
+void GlPlot_impl::stoppedThread() { }
+
+
+QPointF GlPlot_impl::GlToScreenCoords(const t_vec_gl& vec4, bool *pVisible)
+{
+	auto [ vecPersp, vec ] =
+		tl2::hom_to_screen_coords<t_mat_gl, t_vec_gl>
+			(vec4, m_matCam, m_matPerspective, m_matViewport, true);
+
+	// position not visible -> return a point outside the viewport
+	if(vecPersp[2] > 1.)
+	{
+		if(pVisible) *pVisible = false;
+		return QPointF(-1*m_iScreenDims[0], -1*m_iScreenDims[1]);
+	}
+
+	if(pVisible) *pVisible = true;
+	return QPointF(vec[0], vec[1]);
+}
+
+
+t_mat_gl GlPlot_impl::GetArrowMatrix(const t_vec_gl& vecTo, t_real_gl postscale, const t_vec_gl& vecPostTrans,
+	const t_vec_gl& vecFrom, t_real_gl prescale, const t_vec_gl& vecPreTrans)
+{
+	t_mat_gl mat = tl2::unit<t_mat_gl>(4);
+
+	mat *= tl2::hom_translation<t_mat_gl>(vecPreTrans[0], vecPreTrans[1], vecPreTrans[2]);
+	mat *= tl2::hom_scaling<t_mat_gl>(prescale, prescale, prescale);
+
+	mat *= tl2::rotation<t_mat_gl, t_vec_gl>(vecFrom, vecTo);
+
+	mat *= tl2::hom_scaling<t_mat_gl>(postscale, postscale, postscale);
+	mat *= tl2::hom_translation<t_mat_gl>(vecPostTrans[0], vecPostTrans[1], vecPostTrans[2]);
+
+	return mat;
+}
+
+
+GlPlotObj GlPlot_impl::CreateTriangleObject(const std::vector<t_vec3_gl>& verts,
+	const std::vector<t_vec3_gl>& triagverts, const std::vector<t_vec3_gl>& norms,
+	const t_vec_gl& color, bool bUseVertsAsNorm)
+{
+	return create_triangle_object(m_pPlot, verts, triagverts, norms, color, 
+		bUseVertsAsNorm, m_attrVertex, m_attrVertexNorm, m_attrVertexCol);
+}
+
+
+GlPlotObj GlPlot_impl::CreateLineObject(const std::vector<t_vec3_gl>& verts, const t_vec_gl& color)
+{
+	return create_line_object(m_pPlot, verts, color, m_attrVertex, m_attrVertexCol);
 }
 
 
@@ -1423,6 +1449,7 @@ void GlPlot_impl::paintGL()
 
 // ----------------------------------------------------------------------------
 // GLPlot wrapper class
+// ----------------------------------------------------------------------------
 
 GlPlot::GlPlot(QWidget *pParent) : QOpenGLWidget(pParent),
 	m_impl(std::make_unique<GlPlot_impl>(this)),

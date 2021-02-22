@@ -75,6 +75,7 @@
 	#endif
 #endif
 
+
 // GL functions include
 #define _GL_INC_IMPL(MAJ, MIN, SUFF) <QtGui/QOpenGLFunctions_ ## MAJ ## _ ## MIN ## SUFF>
 #define _GL_INC(MAJ, MIN, SUFF) _GL_INC_IMPL(MAJ, MIN, SUFF)
@@ -85,14 +86,14 @@
 #define _GL_FUNC(MAJ, MIN, SUFF) _GL_FUNC_IMPL(MAJ, MIN, SUFF)
 using qgl_funcs = _GL_FUNC(_GL_MAJ_VER, _GL_MIN_VER, _GL_SUFFIX);
 
-// GL surface format
-extern void set_gl_format(bool bCore=true, int iMajorVer=3, int iMinorVer=3, int iSamples=8);
 
 // GL error codes: https://www.khronos.org/opengl/wiki/OpenGL_Error
 #define LOGGLERR(pGl) { while(true) {	\
 		auto err = pGl->glGetError();	\
 		if(err == GL_NO_ERROR) break;	\
-		std::cerr << "gl error in " << __func__ << " line " << std::dec <<  __LINE__  << ": " << std::hex << err << std::endl; \
+		std::cerr << "gl error in " << __func__ \
+			<< " line " << std::dec <<  __LINE__  \
+			<< ": " << std::hex << err << std::endl; \
 	}}
 // ----------------------------------------------------------------------------
 
@@ -105,7 +106,11 @@ using t_real_gl = GLfloat;
 using t_vec3_gl = tl2::qvecN_adapter<int, 3, t_real_gl, QVector3D>;
 using t_vec_gl = tl2::qvecN_adapter<int, 4, t_real_gl, QVector4D>;
 using t_mat_gl = tl2::qmatNN_adapter<int, 4, 4, t_real_gl, QMatrix4x4>;
+// ----------------------------------------------------------------------------
 
+
+
+// ----------------------------------------------------------------------------
 // forward declarations
 class GlPlot_impl;
 class GlPlot;
@@ -153,6 +158,26 @@ struct GlPlotObj
 };
 // ----------------------------------------------------------------------------
 
+
+
+// ----------------------------------------------------------------------------
+// functions
+// GL surface format
+extern void set_gl_format(bool bCore=true, int iMajorVer=3, int iMinorVer=3, int iSamples=8);
+
+// get gl functions
+extern qgl_funcs* get_gl_functions(QOpenGLWidget *pGLWidget);
+
+// create a triangle-based object
+extern GlPlotObj create_triangle_object(QOpenGLWidget* pGLWidget,
+	const std::vector<t_vec3_gl>& verts, const std::vector<t_vec3_gl>& triagverts,
+	const std::vector<t_vec3_gl>& norms, const t_vec_gl& color, bool bUseVertsAsNorm,
+	GLint attrVertex, GLint attrVertexNormal, GLint attrVertexColor);
+
+extern GlPlotObj create_line_object(QOpenGLWidget* pGLWidget, 
+	const std::vector<t_vec3_gl>& verts, const t_vec_gl& color,
+	GLint attrVertex, GLint attrVertexColor);
+// ----------------------------------------------------------------------------
 
 
 
@@ -224,7 +249,7 @@ protected:
 
 
 protected:
-	qgl_funcs* GetGlFunctions(QOpenGLWidget *pWidget = nullptr);
+	qgl_funcs* GetGlFunctions() { return get_gl_functions((QOpenGLWidget*)m_pPlot); }
 
 	void UpdateCam();
 	void RequestPlotUpdate();
