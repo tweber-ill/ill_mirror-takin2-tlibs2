@@ -142,7 +142,8 @@ struct GlRenderObj
 	std::shared_ptr<QOpenGLBuffer> m_puvbuf;
 	std::shared_ptr<QOpenGLBuffer> m_pcolorbuf;
 
-	std::vector<t_vec3_gl> m_vertices, m_triangles;
+	std::vector<t_vec3_gl> m_vertices, m_triangles, m_uvs;
+
 	t_vec_gl m_color = tl2::create<t_vec_gl>({ 0., 0., 1., 1. });	// rgba
 };
 

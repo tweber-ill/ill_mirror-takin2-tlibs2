@@ -184,6 +184,7 @@ bool create_triangle_object(QOpenGLWidget* pGLWidget, GlRenderObj& obj,
 
 	obj.m_vertices = std::move(verts);
 	obj.m_triangles = std::move(triagverts);
+	obj.m_uvs = std::move(uvs);
 	LOGGLERR(pGl)
 
 	return true;
@@ -1120,6 +1121,13 @@ void GlPlot_impl::UpdatePicker()
 				linkedObj->m_triangles[startidx+2]
 			} };
 
+			/*std::vector<t_vec3_gl> polyuv{ { 
+				linkedObj->m_uvs[startidx+0], 
+				linkedObj->m_uvs[startidx+1], 
+				linkedObj->m_uvs[startidx+2]
+			} };*/
+
+
 			// coordTrafoInv only keeps 3d objects from locally distorting
 			auto [vecInters, bInters, lamInters] =
 				tl2::intersect_line_poly<t_vec3_gl, t_mat_gl>(org3, dir3, poly, matTrafo);
@@ -1145,6 +1153,10 @@ void GlPlot_impl::UpdatePicker()
 						objInters = curObj;
 					}
 				}
+
+				// intersection point in uv coordinates:
+				//auto uv = tl2::poly_uv<t_mat_gl, t_vec3_gl>
+				//	(poly[0], poly[1], poly[2], polyuv[0], polyuv[1], polyuv[2], vecInters);
 			}
 		}
 	}
