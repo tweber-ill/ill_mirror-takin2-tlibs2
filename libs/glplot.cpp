@@ -833,19 +833,6 @@ void main()
 	AddCoordinateCross(-m_CoordMax, m_CoordMax);
 
 
-	// options
-	pGl->glCullFace(GL_BACK);
-	pGl->glEnable(GL_CULL_FACE);
-
-	pGl->glEnable(GL_BLEND);
-	pGl->glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-	pGl->glEnable(GL_MULTISAMPLE);
-	pGl->glEnable(GL_LINE_SMOOTH);
-	pGl->glEnable(GL_POLYGON_SMOOTH);
-	pGl->glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
-	pGl->glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST);
-
 	m_bInitialised = true;
 
 	// check threading compatibility
@@ -1099,7 +1086,7 @@ void GlPlot_impl::UpdatePicker()
 			continue;
 
 
-		t_mat_gl matTrafo = (*coordTrafo) * obj.m_mat * coordTrafoInv;
+		const t_mat_gl& matTrafo = (*coordTrafo) * obj.m_mat * coordTrafoInv;
 
 		// scaling factor, TODO: maximum factor for non-uniform scaling
 		auto scale = std::cbrt(std::abs(tl2::det(matTrafo)));
@@ -1250,6 +1237,20 @@ void GlPlot_impl::DoPaintGL(qgl_funcs *pGl)
 {
 	if(!pGl)
 		return;
+
+	// options
+	pGl->glCullFace(GL_BACK);
+	pGl->glFrontFace(GL_CCW);
+	pGl->glEnable(GL_CULL_FACE);
+
+	pGl->glDisable(GL_BLEND);
+	//pGl->glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+	pGl->glEnable(GL_MULTISAMPLE);
+	pGl->glEnable(GL_LINE_SMOOTH);
+	pGl->glEnable(GL_POLYGON_SMOOTH);
+	pGl->glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
+	pGl->glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST);
 
 	// clear
 	pGl->glClearColor(1., 1., 1., 1.);

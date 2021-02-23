@@ -1879,12 +1879,14 @@ template<class t_mat>
 t_mat trans(const t_mat& mat)
 requires is_mat<t_mat>
 {
+	using t_idxtype = decltype(mat.size1());
+
 	t_mat mat2;
 	if constexpr(is_dyn_mat<t_mat>)
 		mat2 = t_mat(mat.size2(), mat.size1());
 
-	for(std::size_t i=0; i<mat.size1(); ++i)
-		for(std::size_t j=0; j<mat.size2(); ++j)
+	for(t_idxtype i=0; i<mat.size1(); ++i)
+		for(t_idxtype j=0; j<mat.size2(); ++j)
 			mat2(j,i) = mat(i,j);
 
 	return mat2;
@@ -3731,9 +3733,9 @@ requires is_vec<t_vec>
 	t_cont<t_vec> vertices =
 	{
 		create<t_vec>({ -l, -l, 0. }),	// vertex 0
-		create<t_vec>({ +l, -l, 0. }),	// vertex 1
+		create<t_vec>({ -l, +l, 0. }),	// vertex 1
 		create<t_vec>({ +l, +l, 0. }),	// vertex 2
-		create<t_vec>({ -l, +l, 0. }),	// vertex 3
+		create<t_vec>({ +l, -l, 0. }),	// vertex 3
 	};
 
 	// rotate according to given normal
@@ -3746,9 +3748,9 @@ requires is_vec<t_vec>
 	t_cont<t_cont<t_vec>> uvs =
 	{{
 		create<t_vec>({0,0}),
-		create<t_vec>({1,0}),
-		create<t_vec>({1,1}),
 		create<t_vec>({0,1}),
+		create<t_vec>({1,1}),
+		create<t_vec>({1,0}),
 	}};
 
 	return std::make_tuple(vertices, faces, normals, uvs);
