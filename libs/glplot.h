@@ -112,7 +112,7 @@ using t_mat_gl = tl2::qmatNN_adapter<int, 4, 4, t_real_gl, QMatrix4x4>;
 
 // ----------------------------------------------------------------------------
 // forward declarations
-class GlPlot_impl;
+class GlPlotRenderer;
 class GlPlot;
 // ----------------------------------------------------------------------------
 
@@ -196,9 +196,9 @@ extern bool create_line_object(QOpenGLWidget* pGLWidget, GlRenderObj& obj,
 
 // ----------------------------------------------------------------------------
 /**
- * GL plotter implementation
+ * GL plot renderer
  */
-class GlPlot_impl : public QObject
+class GlPlotRenderer : public QObject
 { Q_OBJECT
 private:
 	QMutex m_mutexObj{QMutex::Recursive};
@@ -277,8 +277,8 @@ protected:
 
 
 public:
-	GlPlot_impl(GlPlot *pPlot = nullptr);
-	virtual ~GlPlot_impl();
+	GlPlotRenderer(GlPlot *pPlot = nullptr);
+	virtual ~GlPlotRenderer();
 
 	static constexpr bool m_isthreaded = false;
 	static constexpr bool m_usetimer = false;
@@ -382,8 +382,8 @@ public:
 	GlPlot(QWidget *pParent = nullptr);
 	virtual ~GlPlot();
 
-	GlPlot_impl* GetImpl() { return m_impl.get(); }
-	static constexpr bool m_isthreaded = GlPlot_impl::m_isthreaded;
+	GlPlotRenderer* GetRenderer() { return m_renderer.get(); }
+	static constexpr bool m_isthreaded = GlPlotRenderer::m_isthreaded;
 
 protected:
 	virtual void paintEvent(QPaintEvent*) override;
@@ -398,7 +398,7 @@ protected:
 
 private:
 	mutable QMutex m_mutex{QMutex::Recursive};
-	std::unique_ptr<GlPlot_impl> m_impl;
+	std::unique_ptr<GlPlotRenderer> m_renderer;
 	std::unique_ptr<QThread> m_thread_impl;
 	bool m_mouseMovedBetweenDownAndUp = 0;
 	bool m_mouseDown[3] = {0,0,0};

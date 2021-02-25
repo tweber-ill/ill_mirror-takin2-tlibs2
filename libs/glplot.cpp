@@ -273,15 +273,15 @@ bool create_line_object(QOpenGLWidget* pGLWidget, GlRenderObj& obj,
 
 
 // ----------------------------------------------------------------------------
-// GL plot implementation
+// GL plot renderer
 // ----------------------------------------------------------------------------
 
-GlPlot_impl::GlPlot_impl(GlPlot *pPlot) : m_pPlot{pPlot}
+GlPlotRenderer::GlPlotRenderer(GlPlot *pPlot) : m_pPlot{pPlot}
 {
 	if constexpr(m_usetimer)
 	{
 		connect(&m_timer, &QTimer::timeout,
-			this, static_cast<void (GlPlot_impl::*)()>(&GlPlot_impl::tick));
+			this, static_cast<void (GlPlotRenderer::*)()>(&GlPlotRenderer::tick));
 		m_timer.start(std::chrono::milliseconds(1000 / 60));
 	}
 
@@ -289,7 +289,7 @@ GlPlot_impl::GlPlot_impl(GlPlot *pPlot) : m_pPlot{pPlot}
 }
 
 
-GlPlot_impl::~GlPlot_impl()
+GlPlotRenderer::~GlPlotRenderer()
 {
 	if constexpr(m_usetimer)
 		m_timer.stop();
@@ -320,11 +320,11 @@ GlPlot_impl::~GlPlot_impl()
 }
 
 
-void GlPlot_impl::startedThread() { }
-void GlPlot_impl::stoppedThread() { }
+void GlPlotRenderer::startedThread() { }
+void GlPlotRenderer::stoppedThread() { }
 
 
-QPointF GlPlot_impl::GlToScreenCoords(const t_vec_gl& vec4, bool *pVisible)
+QPointF GlPlotRenderer::GlToScreenCoords(const t_vec_gl& vec4, bool *pVisible)
 {
 	auto [ vecPersp, vec ] =
 		tl2::hom_to_screen_coords<t_mat_gl, t_vec_gl>
@@ -342,7 +342,7 @@ QPointF GlPlot_impl::GlToScreenCoords(const t_vec_gl& vec4, bool *pVisible)
 }
 
 
-t_mat_gl GlPlot_impl::GetArrowMatrix(const t_vec_gl& vecTo, t_real_gl postscale, const t_vec_gl& vecPostTrans,
+t_mat_gl GlPlotRenderer::GetArrowMatrix(const t_vec_gl& vecTo, t_real_gl postscale, const t_vec_gl& vecPostTrans,
 	const t_vec_gl& vecFrom, t_real_gl prescale, const t_vec_gl& vecPreTrans)
 {
 	t_mat_gl mat = tl2::unit<t_mat_gl>(4);
@@ -359,7 +359,7 @@ t_mat_gl GlPlot_impl::GetArrowMatrix(const t_vec_gl& vecTo, t_real_gl postscale,
 }
 
 
-GlPlotObj GlPlot_impl::CreateTriangleObject(const std::vector<t_vec3_gl>& verts,
+GlPlotObj GlPlotRenderer::CreateTriangleObject(const std::vector<t_vec3_gl>& verts,
 	const std::vector<t_vec3_gl>& triagverts, const std::vector<t_vec3_gl>& norms,
 	const t_vec_gl& color, bool bUseVertsAsNorm)
 {
@@ -370,7 +370,7 @@ GlPlotObj GlPlot_impl::CreateTriangleObject(const std::vector<t_vec3_gl>& verts,
 }
 
 
-GlPlotObj GlPlot_impl::CreateLineObject(const std::vector<t_vec3_gl>& verts, const t_vec_gl& color)
+GlPlotObj GlPlotRenderer::CreateLineObject(const std::vector<t_vec3_gl>& verts, const t_vec_gl& color)
 {
 	GlPlotObj obj;
 	create_line_object(m_pPlot, obj, verts, color, m_attrVertex, m_attrVertexCol);
@@ -378,27 +378,27 @@ GlPlotObj GlPlot_impl::CreateLineObject(const std::vector<t_vec3_gl>& verts, con
 }
 
 
-void GlPlot_impl::SetObjectMatrix(std::size_t idx, const t_mat_gl& mat)
+void GlPlotRenderer::SetObjectMatrix(std::size_t idx, const t_mat_gl& mat)
 {
 	if(idx >= m_objs.size()) return;
 	m_objs[idx].m_mat = mat;
 }
 
 
-void GlPlot_impl::SetObjectCol(std::size_t idx, t_real_gl r, t_real_gl g, t_real_gl b, t_real_gl a)
+void GlPlotRenderer::SetObjectCol(std::size_t idx, t_real_gl r, t_real_gl g, t_real_gl b, t_real_gl a)
 {
 	if(idx >= m_objs.size()) return;
 	m_objs[idx].m_color = tl2::create<t_vec_gl>({r,g,b,a});
 }
 
 
-void GlPlot_impl::SetObjectLabel(std::size_t idx, const std::string& label)
+void GlPlotRenderer::SetObjectLabel(std::size_t idx, const std::string& label)
 {
 	if(idx >= m_objs.size()) return;
 	m_objs[idx].m_label = label;
 }
 
-const std::string& GlPlot_impl::GetObjectLabel(std::size_t idx) const
+const std::string& GlPlotRenderer::GetObjectLabel(std::size_t idx) const
 {
 	static const std::string empty{};
 	if(idx >= m_objs.size()) return empty;
@@ -407,13 +407,13 @@ const std::string& GlPlot_impl::GetObjectLabel(std::size_t idx) const
 }
 
 
-void GlPlot_impl::SetObjectDataString(std::size_t idx, const std::string& data)
+void GlPlotRenderer::SetObjectDataString(std::size_t idx, const std::string& data)
 {
 	if(idx >= m_objs.size()) return;
 	m_objs[idx].m_datastr = data;
 }
 
-const std::string& GlPlot_impl::GetObjectDataString(std::size_t idx) const
+const std::string& GlPlotRenderer::GetObjectDataString(std::size_t idx) const
 {
 	static const std::string empty{};
 	if(idx >= m_objs.size()) return empty;
@@ -422,28 +422,28 @@ const std::string& GlPlot_impl::GetObjectDataString(std::size_t idx) const
 }
 
 
-void GlPlot_impl::SetObjectVisible(std::size_t idx, bool visible)
+void GlPlotRenderer::SetObjectVisible(std::size_t idx, bool visible)
 {
 	if(idx >= m_objs.size()) return;
 	m_objs[idx].m_visible = visible;
 }
 
 
-void GlPlot_impl::SetObjectHighlight(std::size_t idx, bool highlight)
+void GlPlotRenderer::SetObjectHighlight(std::size_t idx, bool highlight)
 {
 	if(idx >= m_objs.size()) return;
 	m_objs[idx].m_highlighted = highlight;
 }
 
 
-bool GlPlot_impl::GetObjectHighlight(std::size_t idx) const
+bool GlPlotRenderer::GetObjectHighlight(std::size_t idx) const
 {
 	if(idx >= m_objs.size()) return 0;
 	return m_objs[idx].m_highlighted;
 }
 
 
-void GlPlot_impl::RemoveObject(std::size_t idx)
+void GlPlotRenderer::RemoveObject(std::size_t idx)
 {
 	m_objs[idx].m_valid = false;
 
@@ -458,7 +458,7 @@ void GlPlot_impl::RemoveObject(std::size_t idx)
 }
 
 
-std::size_t GlPlot_impl::AddLinkedObject(std::size_t linkTo,
+std::size_t GlPlotRenderer::AddLinkedObject(std::size_t linkTo,
 	t_real_gl x, t_real_gl y, t_real_gl z,
 	t_real_gl r, t_real_gl g, t_real_gl b, t_real_gl a)
 {
@@ -474,7 +474,7 @@ std::size_t GlPlot_impl::AddLinkedObject(std::size_t linkTo,
 }
 
 
-std::size_t GlPlot_impl::AddSphere(t_real_gl rad, t_real_gl x, t_real_gl y, t_real_gl z,
+std::size_t GlPlotRenderer::AddSphere(t_real_gl rad, t_real_gl x, t_real_gl y, t_real_gl z,
 	t_real_gl r, t_real_gl g, t_real_gl b, t_real_gl a)
 {
 	constexpr int numsubdivs = 2;
@@ -498,7 +498,7 @@ std::size_t GlPlot_impl::AddSphere(t_real_gl rad, t_real_gl x, t_real_gl y, t_re
 }
 
 
-std::size_t GlPlot_impl::AddCylinder(t_real_gl rad, t_real_gl h,
+std::size_t GlPlotRenderer::AddCylinder(t_real_gl rad, t_real_gl h,
 	t_real_gl x, t_real_gl y, t_real_gl z,
 	t_real_gl r, t_real_gl g, t_real_gl b, t_real_gl a)
 {
@@ -518,7 +518,7 @@ std::size_t GlPlot_impl::AddCylinder(t_real_gl rad, t_real_gl h,
 }
 
 
-std::size_t GlPlot_impl::AddCone(t_real_gl rad, t_real_gl h,
+std::size_t GlPlotRenderer::AddCone(t_real_gl rad, t_real_gl h,
 	t_real_gl x, t_real_gl y, t_real_gl z,
 	t_real_gl r, t_real_gl g, t_real_gl b, t_real_gl a)
 {
@@ -538,7 +538,7 @@ std::size_t GlPlot_impl::AddCone(t_real_gl rad, t_real_gl h,
 }
 
 
-std::size_t GlPlot_impl::AddArrow(t_real_gl rad, t_real_gl h,
+std::size_t GlPlotRenderer::AddArrow(t_real_gl rad, t_real_gl h,
 	t_real_gl x, t_real_gl y, t_real_gl z,
 	t_real_gl r, t_real_gl g, t_real_gl b, t_real_gl a)
 {
@@ -559,7 +559,7 @@ std::size_t GlPlot_impl::AddArrow(t_real_gl rad, t_real_gl h,
 }
 
 
-std::size_t GlPlot_impl::AddTriangleObject(const std::vector<t_vec3_gl>& triag_verts,
+std::size_t GlPlotRenderer::AddTriangleObject(const std::vector<t_vec3_gl>& triag_verts,
 	const std::vector<t_vec3_gl>& triag_norms,
 	t_real_gl r, t_real_gl g, t_real_gl b, t_real_gl a)
 {
@@ -578,7 +578,7 @@ std::size_t GlPlot_impl::AddTriangleObject(const std::vector<t_vec3_gl>& triag_v
 }
 
 
-std::size_t GlPlot_impl::AddCoordinateCross(t_real_gl min, t_real_gl max)
+std::size_t GlPlotRenderer::AddCoordinateCross(t_real_gl min, t_real_gl max)
 {
 	auto col = tl2::create<t_vec_gl>({0,0,0,1});
 	auto verts = std::vector<t_vec3_gl>
@@ -599,7 +599,7 @@ std::size_t GlPlot_impl::AddCoordinateCross(t_real_gl min, t_real_gl max)
 
 
 
-void GlPlot_impl::initialiseGL()
+void GlPlotRenderer::initialiseGL()
 {
 	// --------------------------------------------------------------------
 	// shaders
@@ -847,7 +847,7 @@ void main()
 }
 
 
-void GlPlot_impl::SetScreenDims(int w, int h)
+void GlPlotRenderer::SetScreenDims(int w, int h)
 {
 	m_iScreenDims[0] = w;
 	m_iScreenDims[1] = h;
@@ -855,7 +855,7 @@ void GlPlot_impl::SetScreenDims(int w, int h)
 }
 
 
-void GlPlot_impl::resizeGL()
+void GlPlotRenderer::resizeGL()
 {
 	if(!m_bPlatformSupported || !m_bInitialised) return;
 
@@ -896,7 +896,7 @@ void GlPlot_impl::resizeGL()
 /**
  * set up a (crystal) B matrix
  */
-void GlPlot_impl::SetBTrafo(const t_mat_gl& matB, const t_mat_gl* matA)
+void GlPlotRenderer::SetBTrafo(const t_mat_gl& matB, const t_mat_gl* matA)
 {
 	m_matB = matB;
 
@@ -926,7 +926,7 @@ void GlPlot_impl::SetBTrafo(const t_mat_gl& matB, const t_mat_gl* matA)
 }
 
 
-void GlPlot_impl::SetCoordSys(int iSys)
+void GlPlotRenderer::SetCoordSys(int iSys)
 {
 	m_iCoordSys = iSys;
 	RequestPlotUpdate();
@@ -936,7 +936,7 @@ void GlPlot_impl::SetCoordSys(int iSys)
 /**
  * update the shader's B matrix
  */
-void GlPlot_impl::UpdateBTrafo()
+void GlPlotRenderer::UpdateBTrafo()
 {
 	m_pShaders->setUniformValue(m_uniMatrixA, m_matA);
 	m_pShaders->setUniformValue(m_uniMatrixB, m_matB);
@@ -945,7 +945,7 @@ void GlPlot_impl::UpdateBTrafo()
 }
 
 
-void GlPlot_impl::UpdateCam()
+void GlPlotRenderer::UpdateCam()
 {
 	m_matCam = m_matCamBase;
 	m_matCam(2,3) /= m_zoom;
@@ -964,7 +964,7 @@ void GlPlot_impl::UpdateCam()
 /**
  * request a plot update
  */
-void GlPlot_impl::RequestPlotUpdate()
+void GlPlotRenderer::RequestPlotUpdate()
 {
 #if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)
 	QMetaObject::invokeMethod((QOpenGLWidget*)m_pPlot,
@@ -978,7 +978,7 @@ void GlPlot_impl::RequestPlotUpdate()
 }
 
 
-void GlPlot_impl::SetLight(std::size_t idx, const t_vec3_gl& pos)
+void GlPlotRenderer::SetLight(std::size_t idx, const t_vec3_gl& pos)
 {
 	if(m_lights.size() < idx+1)
 		m_lights.resize(idx+1);
@@ -988,7 +988,7 @@ void GlPlot_impl::SetLight(std::size_t idx, const t_vec3_gl& pos)
 }
 
 
-void GlPlot_impl::UpdateLights()
+void GlPlotRenderer::UpdateLights()
 {
 	constexpr int MAX_LIGHTS = 4;	// max. number allowed in shader
 
@@ -1009,13 +1009,13 @@ void GlPlot_impl::UpdateLights()
 }
 
 
-void GlPlot_impl::EnablePicker(bool b)
+void GlPlotRenderer::EnablePicker(bool b)
 {
 	m_bPickerEnabled = b;
 }
 
 
-void GlPlot_impl::UpdatePicker()
+void GlPlotRenderer::UpdatePicker()
 {
 	if(!m_bInitialised || !m_bPlatformSupported || !m_bPickerEnabled) return;
 
@@ -1156,7 +1156,7 @@ void GlPlot_impl::UpdatePicker()
 }
 
 
-void GlPlot_impl::mouseMoveEvent(const QPointF& pos)
+void GlPlotRenderer::mouseMoveEvent(const QPointF& pos)
 {
 	m_posMouse = pos;
 
@@ -1180,21 +1180,21 @@ void GlPlot_impl::mouseMoveEvent(const QPointF& pos)
 }
 
 
-void GlPlot_impl::zoom(t_real_gl val)
+void GlPlotRenderer::zoom(t_real_gl val)
 {
 	m_zoom *= std::pow(2., val/64.);
 	UpdateCam();
 }
 
 
-void GlPlot_impl::ResetZoom()
+void GlPlotRenderer::ResetZoom()
 {
 	m_zoom = 1;
 	UpdateCam();
 }
 
 
-void GlPlot_impl::BeginRotation()
+void GlPlotRenderer::BeginRotation()
 {
 	if(!m_bInRotation)
 	{
@@ -1204,7 +1204,7 @@ void GlPlot_impl::BeginRotation()
 }
 
 
-void GlPlot_impl::EndRotation()
+void GlPlotRenderer::EndRotation()
 {
 	if(m_bInRotation)
 	{
@@ -1217,13 +1217,13 @@ void GlPlot_impl::EndRotation()
 }
 
 
-void GlPlot_impl::tick()
+void GlPlotRenderer::tick()
 {
 	tick(std::chrono::milliseconds(1000 / 60));
 }
 
 
-void GlPlot_impl::tick(const std::chrono::milliseconds& ms)
+void GlPlotRenderer::tick(const std::chrono::milliseconds& ms)
 {
 	// TODO
 	UpdateCam();
@@ -1233,7 +1233,7 @@ void GlPlot_impl::tick(const std::chrono::milliseconds& ms)
 /**
  * pure gl drawing
  */
-void GlPlot_impl::DoPaintGL(qgl_funcs *pGl)
+void GlPlotRenderer::DoPaintGL(qgl_funcs *pGl)
 {
 	if(!pGl)
 		return;
@@ -1339,7 +1339,7 @@ void GlPlot_impl::DoPaintGL(qgl_funcs *pGl)
 /**
  * directly draw on a qpainter
  */
-void GlPlot_impl::DoPaintNonGL(QPainter &painter)
+void GlPlotRenderer::DoPaintNonGL(QPainter &painter)
 {
 	const t_mat_gl matUnit = tl2::unit<t_mat_gl>();
 
@@ -1407,7 +1407,7 @@ void GlPlot_impl::DoPaintNonGL(QPainter &painter)
 }
 
 
-void GlPlot_impl::paintGL()
+void GlPlotRenderer::paintGL()
 {
 	if(!m_bPlatformSupported) return;
 	QMutexLocker _locker{&m_mutexObj};
@@ -1462,7 +1462,7 @@ void GlPlot_impl::paintGL()
 			if constexpr(!m_usetimer)
 			{
 				// if the frame is not already updated by the timer, directly update it
-				m_pPlot->GetImpl()->RequestPlotUpdate();
+				m_pPlot->GetRenderer()->RequestPlotUpdate();
 			}
 		}
 		BOOST_SCOPE_EXIT_END
@@ -1490,17 +1490,17 @@ void GlPlot_impl::paintGL()
 // ----------------------------------------------------------------------------
 
 GlPlot::GlPlot(QWidget *pParent) : QOpenGLWidget(pParent),
-	m_impl(std::make_unique<GlPlot_impl>(this)),
+	m_renderer(std::make_unique<GlPlotRenderer>(this)),
 	m_thread_impl(std::make_unique<QThread>(this))
 {
 	qRegisterMetaType<std::size_t>("std::size_t");
 
 	if constexpr(m_isthreaded)
 	{
-		m_impl->moveToThread(m_thread_impl.get());
+		m_renderer->moveToThread(m_thread_impl.get());
 
-		connect(m_thread_impl.get(), &QThread::started, m_impl.get(), &GlPlot_impl::startedThread);
-		connect(m_thread_impl.get(), &QThread::finished, m_impl.get(), &GlPlot_impl::stoppedThread);
+		connect(m_thread_impl.get(), &QThread::started, m_renderer.get(), &GlPlotRenderer::startedThread);
+		connect(m_thread_impl.get(), &QThread::finished, m_renderer.get(), &GlPlotRenderer::stoppedThread);
 	}
 
 	connect(this, &QOpenGLWidget::aboutToCompose, this, &GlPlot::beforeComposing);
@@ -1533,8 +1533,8 @@ void GlPlot::initializeGL()
 {
 	if constexpr(!m_isthreaded)
 	{
-		m_impl->initialiseGL();
-		if(m_impl->IsInitialised())
+		m_renderer->initialiseGL();
+		if(m_renderer->IsInitialised())
 			emit AfterGLInitialisation();
 		else
 			emit GLInitialisationFailed();
@@ -1546,8 +1546,8 @@ void GlPlot::resizeGL(int w, int h)
 {
 	if constexpr(!m_isthreaded)
 	{
-		m_impl->SetScreenDims(w, h);
-		m_impl->resizeGL();
+		m_renderer->SetScreenDims(w, h);
+		m_renderer->resizeGL();
 	}
 }
 
@@ -1556,14 +1556,14 @@ void GlPlot::paintGL()
 {
 	if constexpr(!m_isthreaded)
 	{
-		m_impl->paintGL();
+		m_renderer->paintGL();
 	}
 }
 
 
 void GlPlot::mouseMoveEvent(QMouseEvent *pEvt)
 {
-	m_impl->mouseMoveEvent(pEvt->localPos());
+	m_renderer->mouseMoveEvent(pEvt->localPos());
 	m_mouseMovedBetweenDownAndUp = 1;
 	pEvt->accept();
 }
@@ -1578,9 +1578,9 @@ void GlPlot::mousePressEvent(QMouseEvent *pEvt)
 	if(pEvt->buttons() & Qt::RightButton) m_mouseDown[2] = 1;
 
 	if(m_mouseDown[1])
-		m_impl->ResetZoom();
+		m_renderer->ResetZoom();
 	if(m_mouseDown[2])
-		m_impl->BeginRotation();
+		m_renderer->BeginRotation();
 
 	pEvt->accept();
 	emit MouseDown(m_mouseDown[0], m_mouseDown[1], m_mouseDown[2]);
@@ -1596,7 +1596,7 @@ void GlPlot::mouseReleaseEvent(QMouseEvent *pEvt)
 	if((pEvt->buttons() & Qt::RightButton) == 0) m_mouseDown[2] = 0;
 
 	if(!m_mouseDown[2])
-		m_impl->EndRotation();
+		m_renderer->EndRotation();
 
 	pEvt->accept();
 	emit MouseUp(!m_mouseDown[0], !m_mouseDown[1], !m_mouseDown[2]);
@@ -1616,7 +1616,7 @@ void GlPlot::mouseReleaseEvent(QMouseEvent *pEvt)
 void GlPlot::wheelEvent(QWheelEvent *pEvt)
 {
 	const t_real_gl degrees = pEvt->angleDelta().y() / 8.;
-	m_impl->zoom(degrees);
+	m_renderer->zoom(degrees);
 
 	pEvt->accept();
 }
@@ -1681,9 +1681,9 @@ void GlPlot::afterComposing()
 	{
 		m_mutex.unlock();
 #if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)
-		QMetaObject::invokeMethod(m_impl.get(), &GlPlot_impl::paintGL, Qt::ConnectionType::QueuedConnection);
+		QMetaObject::invokeMethod(m_renderer.get(), &GlPlotRenderer::paintGL, Qt::ConnectionType::QueuedConnection);
 #else
-		QMetaObject::invokeMethod(m_impl.get(), "paintGL", Qt::ConnectionType::QueuedConnection);
+		QMetaObject::invokeMethod(m_renderer.get(), "paintGL", Qt::ConnectionType::QueuedConnection);
 #endif
 	}
 }
@@ -1711,7 +1711,7 @@ void GlPlot::afterResizing()
 		m_mutex.unlock();
 
 		const int w = width(), h = height();
-		m_impl->SetScreenDims(w, h);
+		m_renderer->SetScreenDims(w, h);
 	}
 }
 
