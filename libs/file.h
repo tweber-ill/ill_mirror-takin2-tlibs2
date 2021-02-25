@@ -11,7 +11,7 @@
 #define __TLIBS2_FILE_H__
 
 
-#if __has_include(<filesystem>)
+#if __has_include(<filesystem>) && !defined(__APPLE_CC__)
 	#include <filesystem>
 	namespace fs = std::filesystem;
 #else
@@ -27,7 +27,6 @@
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/property_tree/info_parser.hpp>
 #include <boost/property_tree/ini_parser.hpp>
-#include <boost/optional.hpp>
 
 #include <iostream>
 #include <sstream>
@@ -35,6 +34,7 @@
 #include <vector>
 #include <tuple>
 #include <map>
+#include <optional>
 #include <algorithm>
 
 #include "str.h"
@@ -113,7 +113,7 @@ std::tuple<bool, t_str> load_file(const t_str& file)
  * @param len: length in size of T
  */
 template <class T, class t_char = char>
-std::pair<bool, std::shared_ptr<T[]>> 
+std::pair<bool, std::shared_ptr<T[]>>
 get_file_mem(std::basic_istream<t_char>& istr, std::size_t offs, std::size_t len=1)
 {
 	bool ok = true;
@@ -265,10 +265,10 @@ template<class t_str> struct StringComparer<t_str, 0>
 
 
 template<class t_str = std::string>
-boost::optional<prop::string_path<t_str, prop::id_translator<t_str>>>
+std::optional<prop::string_path<t_str, prop::id_translator<t_str>>>
 get_prop_path(const std::string& _strAddr, const typename t_str::value_type& chSep)
 {
-	using t_ret = boost::optional<prop::string_path<t_str, prop::id_translator<t_str>>>;
+	using t_ret = std::optional<prop::string_path<t_str, prop::id_translator<t_str>>>;
 
 	t_str strAddr = _strAddr;
 	trim(strAddr);
@@ -282,7 +282,7 @@ get_prop_path(const std::string& _strAddr, const typename t_str::value_type& chS
 	try
 	{
 		prop::string_path<t_str, prop::id_translator<t_str>> path(strAddr, chSep);
-		return boost::optional<decltype(path)>(path);
+		return std::optional<decltype(path)>(path);
 	}
 	catch(const prop::ptree_bad_path& ex) {}
 	catch(const std::exception& ex) {}
@@ -446,11 +446,14 @@ public:
 	}
 
 
-	bool Load(const t_str& strFile) { return Load(strFile.c_str()); }
-	bool Load(const t_str& strFile, PropType ty) { return Load(strFile.c_str(), ty); }
+	bool Load(const t_str& strFile)
+	{ return Load(strFile.c_str()); }
+	bool Load(const t_str& strFile, PropType ty)
+	{ return Load(strFile.c_str(), ty); }
 
 
-	bool Save(const t_str& strFile) const { return Save(strFile.c_str()); }
+	bool Save(const t_str& strFile) const
+	{ return Save(strFile.c_str()); }
 	bool Save(const t_str& strFile, PropType ty) const
 	{ return Save(strFile.c_str(), ty); }
 
@@ -490,11 +493,11 @@ public:
 
 
 	template<typename T>
-	boost::optional<T> QueryOpt(const t_str& strAddr) const
+	std::optional<T> QueryOpt(const t_str& strAddr) const
 	{
 		bool bOk = 0;
 		T tVal = Query<T>(strAddr, nullptr, &bOk);
-		return bOk ? boost::optional<T>(std::move(tVal)) : boost::optional<T>();
+		return bOk ? std::optional<T>(std::move(tVal)) : std::nullopt;
 	}
 
 

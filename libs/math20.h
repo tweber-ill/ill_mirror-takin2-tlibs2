@@ -4008,26 +4008,26 @@ requires is_vec<t_vec>
 
 
 /**
- * create the faces of a cube
+ * create the faces of a cuboid
  * @returns [vertices, face vertex indices, face normals, face uvs]
  * @see https://en.wikipedia.org/wiki/Platonic_solid
  */
 template<class t_vec, template<class...> class t_cont = std::vector>
 std::tuple<t_cont<t_vec>, t_cont<t_cont<std::size_t>>, t_cont<t_vec>, t_cont<t_cont<t_vec>>>
-create_cube(typename t_vec::value_type l = 1)
+create_cuboid(typename t_vec::value_type lx=1, typename t_vec::value_type ly=1, typename t_vec::value_type lz=1)
 requires is_vec<t_vec>
 {
 	t_cont<t_vec> vertices =
 	{
-		create<t_vec>({ +l, -l, -l }),	// vertex 0
-		create<t_vec>({ -l, -l, -l }),	// vertex 1
-		create<t_vec>({ -l, +l, -l }),	// vertex 2
-		create<t_vec>({ +l, +l, -l }),	// vertex 3
+		create<t_vec>({ +lx, -ly, -lz }),	// vertex 0
+		create<t_vec>({ -lx, -ly, -lz }),	// vertex 1
+		create<t_vec>({ -lx, +ly, -lz }),	// vertex 2
+		create<t_vec>({ +lx, +ly, -lz }),	// vertex 3
 
-		create<t_vec>({ -l, -l, +l }),	// vertex 4
-		create<t_vec>({ +l, -l, +l }),	// vertex 5
-		create<t_vec>({ +l, +l, +l }),	// vertex 6
-		create<t_vec>({ -l, +l, +l }),	// vertex 7
+		create<t_vec>({ -lx, -ly, +lz }),	// vertex 4
+		create<t_vec>({ +lx, -ly, +lz }),	// vertex 5
+		create<t_vec>({ +lx, +ly, +lz }),	// vertex 6
+		create<t_vec>({ -lx, +ly, +lz }),	// vertex 7
 	};
 
 	t_cont<t_cont<std::size_t>> faces =
@@ -4061,6 +4061,20 @@ requires is_vec<t_vec>
 	};
 
 	return std::make_tuple(vertices, faces, normals, uvs);
+}
+
+
+/**
+ * create the faces of a cube
+ * @returns [vertices, face vertex indices, face normals, face uvs]
+ * @see https://en.wikipedia.org/wiki/Platonic_solid
+ */
+template<class t_vec, template<class...> class t_cont = std::vector>
+std::tuple<t_cont<t_vec>, t_cont<t_cont<std::size_t>>, t_cont<t_vec>, t_cont<t_cont<t_vec>>>
+create_cube(typename t_vec::value_type l = 1)
+requires is_vec<t_vec>
+{
+	return create_cuboid<t_vec, t_cont>(l, l, l);
 }
 
 
