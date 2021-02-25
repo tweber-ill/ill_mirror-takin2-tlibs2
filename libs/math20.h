@@ -3724,7 +3724,7 @@ requires is_vec<t_vec>
  */
 template<class t_mat, class t_vec, template<class...> class t_cont = std::vector>
 std::tuple<t_cont<t_vec>, t_cont<t_cont<std::size_t>>, t_cont<t_vec>, t_cont<t_cont<t_vec>>>
-create_plane(const t_vec& norm, typename t_vec::value_type l=1)
+create_plane(const t_vec& norm, typename t_vec::value_type lx=1, typename t_vec::value_type ly=1)
 requires is_vec<t_vec>
 {
 	t_vec norm_old = create<t_vec>({ 0, 0, -1 });
@@ -3732,10 +3732,10 @@ requires is_vec<t_vec>
 
 	t_cont<t_vec> vertices =
 	{
-		create<t_vec>({ -l, -l, 0. }),	// vertex 0
-		create<t_vec>({ -l, +l, 0. }),	// vertex 1
-		create<t_vec>({ +l, +l, 0. }),	// vertex 2
-		create<t_vec>({ +l, -l, 0. }),	// vertex 3
+		create<t_vec>({ -lx, -ly, 0. }),	// vertex 0
+		create<t_vec>({ -lx, +ly, 0. }),	// vertex 1
+		create<t_vec>({ +lx, +ly, 0. }),	// vertex 2
+		create<t_vec>({ +lx, -ly, 0. }),	// vertex 3
 	};
 
 	// rotate according to given normal
@@ -3747,10 +3747,10 @@ requires is_vec<t_vec>
 
 	t_cont<t_cont<t_vec>> uvs =
 	{{
-		create<t_vec>({0,0}),
-		create<t_vec>({0,1}),
-		create<t_vec>({1,1}),
-		create<t_vec>({1,0}),
+		create<t_vec>({0, 0}),
+		create<t_vec>({0, 1}),
+		create<t_vec>({1, 1}),
+		create<t_vec>({1, 0}),
 	}};
 
 	return std::make_tuple(vertices, faces, normals, uvs);
