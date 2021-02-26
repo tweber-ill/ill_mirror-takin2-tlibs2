@@ -342,23 +342,6 @@ QPointF GlPlotRenderer::GlToScreenCoords(const t_vec_gl& vec4, bool *pVisible)
 }
 
 
-t_mat_gl GlPlotRenderer::GetArrowMatrix(const t_vec_gl& vecTo, t_real_gl postscale, const t_vec_gl& vecPostTrans,
-	const t_vec_gl& vecFrom, t_real_gl prescale, const t_vec_gl& vecPreTrans)
-{
-	t_mat_gl mat = tl2::unit<t_mat_gl>(4);
-
-	mat *= tl2::hom_translation<t_mat_gl>(vecPreTrans[0], vecPreTrans[1], vecPreTrans[2]);
-	mat *= tl2::hom_scaling<t_mat_gl>(prescale, prescale, prescale);
-
-	mat *= tl2::rotation<t_mat_gl, t_vec_gl>(vecFrom, vecTo);
-
-	mat *= tl2::hom_scaling<t_mat_gl>(postscale, postscale, postscale);
-	mat *= tl2::hom_translation<t_mat_gl>(vecPostTrans[0], vecPostTrans[1], vecPostTrans[2]);
-
-	return mat;
-}
-
-
 GlPlotObj GlPlotRenderer::CreateTriangleObject(const std::vector<t_vec3_gl>& verts,
 	const std::vector<t_vec3_gl>& triagverts, const std::vector<t_vec3_gl>& norms,
 	const t_vec_gl& color, bool bUseVertsAsNorm)
@@ -549,7 +532,8 @@ std::size_t GlPlotRenderer::AddArrow(t_real_gl rad, t_real_gl h,
 	QMutexLocker _locker{&m_mutexObj};
 
 	auto obj = CreateTriangleObject(std::get<0>(solid), triagverts, norms, tl2::create<t_vec_gl>({r,g,b,a}), false);
-	obj.m_mat = GetArrowMatrix(tl2::create<t_vec_gl>({1,0,0}), 1., tl2::create<t_vec_gl>({x,y,z}), tl2::create<t_vec_gl>({0,0,1}));
+	obj.m_mat = tl2::get_arrow_matrix<t_vec_gl, t_mat_gl, t_real_gl>(
+		tl2::create<t_vec_gl>({1,0,0}), 1., tl2::create<t_vec_gl>({x,y,z}), tl2::create<t_vec_gl>({0,0,1}));
 	obj.m_boundingSpherePos = std::move(boundingSpherePos);
 	obj.m_boundingSphereRad = boundingSphereRad;
 	obj.m_labelPos = tl2::create<t_vec3_gl>({0., 0., 0.75});
