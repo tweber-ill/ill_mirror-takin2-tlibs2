@@ -4376,32 +4376,6 @@ requires is_vec<t_vec>
 
 
 /**
- * arrow matrix
- */
-template<class t_vec, class t_mat, class t_real = typename t_vec::value_type>
-t_mat get_arrow_matrix(
-	const t_vec& vecTo, 
-	t_real postscale = 1, const t_vec& vecPostTrans = create<t_vec>({0,0,0.5}),
-	const t_vec& vecFrom = create<t_vec>({0,0,1}), 
-	t_real prescale =  1, const t_vec& vecPreTrans = create<t_vec>({0,0,0}))
-requires is_vec<t_vec> && is_mat<t_mat>
-{
-	t_mat mat = unit<t_mat>(4);
-
-	mat *= hom_translation<t_mat>(vecPreTrans[0], vecPreTrans[1], vecPreTrans[2]);
-	mat *= hom_scaling<t_mat>(prescale, prescale, prescale);
-
-	mat *= rotation<t_mat, t_vec>(vecFrom, vecTo);
-
-	mat *= hom_scaling<t_mat>(postscale, postscale, postscale);
-	mat *= hom_translation<t_mat>(vecPostTrans[0], vecPostTrans[1], vecPostTrans[2]);
-
-	return mat;
-}
-
-
-
-/**
  * create the faces of a cuboid
  * @returns [vertices, face vertex indices, face normals, face uvs]
  * @see https://en.wikipedia.org/wiki/Platonic_solid
@@ -4949,6 +4923,31 @@ requires is_mat<t_mat>
 
 // ----------------------------------------------------------------------------
 
+
+
+/**
+ * arrow matrix
+ */
+template<class t_vec, class t_mat, class t_real = typename t_vec::value_type>
+t_mat get_arrow_matrix(
+	const t_vec& vecTo, 
+	t_real postscale = 1, const t_vec& vecPostTrans = create<t_vec>({0,0,0.5}),
+	const t_vec& vecFrom = create<t_vec>({0,0,1}), 
+	t_real prescale =  1, const t_vec& vecPreTrans = create<t_vec>({0,0,0}))
+requires is_vec<t_vec> && is_mat<t_mat>
+{
+	t_mat mat = unit<t_mat>(4);
+
+	mat *= hom_translation<t_mat>(vecPreTrans[0], vecPreTrans[1], vecPreTrans[2]);
+	mat *= hom_scaling<t_mat>(prescale, prescale, prescale);
+
+	mat *= rotation<t_mat, t_vec>(vecFrom, vecTo);
+
+	mat *= hom_scaling<t_mat>(postscale, postscale, postscale);
+	mat *= hom_translation<t_mat>(vecPostTrans[0], vecPostTrans[1], vecPostTrans[2]);
+
+	return mat;
+}
 
 
 
