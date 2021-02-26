@@ -94,7 +94,8 @@ bool create_triangle_object(QOpenGLWidget* pGLWidget, GlRenderObj& obj,
 	obj.m_color = color;
 
 	// flatten vertex array into raw float array
-	auto to_float_array = [](const std::vector<t_vec3_gl>& verts, int iRepeat=1, int iElems=3, bool bNorm=false)
+	auto to_float_array = [](const std::vector<t_vec3_gl>& verts, 
+		int iRepeat=1, int iElems=3, bool bNorm=false, t_real_gl lastElem=1.)
 		-> std::vector<t_real_gl>
 	{
 		std::vector<t_real_gl> vecRet;
@@ -105,8 +106,15 @@ bool create_triangle_object(QOpenGLWidget* pGLWidget, GlRenderObj& obj,
 			t_real_gl norm = bNorm ? tl2::norm<t_vec3_gl>(vert) : 1;
 
 			for(int i=0; i<iRepeat; ++i)
+			{
 				for(int iElem=0; iElem<iElems; ++iElem)
-					vecRet.push_back(vert[iElem] / norm);
+				{
+					if(iElem < vert.size())
+						vecRet.push_back(vert[iElem] / norm);
+					else
+						vecRet.push_back(lastElem);
+				}
+			}
 		}
 
 		return vecRet;
@@ -127,9 +135,9 @@ bool create_triangle_object(QOpenGLWidget* pGLWidget, GlRenderObj& obj,
 			std::cerr << "Cannot bind vertex buffer." << std::endl;
 		BOOST_SCOPE_EXIT(&obj) { obj.m_pvertexbuf->release(); } BOOST_SCOPE_EXIT_END
 
-		auto vecVerts = to_float_array(triagverts, 1, 3, false);
+		auto vecVerts = to_float_array(triagverts, 1, 4, false, 1.);
 		obj.m_pvertexbuf->allocate(vecVerts.data(), vecVerts.size()*sizeof(typename decltype(vecVerts)::value_type));
-		pGl->glVertexAttribPointer(attrVertex, 3, GL_FLOAT, 0, 0, nullptr);
+		pGl->glVertexAttribPointer(attrVertex, 4, GL_FLOAT, 0, 0, nullptr);
 	}
 
 	// normals
@@ -141,9 +149,9 @@ bool create_triangle_object(QOpenGLWidget* pGLWidget, GlRenderObj& obj,
 		obj.m_pnormalsbuf->bind();
 		BOOST_SCOPE_EXIT(&obj) { obj.m_pnormalsbuf->release(); } BOOST_SCOPE_EXIT_END
 
-		auto vecNorms = bUseVertsAsNorm ? to_float_array(triagverts, 1, 3, true) : to_float_array(norms, 3, 3, false);
+		auto vecNorms = bUseVertsAsNorm ? to_float_array(triagverts, 1, 4, true, 0.) : to_float_array(norms, 3, 4, false, 0.);
 		obj.m_pnormalsbuf->allocate(vecNorms.data(), vecNorms.size()*sizeof(typename decltype(vecNorms)::value_type));
-		pGl->glVertexAttribPointer(attrVertexNormal, 3, GL_FLOAT, 0, 0, nullptr);
+		pGl->glVertexAttribPointer(attrVertexNormal, 4, GL_FLOAT, 0, 0, nullptr);
 	}
 
 	// colours

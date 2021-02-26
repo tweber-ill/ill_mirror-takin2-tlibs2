@@ -4444,7 +4444,7 @@ requires is_vec<t_vec>
 		create<t_vec>({ +1, 0, 0 }),	// +x face
 	};
 
-	t_cont<t_cont<t_vec>> uvs =	// TODO
+	t_cont<t_cont<t_vec>> uvs =
 	{
 		{ create<t_vec>({0,0}), create<t_vec>({1,0}), create<t_vec>({1,1}), create<t_vec>({0,1}) },	// -z face
 		{ create<t_vec>({0,0}), create<t_vec>({1,0}), create<t_vec>({1,1}), create<t_vec>({0,1}) },	// +z face
