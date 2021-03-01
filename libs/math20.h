@@ -3823,7 +3823,8 @@ requires is_vec<t_vec>
  */
 template<class t_vec, template<class...> class t_cont = std::vector>
 std::tuple<t_cont<t_vec>, t_cont<t_vec>, t_cont<t_vec>>
-create_triangles(const std::tuple<t_cont<t_vec>, t_cont<t_cont<std::size_t>>, t_cont<t_vec>, t_cont<t_cont<t_vec>>>& tup)
+create_triangles(const std::tuple<t_cont<t_vec>, t_cont<t_cont<std::size_t>>, 
+	t_cont<t_vec>, t_cont<t_cont<t_vec>>>& tup)
 requires is_vec<t_vec>
 {
 	const t_cont<t_vec>& vertices = std::get<0>(tup);
@@ -4093,6 +4094,54 @@ requires is_vec<t_vec>
 // ----------------------------------------------------------------------------
 // 3-dim solids
 // ----------------------------------------------------------------------------
+
+/**
+ * transforms vertices and normals using a matrix
+ */
+template<class t_mat, class t_vec, template<class...> class t_cont = std::vector>
+void transform_obj(t_cont<t_vec>& verts, t_cont<t_vec>& norms, const t_mat& mat, bool is_3dhom=false)
+requires is_vec<t_vec> && is_mat<t_mat>
+{
+	using size_t = decltype(mat.size1());
+
+	// make sure a 3-vector and a 4-matrix are handled correctly in homogeneous coordinates
+	if(is_3dhom && mat.size1()==4)
+	{
+		t_mat mat3 = mat;
+		for(size_t i=0; i<3; ++i)
+		{
+			mat3(3,i) = 0;
+			mat3(i,3) = 0;
+		}
+		mat3(3,3) = 1;
+
+		for(auto& vert : verts)
+		{
+			vert = mat3 * vert;
+
+			// add translation and normalise
+			for(size_t i=0; i<3; ++i)
+			{
+				vert[i] += mat(i,3);
+				vert[i] /= mat(3,3);
+			}
+		}
+
+		for(auto& norm : norms)
+			norm = mat3 * norm;
+	}
+
+	// standard case: just multiply
+	else
+	{
+		for(auto& vert : verts)
+			vert = mat * vert;
+
+		for(auto& norm : norms)
+			norm = mat * norm;
+	}
+}
+
 
 /**
  * create a plane
