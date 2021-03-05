@@ -74,7 +74,7 @@ qgl_funcs* get_gl_functions(QOpenGLWidget *pGLWidget)
 	else
 	{
 #if QT_VERSION >= 0x060000
-		QOpenGLVersionFunctionsFactory::get<qgl_funcs>(pGLWidget->context());
+		pGl = QOpenGLVersionFunctionsFactory::get<qgl_funcs>(pGLWidget->context());
 #else
 		pGl = (qgl_funcs*)pGLWidget->context()->versionFunctions<qgl_funcs>();
 #endif
