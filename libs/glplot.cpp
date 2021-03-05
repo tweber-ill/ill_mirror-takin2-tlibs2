@@ -14,6 +14,11 @@
 
 #include <QtGui/QOpenGLContext>
 #include <QtGui/QOpenGLFunctions>
+
+#if QT_VERSION >= 0x060000
+	#include <QtOpenGL/QOpenGLVersionFunctionsFactory>
+#endif
+
 #include <QtGui/QSurfaceFormat>
 #include <QtGui/QPainter>
 #include <QtGui/QGuiApplication>
@@ -63,9 +68,17 @@ qgl_funcs* get_gl_functions(QOpenGLWidget *pGLWidget)
 	qgl_funcs *pGl = nullptr;
 
 	if constexpr(std::is_same_v<qgl_funcs, QOpenGLFunctions>)
+	{
 		pGl = (qgl_funcs*)pGLWidget->context()->functions();
+	}
 	else
+	{
+#if QT_VERSION >= 0x060000
+		QOpenGLVersionFunctionsFactory::get<qgl_funcs>(pGLWidget->context());
+#else
 		pGl = (qgl_funcs*)pGLWidget->context()->versionFunctions<qgl_funcs>();
+#endif
+	}
 
 	if(!pGl)
 		std::cerr << "No suitable GL interface found." << std::endl;

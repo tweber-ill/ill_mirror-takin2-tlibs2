@@ -14,15 +14,26 @@
 #define __MAG_GL_PLOT_H__
 
 #include <QtCore/QThread>
-#include <QtCore/QMutex>
 
 #include <QtCore/QTimer>
 #include <QtWidgets/QDialog>
 #include <QtGui/QMouseEvent>
 
-#include <QtGui/QOpenGLShaderProgram>
-#include <QtGui/QOpenGLBuffer>
-#include <QtWidgets/QOpenGLWidget>
+#if QT_VERSION >= 0x060000
+	#include <QtOpenGL/QOpenGLShaderProgram>
+	#include <QtOpenGL/QOpenGLBuffer>
+	#include <QtOpenGLWidgets/QOpenGLWidget>
+
+	#include <QtCore/QRecursiveMutex>
+	using t_qt_mutex = QRecursiveMutex;
+#else
+	#include <QtGui/QOpenGLShaderProgram>
+	#include <QtGui/QOpenGLBuffer>
+	#include <QtWidgets/QOpenGLWidget>
+
+	#include <QtCore/QMutex>
+	using t_qt_mutex = QMutex;
+#endif
 
 #include <QtGui/QMatrix4x4>
 #include <QtGui/QVector4D>
@@ -78,7 +89,11 @@
 
 
 // GL functions include
-#define _GL_INC_IMPL(MAJ, MIN, SUFF) <QtGui/QOpenGLFunctions_ ## MAJ ## _ ## MIN ## SUFF>
+#if QT_VERSION >= 0x060000
+	#define _GL_INC_IMPL(MAJ, MIN, SUFF) <QtOpenGL/QOpenGLFunctions_ ## MAJ ## _ ## MIN ## SUFF>
+#else
+	#define _GL_INC_IMPL(MAJ, MIN, SUFF) <QtGui/QOpenGLFunctions_ ## MAJ ## _ ## MIN ## SUFF>
+#endif
 #define _GL_INC(MAJ, MIN, SUFF) _GL_INC_IMPL(MAJ, MIN, SUFF)
 #include _GL_INC(_GL_MAJ_VER, _GL_MIN_VER, _GL_SUFFIX)
 
@@ -203,7 +218,11 @@ extern bool create_line_object(QOpenGLWidget* pGLWidget, GlRenderObj& obj,
 class GlPlotRenderer : public QObject
 { Q_OBJECT
 private:
-	QMutex m_mutexObj{QMutex::Recursive};
+#if QT_VERSION >= 0x060000
+	t_qt_mutex m_mutexObj;
+#else
+	t_qt_mutex m_mutexObj{QMutex::Recursive};
+#endif
 
 
 protected:
@@ -395,14 +414,19 @@ protected:
 	virtual void wheelEvent(QWheelEvent *pEvt) override;
 
 private:
-	mutable QMutex m_mutex{QMutex::Recursive};
+#if QT_VERSION >= 0x060000
+	mutable t_qt_mutex m_mutex;
+#else
+	mutable t_qt_mutex m_mutex{QMutex::Recursive};
+#endif
+
 	std::unique_ptr<GlPlotRenderer> m_renderer;
 	std::unique_ptr<QThread> m_thread_impl;
 	bool m_mouseMovedBetweenDownAndUp = 0;
 	bool m_mouseDown[3] = {0,0,0};
 
 public:
-	QMutex* GetMutex() { return &m_mutex; }
+	t_qt_mutex* GetMutex() { return &m_mutex; }
 
 	void MoveContextToThread();
 	bool IsContextInThread() const;
