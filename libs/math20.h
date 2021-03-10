@@ -7,7 +7,7 @@
  *
  * @desc The present version was forked on 8-Nov-2018 from my privately developed "magtools" project (https://github.com/t-weber/magtools).
  * @desc Additional functions forked on 7-Nov-2018 from my privately and TUM-PhD-developed "tlibs" project (https://github.com/t-weber/tlibs).
- * @desc Forked on 1-Feb-2021 from my privately developed "geo" project (https://github.com/t-weber/geo).
+ * @desc Further functions and updates forked on 1-Feb-2021 from my privately developed "geo" and "misc" projects (https://github.com/t-weber/geo and https://github.com/t-weber/misc).
  *
  * @desc for the references, see the 'LITERATURE' file
  */
@@ -84,7 +84,7 @@ requires is_basic_vec<t_vec>;
 
 
 // ----------------------------------------------------------------------------
-// helpers
+// helpers and constants
 // ----------------------------------------------------------------------------
 
 // constants
@@ -1511,11 +1511,9 @@ private:
 
 
 
-
 // ----------------------------------------------------------------------------
-// n-dim algos
+// scalar algos
 // ----------------------------------------------------------------------------
-
 
 /**
  * are two scalars equal within an epsilon range?
@@ -1525,6 +1523,32 @@ bool equals(T t1, T t2, T eps = std::numeric_limits<T>::epsilon())
 requires is_scalar<T>
 {
 	return std::abs(t1 - t2) <= eps;
+}
+
+
+/**
+ * get next multiple of the given granularity
+ */
+template<typename t_num = unsigned int>
+t_num next_multiple(t_num num, t_num granularity)
+requires is_scalar<t_num>
+{
+	t_num div = num / granularity;
+	bool rest_is_0 = 1;
+
+	if constexpr(std::is_floating_point_v<t_num>)
+	{
+		div = std::floor(div);
+		t_num rest = std::fmod(num, granularity);
+		rest_is_0 = equals(rest, t_num{0});
+	}
+	else
+	{
+		t_num rest = num % granularity;
+		rest_is_0 = (rest==0);
+	}
+
+	return rest_is_0 ? num : (div+1) * granularity;
 }
 
 
@@ -1561,13 +1585,20 @@ requires is_scalar<T>
  */
 template<class T>
 bool equals(const T& t1, const T& t2,
-	typename T::value_type eps = std::numeric_limits<typename T::value_type>::epsilon())
+			typename T::value_type eps = std::numeric_limits<typename T::value_type>::epsilon())
 requires is_complex<T>
 {
 	return (std::abs(t1.real() - t2.real()) <= eps) &&
-		(std::abs(t1.imag() - t2.imag()) <= eps);
+	(std::abs(t1.imag() - t2.imag()) <= eps);
 }
 
+// ----------------------------------------------------------------------------
+
+
+
+// ----------------------------------------------------------------------------
+// n-dim algos
+// ----------------------------------------------------------------------------
 
 /**
  * are two vectors equal within an epsilon range?
@@ -4856,73 +4887,71 @@ requires is_vec<t_vec> && is_mat<t_mat>
  * perspective matrix (homogeneous 4x4)
  * @see https://www.khronos.org/registry/OpenGL-Refpages/gl2.1/xhtml/gluPerspective.xml
  */
-template<class t_mat>
+template<class t_mat, typename t_scalar=typename t_mat::value_type>
 t_mat hom_perspective(
-	typename t_mat::value_type n = 0.01, typename t_mat::value_type f = 100.,
-	typename t_mat::value_type fov = 0.5*pi<typename t_mat::value_type>, typename t_mat::value_type ratio = 3./4.,
+	t_scalar n = 0.01, t_scalar f = 100.,
+	t_scalar fov = 0.5*pi<typename t_mat::value_type>, t_scalar ratio = 3./4.,
 	bool bRHS = true, bool bZ01 = false)
 requires is_mat<t_mat>
 {
-	using T = typename t_mat::value_type;
-	const T c = 1./std::tan(0.5 * fov);
-	const T n0 = bZ01 ? T(0) : n;
-	const T sc = bZ01 ? T(1) : T(2);
-	const T zs = bRHS ? T(1) : T(-1);
+	const t_scalar c = 1./std::tan(0.5 * fov);
+	const t_scalar n0 = bZ01 ? t_scalar{0} : n;
+	const t_scalar sc = bZ01 ? t_scalar{1} : t_scalar{2};
+	const t_scalar zs = bRHS ? t_scalar{1} : t_scalar{-1};
+	const t_scalar range_nf = std::abs(f-n);
 
 	//         ( x*c*r                           )      ( -x*c*r/z                         )
 	//         ( y*c                             )      ( -y*c/z                           )
 	// P * x = ( z*(n0+f)/(n-f) + w*sc*n*f/(n-f) )  =>  ( -(n0+f)/(n-f) - w/z*sc*n*f/(n-f) )
 	//         ( -z                              )      ( 1                                )
 	return create<t_mat>({
-		c*ratio, 	0., 	0., 			0.,
-		0, 		c, 	0., 			0.,
-		0.,		0.,	zs*(n0+f)/(n-f), 	sc*n*f/(n-f),
-		0.,		0.,	-zs,			0.
+		c*ratio,  0.,  0.,                   0.,
+		0,        c,   0.,                   0.,
+		0.,       0.,  -zs*(n0+f)/range_nf,  -sc*n*f/range_nf,
+		0.,       0.,  -zs,                  0.
 	});
 }
 
 
 /**
  * orthographic projection matrix (homogeneous 4x4)
- * @see https://www.khronos.org/registry/OpenGL-Refpages/gl2.1/xhtml/gluPerspective.xml
+ * @see https://www.khronos.org/registry/OpenGL-Refpages/gl2.1/xhtml/glOrtho.xml
  */
-template<class t_mat>
+template<class t_mat, typename t_scalar=typename t_mat::value_type>
 t_mat hom_ortho(
-	typename t_mat::value_type n = 0.01, typename t_mat::value_type f = 100.,
-	typename t_mat::value_type l = -1., typename t_mat::value_type r = 1.,
-	typename t_mat::value_type b = -1., typename t_mat::value_type t = 1.,
+	t_scalar n = 0.01, t_scalar f = 100.,
+	t_scalar l = -1., t_scalar r = 1.,
+	t_scalar b = -1., t_scalar t = 1.,
 	bool bRHS = true, bool bMap05 = false)
 requires is_mat<t_mat>
 {
-	using T = typename t_mat::value_type;
-
 	// map ranges into [-0.5, 0.5] or [-1, 1] else
-	const T sc = bMap05 ? T{1} : T{2};
-	const T zs = bRHS ? T{1} : T{-1};
+	const t_scalar sc = bMap05 ? t_scalar{1} : t_scalar{2};
+	const t_scalar zs = bRHS ? t_scalar{1} : t_scalar{-1};
 
-	const T range_nf = std::abs(f-n);
-	const T range_lr = std::abs(r-l);
-	const T range_bt = std::abs(t-b);
+	const t_scalar range_lr = std::abs(r-l);
+	const t_scalar range_bt = std::abs(t-b);
+	const t_scalar range_nf = std::abs(f-n);
 
 	// centring
-	const T tr_x = sc/T{2} * (l+r) / range_lr;
-	const T tr_y = sc/T{2} * (b+t) / range_bt;
-	const T tr_z = sc/T{2} * (n+f) / range_nf;
+	const t_scalar tr_x = sc/t_scalar{2} * (l+r) / range_lr;
+	const t_scalar tr_y = sc/t_scalar{2} * (b+t) / range_bt;
+	const t_scalar tr_z = sc/t_scalar{2} * (n+f) / range_nf;
 
 	// scaling
-	const T sc_x = sc / range_lr;
-	const T sc_y = sc / range_bt;
-	const T sc_z = sc / range_nf;
+	const t_scalar sc_x = sc / range_lr;
+	const t_scalar sc_y = sc / range_bt;
+	const t_scalar sc_z = sc / range_nf;
 
 	//         ( sc_x*x - tr_x )
 	//         ( sc_y*y - tr_y )
 	// P * x = ( sc_z*z - tr_z )
 	//         ( 1             )
 	return create<t_mat>({
-		sc_x,	0.,	0.,		-tr_x,
-		0.,	sc_y,	0.,		-tr_x,
-		0.,	0.,	zs*sc_z,	-tr_x,
-		0.,	0.,	0.,		1.
+		sc_x,  0.,    0.,        -tr_x,
+		0.,    sc_y,  0.,        -tr_y,
+		0.,    0.,    -zs*sc_z,  -tr_z,
+		0.,    0.,    0.,        1.
 	});
 }
 
@@ -4931,18 +4960,17 @@ requires is_mat<t_mat>
  * viewport matrix (homogeneous 4x4)
  * @see https://www.khronos.org/registry/OpenGL-Refpages/gl2.1/xhtml/glViewport.xml
  */
-template<class t_mat>
-t_mat hom_viewport(typename t_mat::value_type w, typename t_mat::value_type h,
-	typename t_mat::value_type n = 0, typename t_mat::value_type f = 1)
+template<class t_mat, typename t_scalar=typename t_mat::value_type>
+t_mat hom_viewport(t_scalar w, t_scalar h, t_scalar n = 0, t_scalar f = 1)
 requires is_mat<t_mat>
 {
-	using T = typename t_mat::value_type;
+	t_scalar sc{0.5};
 
 	return create<t_mat>({
-		T(0.5)*w, 	0., 		0., 		T(0.5)*w,
-		0, 		T(0.5)*h, 	0., 		T(0.5)*h,
-		0.,		0.,		T(0.5)*(f-n), 	T(0.5)*(f+n),
-		0.,		0.,		0.,		1.
+		sc*w,  0.,    0.,        sc*w,
+		0,     sc*h,  0.,        sc*h,
+		0.,    0.,    sc*(f-n),  sc*(f+n),
+		0.,    0.,    0.,        1.
 	});
 }
 
@@ -4955,10 +4983,10 @@ t_mat hom_translation(t_real x, t_real y, t_real z)
 requires is_mat<t_mat>
 {
 	return create<t_mat>({
-		1., 	0., 	0., 	static_cast<typename t_mat::value_type>(x),
-		0., 	1., 	0., 	static_cast<typename t_mat::value_type>(y),
-		0.,	0.,	1., 	static_cast<typename t_mat::value_type>(z),
-		0.,	0.,	0.,	1.
+		1.,  0.,  0.,  x,
+		0.,  1.,  0.,  y,
+		0.,  0.,  1.,  z,
+		0.,  0.,  0.,  1.
 	});
 }
 
@@ -4971,10 +4999,10 @@ t_mat hom_scaling(t_real x, t_real y, t_real z)
 requires is_mat<t_mat>
 {
 	return create<t_mat>({
-		x, 	0., 0., 0.,
-		0., y, 	0., 0.,
-		0.,	0.,	z, 	0.,
-		0.,	0.,	0.,	1.
+		x,   0.,  0.,  0.,
+		0.,  y,   0.,  0.,
+		0.,  0.,  z,   0.,
+		0.,  0.,  0.,  1.
 	});
 }
 
@@ -4987,9 +5015,9 @@ requires is_mat<t_mat>
  */
 template<class t_vec, class t_mat, class t_real = typename t_vec::value_type>
 t_mat get_arrow_matrix(
-	const t_vec& vecTo, 
+	const t_vec& vecTo,
 	t_real postscale = 1, const t_vec& vecPostTrans = create<t_vec>({0,0,0.5}),
-	const t_vec& vecFrom = create<t_vec>({0,0,1}), 
+	const t_vec& vecFrom = create<t_vec>({0,0,1}),
 	t_real prescale =  1, const t_vec& vecPreTrans = create<t_vec>({0,0,0}))
 requires is_vec<t_vec> && is_mat<t_mat>
 {

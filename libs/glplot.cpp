@@ -573,7 +573,7 @@ std::size_t GlPlotRenderer::AddTriangleObject(const std::vector<t_vec3_gl>& tria
 	QMutexLocker _locker{&m_mutexObj};
 
 	auto obj = CreateTriangleObject(triag_verts, triag_verts, triag_norms, tl2::create<t_vec_gl>({r,g,b,a}), false);
-	obj.m_mat = tl2::hom_translation<t_mat_gl>(0., 0., 0.);
+	obj.m_mat = tl2::hom_translation<t_mat_gl, t_real_gl>(0., 0., 0.);
 	obj.m_boundingSpherePos = std::move(boundingSpherePos);
 	obj.m_boundingSphereRad = boundingSphereRad;
 	obj.m_labelPos = tl2::create<t_vec3_gl>({0., 0., 0.75});
@@ -873,10 +873,10 @@ void GlPlotRenderer::resizeGL()
 	if(!pGl)
 		return;
 
-	m_matViewport = tl2::hom_viewport<t_mat_gl>(w, h, 0., 1.);
+	m_matViewport = tl2::hom_viewport<t_mat_gl, t_real_gl>(w, h, 0., 1.);
 	std::tie(m_matViewport_inv, std::ignore) = tl2::inv<t_mat_gl>(m_matViewport);
 
-	m_matPerspective = tl2::hom_perspective<t_mat_gl>(0.01, 100., tl2::pi<t_real_gl>*0.5, t_real_gl(h)/t_real_gl(w));
+	m_matPerspective = tl2::hom_perspective<t_mat_gl, t_real_gl>(0.01, 100., tl2::pi<t_real_gl>*0.5, t_real_gl(h)/t_real_gl(w));
 	//m_matPerspective = tl2::hom_ortho<t_mat_gl>(0.01, 100., -t_real_gl(w)*0.0025, t_real_gl(w)*0.0025, -t_real_gl(h)*0.0025, t_real_gl(h)*0.0025);
 	std::tie(m_matPerspective_inv, std::ignore) = tl2::inv<t_mat_gl>(m_matPerspective);
 
