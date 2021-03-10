@@ -16,7 +16,7 @@ namespace testtools = boost::test_tools;
 #include <vector>
 #include <random>
 
-#include "libs/math20.h"
+#include "libs/maths.h"
 
 
 // LinearAlgebra.eigen([-1.5 0.01 0.02; -0.04 1.0 0.03; -2.05 0.06 0.5])

@@ -14,7 +14,7 @@ namespace testtools = boost::test_tools;
 
 
 #include "libs/fit.h"
-#include "libs/math20.h"
+#include "libs/maths.h"
 
 
 using t_types_real = std::tuple<double, float>;

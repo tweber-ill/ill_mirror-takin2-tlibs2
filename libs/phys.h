@@ -15,7 +15,7 @@
 #include "log.h"
 
 #if defined(__cpp_concepts) && __cplusplus >= 201709L
-	#include "math20.h"
+	#include "maths.h"
 #else
 	#pragma message("The compiler does not support C++20, trying to use old C++17 math library, if available.")
 	#include "math17.h"
