@@ -80,6 +80,18 @@ requires is_basic_mat<t_mat>;
 template<class t_vec>
 t_vec zero(std::size_t N=0)
 requires is_basic_vec<t_vec>;
+
+template<class t_mat, class t_vec>
+std::tuple<bool, t_mat, t_mat> qr(const t_mat& mat)
+requires is_mat<t_mat> && is_vec<t_vec>;
+
+template<class t_mat>
+std::tuple<t_mat, bool> inv(const t_mat& mat)
+requires is_mat<t_mat>;
+
+template<class t_mat>
+typename t_mat::value_type det(const t_mat& mat)
+requires is_mat<t_mat>;
 // ----------------------------------------------------------------------------
 
 
@@ -750,21 +762,6 @@ std::tuple<T,T> stereographic_proj(T twophi_crys, T twotheta_crys, T rad)
 	return std::make_tuple(x, y);
 }
 // -----------------------------------------------------------------------------
-
-
-
-// ----------------------------------------------------------------------------
-// forward declarations
-// ----------------------------------------------------------------------------
-template<class t_mat, class t_vec>
-std::tuple<bool, t_mat, t_mat> qr(const t_mat& mat)
-requires is_mat<t_mat> && is_vec<t_vec>;
-
-template<class t_mat>
-std::tuple<t_mat, bool> inv(const t_mat& mat)
-requires is_mat<t_mat>;
-// ----------------------------------------------------------------------------
-
 
 
 
@@ -2002,6 +1999,35 @@ requires is_basic_mat<t_mat>
 // -----------------------------------------------------------------------------
 
 
+/**
+ * create a vector with given size if it is dynamic
+ */
+template<class t_vec>
+t_vec create(std::size_t size=3)
+requires is_basic_vec<t_vec>
+{
+	t_vec vec;
+	if constexpr(is_dyn_vec<t_vec>)
+		vec = t_vec{size};
+
+	return vec;
+}
+
+
+/**
+ * create a matrix with given sizes if it is dynamic
+ */
+template<class t_mat>
+t_mat create(std::size_t size1, std::size_t size2)
+requires is_basic_mat<t_mat>
+{
+	t_mat mat;
+	if constexpr(is_dyn_mat<t_mat>)
+		mat = t_mat{size1, size2};
+
+	return mat;
+}
+
 
 /**
  * create vector from initializer_list
@@ -2849,23 +2875,6 @@ requires is_basic_vec<t_vec>
 	}
 
 	return fullDet;
-}
-
-
-/**
- * determinant
- */
-template<class t_mat>
-typename t_mat::value_type det(const t_mat& mat)
-requires is_mat<t_mat>
-{
-	using T = typename t_mat::value_type;
-
-	if(mat.size1() != mat.size2())
-		return 0;
-
-	std::vector<T> matFlat = flatten<t_mat, std::vector>(mat);
-	return flat_det<std::vector<T>>(matFlat, mat.size1());
 }
 
 
@@ -6446,6 +6455,57 @@ requires is_mat<t_mat>
 
 	matInv = matInv / fullDet;
 	return std::make_tuple(matInv, true);
+#endif
+}
+
+
+/**
+ * determinant
+ * 
+ * M v = l v
+ * M = V^-1 L V
+ * det(M) = det(V^-1 L V) = det(V V^-1 L) = det(L) = l_1*...*l_n
+ */
+template<class t_mat>
+typename t_mat::value_type det(const t_mat& mat)
+requires is_mat<t_mat>
+{
+	using T = typename t_mat::value_type;
+	if(mat.size1() != mat.size2())
+		return 0;
+	
+#ifdef USE_LAPACK
+
+	using t_vec = vec<T>;
+
+	if constexpr(is_complex<typename t_mat::value_type>)
+	{
+		const auto [ok, evals, evecs] =
+			tl2_la::eigenvec<t_mat, t_vec, T>(mat, true, false, false);
+		
+		T detval{1, 0};
+		for(const auto& eval : evals)
+			detval *= eval;
+
+		return detval;
+	}
+	else
+	{
+		const auto [ok, evalsRe, evalsIm, evecsRe, evecsIm] =
+			tl2_la::eigenvec<t_mat, t_vec, T>(mat, true, false, false);
+
+		std::complex<T> detval{1, 0};
+		for(std::size_t i=0; i<evalsRe.size(); ++i)
+			detval *= std::complex<T>{evalsRe[i], evalsIm[i]};
+
+		return std::abs(detval);
+	}
+
+#else
+
+	std::vector<T> matFlat = flatten<t_mat, std::vector>(mat);
+	return flat_det<std::vector<T>>(matFlat, mat.size1());
+
 #endif
 }
 

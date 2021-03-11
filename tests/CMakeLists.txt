@@ -76,6 +76,7 @@ add_executable(cov cov.cpp)
 
 target_link_libraries(expr Threads::Threads)
 target_link_libraries(mat0 ${Lapacke_LIBRARIES})
+target_link_libraries(mat2 ${Lapacke_LIBRARIES})
 target_link_libraries(cryst ${Lapacke_LIBRARIES})
 target_link_libraries(leastsq ${Lapacke_LIBRARIES})
 target_link_libraries(eig ${Lapacke_LIBRARIES})
