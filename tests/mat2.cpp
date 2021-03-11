@@ -1,5 +1,5 @@
 /**
- * math lib rwar
+ * math lib test
  * @author Tobias Weber <tweber@ill.fr>
  * @date mar-21
  * @license GPLv3, see 'LICENSE' file
