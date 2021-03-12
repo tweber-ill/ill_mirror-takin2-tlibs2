@@ -781,7 +781,7 @@ public:
 	using base_type::base_type;
 	qvec_adapter(const base_type& vec) : base_type{vec} {}
 
-	constexpr size_t size() const { return N; }
+	static constexpr size_t size() { return N; }
 
 	T& operator[](size_t i) { return base_type::operator()(i,0); }
 	const T operator[](size_t i) const { return base_type::operator()(i,0); }
@@ -800,8 +800,8 @@ public:
 	using base_type::base_type;
 	qmat_adapter(const base_type& mat) : base_type{mat} {}
 
-	size_t size1() const { return ROWS; }
-	size_t size2() const { return COLS; }
+	static constexpr size_t size1() { return ROWS; }
+	static constexpr size_t size2() { return COLS; }
 };
 
 
@@ -818,7 +818,7 @@ public:
 	using base_type::base_type;
 	qvecN_adapter(const base_type& vec) : base_type{vec} {}
 
-	constexpr size_t size() const { return N; }
+	static constexpr size_t size() { return N; }
 
 	T& operator[](size_t i) { return static_cast<base_type&>(*this)[i]; }
 	const T operator[](size_t i) const { return static_cast<const base_type&>(*this)[i]; }
@@ -849,8 +849,8 @@ public:
 				(*this)(i,j) = static_cast<value_type>(matOther(i,j));
 	}
 
-	size_t size1() const { return ROWS; }
-	size_t size2() const { return COLS; }
+	static constexpr size_t size1() { return ROWS; }
+	static constexpr size_t size2() { return COLS; }
 };
 // ----------------------------------------------------------------------------
 }
