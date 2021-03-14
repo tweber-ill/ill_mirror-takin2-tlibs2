@@ -898,8 +898,6 @@ requires tl2::is_basic_vec<t_vec> && tl2::is_dyn_vec<t_vec>
 {
 	if constexpr(tl2::is_dyn_vec<t_vec>)
 		assert((vec1.size() == vec2.size()));
-	else
-		static_assert(vec1.size() == vec2.size());
 
 	t_vec vec(vec1.size());
 
@@ -1097,8 +1095,6 @@ requires tl2::is_basic_mat<t_mat> && tl2::is_dyn_mat<t_mat>
 {
 	if constexpr(tl2::is_dyn_mat<t_mat>)
 		assert((mat1.size1() == mat2.size1() && mat1.size2() == mat2.size2()));
-	else
-		static_assert(mat1.size1() == mat2.size1() && mat1.size2() == mat2.size2());
 
 	t_mat mat(mat1.size1(), mat1.size2());
 
@@ -1287,7 +1283,7 @@ requires tl2::is_basic_mat<t_mat> && tl2::is_dyn_mat<t_mat>
 	if constexpr(tl2::is_dyn_mat<t_mat>)
 		assert((mat.size2() == vec.size()));
 	else
-		static_assert(mat.size2() == vec.size());
+		static_assert(t_mat::size2() == t_vec::size());
 
 
 	t_vec vecRet(mat.size1());
@@ -2346,7 +2342,7 @@ requires tl2::is_basic_mat<t_mat> && tl2::is_dyn_mat<t_mat>
 		if constexpr(tl2::is_dyn_mat<t_mat>)
 			assert((mat1.size2() == mat2.size1()));
 		else
-			static_assert(mat1.size2() == mat2.size1());
+			static_assert(t_mat::size2() == t_mat::size1());
 	}
 
 
@@ -2378,8 +2374,6 @@ requires tl2::is_basic_mat<t_mat>
 	{
 		if constexpr(tl2::is_dyn_mat<t_mat>)
 			assert(mat1.size1() == mat2.size1() && mat1.size2() == mat2.size2());
-		else
-			static_assert(mat1.size1() == mat2.size1() && mat1.size2() == mat2.size2());
 	}
 
 
@@ -3548,7 +3542,8 @@ requires is_mat<t_mat> && is_vec<t_vec>
 	using t_innervec = typename std::remove_const<
 		typename std::remove_reference<t_innervec_org>::type>::type;
 
-	if(vecVals.size() == 0) return std::make_tuple(t_mat(), t_mat());
+	if(vecVals.size() == 0)
+		return std::make_tuple(t_mat(), t_mat());
 
 	// mean vector <X_i>
 	t_innervec vecMean;
@@ -5850,7 +5845,7 @@ requires tl2::is_mat<t_mat>
 	if constexpr(tl2::is_dyn_mat<t_mat>)
 		assert((mat.size1() == mat.size2()));
 	else
-		static_assert(mat.size1() == mat.size2());
+		static_assert(t_mat::size1() == t_mat::size2());
 
 	using t_scalar = typename t_mat::value_type;
 	using t_real = tl2::underlying_value_type<t_scalar>;
@@ -6503,11 +6498,11 @@ template<class t_mat>
 std::tuple<t_mat, bool> inv(const t_mat& mat)
 requires is_mat<t_mat>
 {
-	// fail if matrix is not square, TODO: fix
-	//if constexpr(tl2::is_dyn_mat<t_mat>)
+	// fails if matrix is not square, TODO: fix
+	if constexpr(tl2::is_dyn_mat<t_mat>)
 		assert((mat.size1() == mat.size2()));
-	//else
-	//	static_assert(mat.size1() == mat.size2());
+	else
+		static_assert(t_mat::size1() == t_mat::size2());
 
 #ifdef USE_LAPACK
 	return tl2_la::inv<t_mat>(mat);
@@ -6645,10 +6640,8 @@ std::tuple<t_vec, bool> leastsq(const t_vec& x, const t_vec& y, std::size_t orde
 requires is_vec<t_vec> && is_dyn_mat<t_mat>
 {
 	// check array sizes, TODO: fix
-	//if constexpr(tl2::is_dyn_vec<t_vec>)
+	if constexpr(tl2::is_dyn_vec<t_vec>)
 		assert((x.size() == y.size()));
-	//else
-	//	static_assert(x.size() == y.size());
 
 
 	using namespace tl2_ops;
