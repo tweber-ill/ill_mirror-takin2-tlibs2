@@ -1184,6 +1184,18 @@ requires tl2::is_basic_mat<t_mat> && tl2::is_dyn_mat<t_mat>
 
 
 /**
+* matrix *= matrix
+ */
+template<class t_mat>
+t_mat& operator*=(t_mat& mat1, const t_mat& mat2)
+requires tl2::is_basic_mat<t_mat> && tl2::is_dyn_mat<t_mat>
+{
+	mat1 = mat1 * mat2;
+	return mat1;
+}
+
+
+/**
  * matrix += matrix
  */
 template<class t_mat>
@@ -1302,22 +1314,6 @@ namespace tl2 {
 // vector and matrix containers
 // ----------------------------------------------------------------------------
 
-/**
- * conversion between vector types
- */
-template<class t_vec_to, class t_vec_from>
-t_vec_to convert_vec(const t_vec_from& vec)
-requires is_basic_vec<t_vec_to> && is_basic_vec<t_vec_from>
-{
-	t_vec_to vecTo = zero<t_vec_to>(vec.size());
-	using t_real = typename t_vec_to::value_type;
-
-	for(std::size_t i=0; i<vec.size(); ++i)
-		vecTo[i] = t_real(vec[i]);
-	return vecTo;
-}
-
-
 template<class T = double, template<class...> class t_cont = std::vector>
 requires is_basic_vec<t_cont<T>> && is_dyn_vec<t_cont<T>>
 class vec : public t_cont<T>
@@ -1360,9 +1356,15 @@ public:
 	}
 
 	template<class T_other, template<class...> class t_cont_other>
+	vec<T, t_cont>& operator=(const vec<T_other, t_cont_other>& other)
+	{
+		*this = convert<vec<T, t_cont>, vec<T_other, t_cont_other>>(other);
+	}
+
+	template<class T_other, template<class...> class t_cont_other>
 	const vec<T, t_cont>& operator=(const vec<T_other, t_cont_other>& other) const
 	{
-		*this = convert_vec<vec<T, t_cont>, vec<T_other, t_cont_other>>(other);
+		*this = convert<vec<T, t_cont>, vec<T_other, t_cont_other>>(other);
 	}
 
 	vec(std::size_t SIZE, const T* arr = nullptr) : container_type(SIZE)
@@ -1370,13 +1372,6 @@ public:
 		if(arr)
 			from_array(arr);
 	}
-
-	/*vec(const std::initializer_list<T>& lst) : container_type(lst.size())
-	{
-		std::size_t i = 0;
-		for(auto iterLst=lst.begin(); iterLst!=lst.end(); std::advance(iterLst, 1))
-			this->operator[](i++) = *iterLst;
-	}*/
 
 
 	const value_type& operator()(std::size_t i) const { return this->operator[](i); }
@@ -1432,25 +1427,29 @@ public:
 			from_array(arr);
 	}
 
-	mat<T, t_cont>& operator=(const mat<T, t_cont>& other)
+
+	template<class T_other, template<class...> class t_cont_other>
+	mat(const mat<T_other, t_cont_other>& other)
 	{
-		this->m_data = other.m_data;
-		this->m_rowsize = other.m_rowsize;
-		this->m_colsize = other.m_colsize;
-		return *this;
+		this->operator=<T_other, t_cont_other>(other);
 	}
 
-	const mat<T, t_cont>& operator=(const mat<T, t_cont>& other) const
+	template<class T_other, template<class...> class t_cont_other>
+	mat<T, t_cont>& operator=(const vec<T_other, t_cont_other>& other)
 	{
-		this->m_data = other.m_data;
+		*this = convert<mat<T, t_cont>, mat<T_other, t_cont_other>>(other);
+
 		this->m_rowsize = other.m_rowsize;
 		this->m_colsize = other.m_colsize;
-		return *this;
 	}
 
-	mat(const mat<T, t_cont>& other)
+	template<class T_other, template<class...> class t_cont_other>
+	const mat<T, t_cont>& operator=(const vec<T_other, t_cont_other>& other) const
 	{
-		this->operator=(other);
+		*this = convert<mat<T, t_cont>, mat<T_other, t_cont_other>>(other);
+
+		this->m_rowsize = other.m_rowsize;
+		this->m_colsize = other.m_colsize;
 	}
 
 
@@ -2166,22 +2165,81 @@ requires is_mat<t_mat>
 
 
 /**
- * convert between vector types
+ * linearise a matrix to a vector container
  */
-template<class t_vecTo, class t_vecFrom>
-t_vecTo convert(const t_vecFrom& vec)
-requires is_basic_vec<t_vecFrom> && is_basic_vec<t_vecTo>
+template<class t_vec, class t_mat>
+t_vec convert(const t_mat& mat)
+requires is_basic_vec<t_vec> && is_mat<t_mat>
 {
-	using t_ty = typename t_vecTo::value_type;
+	using T_dst = typename t_vec::value_type;
+	using t_idx = decltype(mat.size1());
 
-	t_vecTo vecRet;
-	if constexpr(is_dyn_vec<t_vecTo>)
-		vecRet = t_vecTo(vec.size());
+	t_vec vec;
 
-	for(std::size_t i=0; i<vec.size(); ++i)
-		vecRet[i] = static_cast<t_ty>(vec[i]);
+	for(t_idx iRow=0; iRow<mat.size1(); ++iRow)
+		for(t_idx iCol=0; iCol<mat.size2(); ++iCol)
+			vec.push_back(T_dst(mat(iRow, iCol)));
 
-	return vecRet;
+	return vec;
+}
+
+
+/**
+ * converts matrix containers of different value types
+ */
+template<class t_mat_dst, class t_mat_src>
+t_mat_dst convert(const t_mat_src& mat)
+requires is_mat<t_mat_dst> && is_mat<t_mat_src>
+{
+	using T_dst = typename t_mat_dst::value_type;
+	using t_idx = decltype(mat.size1());
+
+	// in case the static size of the destination vector is larger than the source's
+	t_idx maxRows = std::max(mat.size1(), t_idx(t_mat_dst{}.size1()));
+	t_idx maxCols = std::max(mat.size2(), t_idx(t_mat_dst{}.size2()));
+
+	t_mat_dst matdst = unit<t_mat_dst>(maxRows, maxCols);
+
+	for(t_idx iRow=0; iRow<mat.size1(); ++iRow)
+		for(t_idx iCol=0; iCol<mat.size2(); ++iCol)
+			matdst(iRow, iCol) = T_dst(mat(iRow, iCol));
+
+	return matdst;
+}
+
+
+/**
+ * converts vector containers of different value types
+ */
+template<class t_vec_dst, class t_vec_src>
+t_vec_dst convert(const t_vec_src& vec)
+requires is_vec<t_vec_dst> && is_vec<t_vec_src>
+{
+	using T_dst = typename t_vec_dst::value_type;
+	using t_idx = decltype(vec.size());
+
+	t_vec_dst vecdst = create<t_vec_dst>(vec.size());
+
+	for(t_idx i=0; i<vec.size(); ++i)
+		vecdst[i] = T_dst(vec[i]);
+
+	return vecdst;
+}
+
+
+/**
+ * converts a container of objects
+ */
+template<class t_obj_dst, class t_obj_src, template<class...> class t_cont>
+t_cont<t_obj_dst> convert(const t_cont<t_obj_src>& src_objs)
+requires (is_vec<t_obj_dst> || is_mat<t_obj_dst>) && (is_vec<t_obj_src> || is_mat<t_obj_src>)
+{
+	t_cont<t_obj_dst> dst_objs;
+
+	for(const t_obj_src& src_obj : src_objs)
+		dst_objs.emplace_back(convert<t_obj_dst, t_obj_src>(src_obj));
+
+	return dst_objs;
 }
 
 
@@ -2772,28 +2830,6 @@ requires is_vec<t_vec>
 
 
 /**
- * linearise a matrix to a vector container
- */
-template<class t_mat, template<class...> class t_cont>
-t_cont<typename t_mat::value_type> flatten(const t_mat& mat)
-requires is_mat<t_mat> && is_basic_vec<t_cont<typename t_mat::value_type>>
-{
-	using T = typename t_mat::value_type;
-	t_cont<T> vec;
-
-	auto size1 = mat.size1();
-	auto size2 = mat.size2();
-	using local_size_t = std::decay_t<decltype(size1)>;
-
-	for(local_size_t iRow=0; iRow<size1; ++iRow)
-		for(local_size_t iCol=0; iCol<size2; ++iCol)
-			vec.push_back(mat(iRow, iCol));
-
-	return vec;
-}
-
-
-/**
  * submatrix removing a column/row from a matrix stored in a vector container
  */
 template<class t_vec>
@@ -2818,6 +2854,39 @@ requires is_basic_vec<t_vec>
 	}
 
 	return vec;
+}
+
+
+/**
+ * submatrix removing a column/row from a matrix
+ */
+template<class t_mat>
+t_mat submat(const t_mat& mat, decltype(mat.size1()) iRemRow, decltype(mat.size2()) iRemCol)
+requires is_dyn_mat<t_mat>
+{
+	using size_t = decltype(mat.size1());
+	t_mat matRet = create<t_mat>(mat.size1()-1, mat.size2()-1);
+
+	size_t iResRow = 0;
+	for(size_t iRow=0; iRow<mat.size1(); ++iRow)
+	{
+		if(iRow == iRemRow)
+			continue;
+
+		size_t iResCol = 0;
+		for(size_t iCol=0; iCol<mat.size2(); ++iCol)
+		{
+			if(iCol == iRemCol)
+				continue;
+
+			matRet(iResRow, iResCol) = mat(iRow, iCol);
+			++iResCol;
+		}
+
+		++iResRow;
+	}
+
+	return matRet;
 }
 
 
@@ -5015,6 +5084,24 @@ requires is_mat<t_mat>
 	});
 }
 
+
+/**
+ * rotation matrix in homogeneous coordinates
+ */
+template<class t_mat, class t_vec>
+t_mat hom_rotation(const t_vec& vec1, const t_vec& vec2)
+requires is_vec<t_vec> && is_mat<t_mat>
+{
+	t_mat rot = rotation<t_mat, t_vec>(vec1, vec2);
+
+	return create<t_mat>({
+		rot(0,0), rot(0,1), rot(0,2), 0.,
+		rot(1,0), rot(1,1), rot(1,2), 0.,
+		rot(2,0), rot(2,1), rot(2,2), 0.,
+		0.,       0.,       0.,       1.
+	});
+}
+
 // ----------------------------------------------------------------------------
 
 
@@ -5027,7 +5114,7 @@ t_mat get_arrow_matrix(
 	const t_vec& vecTo,
 	t_real postscale = 1, const t_vec& vecPostTrans = create<t_vec>({0,0,0.5}),
 	const t_vec& vecFrom = create<t_vec>({0,0,1}),
-	t_real prescale =  1, const t_vec& vecPreTrans = create<t_vec>({0,0,0}))
+	t_real prescale = 1, const t_vec& vecPreTrans = create<t_vec>({0,0,0}))
 requires is_vec<t_vec> && is_mat<t_mat>
 {
 	t_mat mat = unit<t_mat>(4);
@@ -5035,7 +5122,7 @@ requires is_vec<t_vec> && is_mat<t_mat>
 	mat *= hom_translation<t_mat>(vecPreTrans[0], vecPreTrans[1], vecPreTrans[2]);
 	mat *= hom_scaling<t_mat>(prescale, prescale, prescale);
 
-	mat *= rotation<t_mat, t_vec>(vecFrom, vecTo);
+	mat *= hom_rotation<t_mat, t_vec>(vecFrom, vecTo);
 
 	mat *= hom_scaling<t_mat>(postscale, postscale, postscale);
 	mat *= hom_translation<t_mat>(vecPostTrans[0], vecPostTrans[1], vecPostTrans[2]);
@@ -6429,7 +6516,7 @@ requires is_mat<t_mat>
 	using t_vec = std::vector<T>;
 	const std::size_t N = mat.size1();
 
-	const t_vec matFlat = flatten<t_mat, std::vector>(mat);
+	const t_vec matFlat = convert<t_vec, t_mat>(mat);
 	const T fullDet = flat_det<t_vec>(matFlat, N);
 
 	// fail if determinant is zero
@@ -6503,7 +6590,7 @@ requires is_mat<t_mat>
 
 #else
 
-	std::vector<T> matFlat = flatten<t_mat, std::vector>(mat);
+	std::vector<T> matFlat = convert<std::vector<T>, t_mat>(mat);
 	return flat_det<std::vector<T>>(matFlat, mat.size1());
 
 #endif
