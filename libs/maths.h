@@ -4989,6 +4989,7 @@ requires is_mat<t_mat>
 /**
  * orthographic projection matrix (homogeneous 4x4)
  * @see https://www.khronos.org/registry/OpenGL-Refpages/gl2.1/xhtml/glOrtho.xml
+ * @see https://en.wikipedia.org/wiki/Orthographic_projection
  */
 template<class t_mat, typename t_scalar=typename t_mat::value_type>
 t_mat hom_ortho(
@@ -5002,29 +5003,24 @@ requires is_mat<t_mat>
 	const t_scalar sc = bMap05 ? t_scalar{1} : t_scalar{2};
 	const t_scalar zs = bRHS ? t_scalar{1} : t_scalar{-1};
 
-	const t_scalar range_lr = std::abs(r-l);
-	const t_scalar range_bt = std::abs(t-b);
-	const t_scalar range_nf = std::abs(f-n);
+	const t_scalar range_lr = std::abs(r) + std::abs(l);
+	const t_scalar range_bt = std::abs(t) + std::abs(b);
+	const t_scalar range_nf = std::abs(f) + std::abs(n);
 
 	// centring
-	const t_scalar tr_x = sc/t_scalar{2} * (l+r) / range_lr;
-	const t_scalar tr_y = sc/t_scalar{2} * (b+t) / range_bt;
-	const t_scalar tr_z = sc/t_scalar{2} * (n+f) / range_nf;
-
-	// scaling
-	const t_scalar sc_x = sc / range_lr;
-	const t_scalar sc_y = sc / range_bt;
-	const t_scalar sc_z = sc / range_nf;
+	const t_scalar tr_x = sc*t_scalar{0.5} * (l+r) / range_lr;
+	const t_scalar tr_y = sc*t_scalar{0.5} * (b+t) / range_bt;
+	const t_scalar tr_z = sc*t_scalar{0.5} * (n+f) / range_nf;
 
 	//         ( sc_x*x - tr_x )
 	//         ( sc_y*y - tr_y )
 	// P * x = ( sc_z*z - tr_z )
 	//         ( 1             )
 	return create<t_mat>({
-		sc_x,  0.,    0.,        -tr_x,
-		0.,    sc_y,  0.,        -tr_y,
-		0.,    0.,    -zs*sc_z,  -tr_z,
-		0.,    0.,    0.,        1.
+		sc/range_lr, 0.,          0.,              -tr_x,
+		0.,          sc/range_bt, 0.,              -tr_y,
+		0.,          0.,          -zs*sc/range_nf, -zs*tr_z,
+		0.,          0.,          0.,              1.
 	});
 }
 

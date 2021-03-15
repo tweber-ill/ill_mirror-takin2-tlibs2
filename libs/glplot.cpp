@@ -345,7 +345,7 @@ void GlPlotRenderer::startedThread() { }
 void GlPlotRenderer::stoppedThread() { }
 
 
-QPointF GlPlotRenderer::GlToScreenCoords(const t_vec_gl& vec4, bool *pVisible)
+QPointF GlPlotRenderer::GlToScreenCoords(const t_vec_gl& vec4, bool *pVisible) const
 {
 	auto [ vecPersp, vec ] =
 		tl2::hom_to_screen_coords<t_mat_gl, t_vec_gl>

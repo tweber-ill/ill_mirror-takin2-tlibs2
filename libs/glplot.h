@@ -307,7 +307,7 @@ public:
 	std::tuple<std::string, std::string, std::string, std::string>
 		GetGlDescr() const { return std::make_tuple(m_strGlVer, m_strGlShaderVer, m_strGlVendor, m_strGlRenderer); }
 
-	QPointF GlToScreenCoords(const t_vec_gl& vec, bool *pVisible=nullptr);
+	QPointF GlToScreenCoords(const t_vec_gl& vec, bool *pVisible=nullptr) const;
 
 	void SetCamBase(const t_mat_gl& mat, const t_vec_gl& vecX, const t_vec_gl& vecY)
 	{ m_matCamBase = mat; m_vecCamX = vecX; m_vecCamY = vecY; UpdateCam(); }
