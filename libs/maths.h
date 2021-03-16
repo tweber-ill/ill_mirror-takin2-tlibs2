@@ -4449,7 +4449,7 @@ requires is_vec<t_vec>
 		std::size_t idx2 = (face >= num_points-1 ? 1 : face*2 + 3);	// bottom 2
 		std::size_t idx3 = (face >= num_points-1 ? 0 : face*2 + 2);	// top 2
 
-		t_vec n = cross<t_vec>({vertices[idx3]-vertices[idx0], vertices[idx1]-vertices[idx0]});
+		t_vec n = cross<t_vec>({vertices[idx1]-vertices[idx0], vertices[idx3]-vertices[idx0]});
 		n /= norm<t_vec>(n);
 
 		faces.push_back({ idx0, idx1, idx2, idx3 });
