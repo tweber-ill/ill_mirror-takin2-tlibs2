@@ -5093,6 +5093,24 @@ requires is_vec<t_vec> && is_mat<t_mat>
 	});
 }
 
+
+/**
+ * rotation matrix in homogeneous coordinates
+ */
+template<class t_mat, class t_vec>
+t_mat hom_rotation(const t_vec& axis, const typename t_vec::value_type angle, bool bIsNormalised=1)
+requires is_vec<t_vec> && is_mat<t_mat>
+{
+	t_mat rot = rotation<t_mat, t_vec>(axis, angle, bIsNormalised);
+
+	return create<t_mat>({
+		rot(0,0), rot(0,1), rot(0,2), 0.,
+		rot(1,0), rot(1,1), rot(1,2), 0.,
+		rot(2,0), rot(2,1), rot(2,2), 0.,
+		0.,       0.,       0.,       1.
+	});
+}
+
 // ----------------------------------------------------------------------------
 
 
