@@ -93,8 +93,8 @@ qgl_funcs* get_gl_functions(QOpenGLWidget *pGLWidget)
 bool create_triangle_object(QOpenGLWidget* pGLWidget, GlRenderObj& obj,
 	const std::vector<t_vec3_gl>& verts, const std::vector<t_vec3_gl>& triagverts,
 	const std::vector<t_vec3_gl>& norms, const std::vector<t_vec3_gl>& uvs,
-	const t_vec_gl& color, bool bUseVertsAsNorm,
-	GLint attrVertex, GLint attrVertexNormal, GLint attrVertexColor, GLint attrTextureCoords)
+	const t_vec_gl& colour, bool bUseVertsAsNorm,
+	GLint attrVertex, GLint attrVertexNormal, GLint attrVertexcolour, GLint attrTextureCoords)
 {
 	// TODO: move context to calling thread
 	pGLWidget->makeCurrent();
@@ -104,7 +104,7 @@ bool create_triangle_object(QOpenGLWidget* pGLWidget, GlRenderObj& obj,
 	if(!pGl) return false;
 
 	obj.m_type = GlRenderObjType::TRIANGLES;
-	obj.m_color = color;
+	obj.m_colour = colour;
 
 	// flatten vertex array into raw float array
 	auto to_float_array = [](const std::vector<t_vec3_gl>& verts, 
@@ -168,24 +168,24 @@ bool create_triangle_object(QOpenGLWidget* pGLWidget, GlRenderObj& obj,
 	}
 
 	// colours
-	if(attrVertexColor >= 0)
+	if(attrVertexcolour >= 0)
 	{
-		obj.m_pcolorbuf = std::make_shared<QOpenGLBuffer>(QOpenGLBuffer::VertexBuffer);
+		obj.m_pcolourbuf = std::make_shared<QOpenGLBuffer>(QOpenGLBuffer::VertexBuffer);
 
-		obj.m_pcolorbuf->create();
-		obj.m_pcolorbuf->bind();
-		BOOST_SCOPE_EXIT(&obj) { obj.m_pcolorbuf->release(); } BOOST_SCOPE_EXIT_END
+		obj.m_pcolourbuf->create();
+		obj.m_pcolourbuf->bind();
+		BOOST_SCOPE_EXIT(&obj) { obj.m_pcolourbuf->release(); } BOOST_SCOPE_EXIT_END
 
 		std::vector<t_real_gl> vecCols;
 		vecCols.reserve(4*triagverts.size());
 		for(std::size_t iVert=0; iVert<triagverts.size(); ++iVert)
 		{
-			for(int icol=0; icol<obj.m_color.size(); ++icol)
-				vecCols.push_back(obj.m_color[icol]);
+			for(int icol=0; icol<obj.m_colour.size(); ++icol)
+				vecCols.push_back(obj.m_colour[icol]);
 		}
 
-		obj.m_pcolorbuf->allocate(vecCols.data(), vecCols.size()*sizeof(typename decltype(vecCols)::value_type));
-		pGl->glVertexAttribPointer(attrVertexColor, 4, GL_FLOAT, 0, 0, nullptr);
+		obj.m_pcolourbuf->allocate(vecCols.data(), vecCols.size()*sizeof(typename decltype(vecCols)::value_type));
+		pGl->glVertexAttribPointer(attrVertexcolour, 4, GL_FLOAT, 0, 0, nullptr);
 	}
 
 	// texture uv coordinates
@@ -216,8 +216,8 @@ bool create_triangle_object(QOpenGLWidget* pGLWidget, GlRenderObj& obj,
  * creates a line-based 3d object
  */
 bool create_line_object(QOpenGLWidget* pGLWidget, GlRenderObj& obj,
-	const std::vector<t_vec3_gl>& verts, const t_vec_gl& color,
-	GLint attrVertex, GLint attrVertexColor)
+	const std::vector<t_vec3_gl>& verts, const t_vec_gl& colour,
+	GLint attrVertex, GLint attrVertexcolour)
 {
 	// TODO: move context to calling thread
 	pGLWidget->makeCurrent();
@@ -227,10 +227,10 @@ bool create_line_object(QOpenGLWidget* pGLWidget, GlRenderObj& obj,
 	if(!pGl) return false;
 
 	//GLint attrVertex = m_attrVertex;
-	//GLint attrVertexColor = m_attrVertexCol;
+	//GLint attrVertexcolour = m_attrVertexCol;
 
 	obj.m_type = GlRenderObjType::LINES;
-	obj.m_color = color;
+	obj.m_colour = colour;
 
 	// flatten vertex array into raw float array
 	auto to_float_array = [](const std::vector<t_vec3_gl>& verts, int iElems=3) -> std::vector<t_real_gl>
@@ -264,22 +264,22 @@ bool create_line_object(QOpenGLWidget* pGLWidget, GlRenderObj& obj,
 	}
 
 	{	// colours
-		obj.m_pcolorbuf = std::make_shared<QOpenGLBuffer>(QOpenGLBuffer::VertexBuffer);
+		obj.m_pcolourbuf = std::make_shared<QOpenGLBuffer>(QOpenGLBuffer::VertexBuffer);
 
-		obj.m_pcolorbuf->create();
-		obj.m_pcolorbuf->bind();
-		BOOST_SCOPE_EXIT(&obj) { obj.m_pcolorbuf->release(); } BOOST_SCOPE_EXIT_END
+		obj.m_pcolourbuf->create();
+		obj.m_pcolourbuf->bind();
+		BOOST_SCOPE_EXIT(&obj) { obj.m_pcolourbuf->release(); } BOOST_SCOPE_EXIT_END
 
 		std::vector<t_real_gl> vecCols;
 		vecCols.reserve(4*verts.size());
 		for(std::size_t iVert=0; iVert<verts.size(); ++iVert)
 		{
-			for(int icol=0; icol<obj.m_color.size(); ++icol)
-				vecCols.push_back(obj.m_color[icol]);
+			for(int icol=0; icol<obj.m_colour.size(); ++icol)
+				vecCols.push_back(obj.m_colour[icol]);
 		}
 
-		obj.m_pcolorbuf->allocate(vecCols.data(), vecCols.size()*sizeof(typename decltype(vecCols)::value_type));
-		pGl->glVertexAttribPointer(attrVertexColor, 4, GL_FLOAT, 0, 0, nullptr);
+		obj.m_pcolourbuf->allocate(vecCols.data(), vecCols.size()*sizeof(typename decltype(vecCols)::value_type));
+		pGl->glVertexAttribPointer(attrVertexcolour, 4, GL_FLOAT, 0, 0, nullptr);
 	}
 
 
@@ -332,7 +332,7 @@ GlPlotRenderer::~GlPlotRenderer()
 	{
 		obj.m_pvertexbuf.reset();
 		obj.m_pnormalsbuf.reset();
-		obj.m_pcolorbuf.reset();
+		obj.m_pcolourbuf.reset();
 		if(pGl) pGl->glDeleteVertexArrays(1, &obj.m_vertexarr);
 	}
 
@@ -365,19 +365,19 @@ QPointF GlPlotRenderer::GlToScreenCoords(const t_vec_gl& vec4, bool *pVisible) c
 
 GlPlotObj GlPlotRenderer::CreateTriangleObject(const std::vector<t_vec3_gl>& verts,
 	const std::vector<t_vec3_gl>& triagverts, const std::vector<t_vec3_gl>& norms,
-	const t_vec_gl& color, bool bUseVertsAsNorm)
+	const t_vec_gl& colour, bool bUseVertsAsNorm)
 {
 	GlPlotObj obj;
-	create_triangle_object(m_pPlot, obj, verts, triagverts, norms, {}, color, 
+	create_triangle_object(m_pPlot, obj, verts, triagverts, norms, {}, colour, 
 		bUseVertsAsNorm, m_attrVertex, m_attrVertexNorm, m_attrVertexCol, -1);
 	return obj;
 }
 
 
-GlPlotObj GlPlotRenderer::CreateLineObject(const std::vector<t_vec3_gl>& verts, const t_vec_gl& color)
+GlPlotObj GlPlotRenderer::CreateLineObject(const std::vector<t_vec3_gl>& verts, const t_vec_gl& colour)
 {
 	GlPlotObj obj;
-	create_line_object(m_pPlot, obj, verts, color, m_attrVertex, m_attrVertexCol);
+	create_line_object(m_pPlot, obj, verts, colour, m_attrVertex, m_attrVertexCol);
 	return obj;
 }
 
@@ -392,7 +392,7 @@ void GlPlotRenderer::SetObjectMatrix(std::size_t idx, const t_mat_gl& mat)
 void GlPlotRenderer::SetObjectCol(std::size_t idx, t_real_gl r, t_real_gl g, t_real_gl b, t_real_gl a)
 {
 	if(idx >= m_objs.size()) return;
-	m_objs[idx].m_color = tl2::create<t_vec_gl>({r,g,b,a});
+	m_objs[idx].m_colour = tl2::create<t_vec_gl>({r,g,b,a});
 }
 
 
@@ -453,7 +453,7 @@ void GlPlotRenderer::RemoveObject(std::size_t idx)
 
 	m_objs[idx].m_pvertexbuf.reset();
 	m_objs[idx].m_pnormalsbuf.reset();
-	m_objs[idx].m_pcolorbuf.reset();
+	m_objs[idx].m_pcolourbuf.reset();
 
 	m_objs[idx].m_vertices.clear();
 	m_objs[idx].m_triangles.clear();
@@ -469,7 +469,7 @@ std::size_t GlPlotRenderer::AddLinkedObject(std::size_t linkTo,
 	GlPlotObj obj;
 	obj.linkedObj = linkTo;
 	obj.m_mat = tl2::hom_translation<t_mat_gl>(x, y, z);
-	obj.m_color = tl2::create<t_vec_gl>({r, g, b, a});
+	obj.m_colour = tl2::create<t_vec_gl>({r, g, b, a});
 
 	QMutexLocker _locker{&m_mutexObj};
 	m_objs.emplace_back(std::move(obj));
@@ -1288,15 +1288,15 @@ void GlPlotRenderer::DoPaintGL(qgl_funcs *pGl)
 			// get linked object
 			linkedObj = &m_objs[*obj.linkedObj];
 
-			// override constant color for linked object
+			// override constant colour for linked object
 			if(obj.m_highlighted)
 				m_pShaders->setUniformValue(m_uniConstCol, colHighlight);
 			else
-				m_pShaders->setUniformValue(m_uniConstCol, obj.m_color);
+				m_pShaders->setUniformValue(m_uniConstCol, obj.m_colour);
 		}
 		else
 		{
-			// set override color to white for non-linked objects
+			// set override colour to white for non-linked objects
 			m_pShaders->setUniformValue(m_uniConstCol, colOverride);
 		}
 
@@ -1392,14 +1392,14 @@ void GlPlotRenderer::DoPaintNonGL(QPainter &painter)
 
 			fontLabel.setStyleStrategy(QFont::StyleStrategy(/*QFont::OpenGLCompatible |*/ QFont::PreferAntialias | QFont::PreferQuality));
 			fontLabel.setWeight(QFont::Medium);
-			//penLabel.setColor(QColor(int((1.-obj.m_color[0])*255.), int((1.-obj.m_color[1])*255.), int((1.-obj.m_color[2])*255.), int(obj.m_color[3]*255.)));
+			//penLabel.setColor(QColor(int((1.-obj.m_colour[0])*255.), int((1.-obj.m_colour[1])*255.), int((1.-obj.m_colour[2])*255.), int(obj.m_colour[3]*255.)));
 			penLabel.setColor(QColor(0,0,0,255));
 			painter.setFont(fontLabel);
 			painter.setPen(penLabel);
 			painter.drawText(posLabel2d, obj.m_label.c_str());
 
 			fontLabel.setWeight(QFont::Normal);
-			penLabel.setColor(QColor(int(obj.m_color[0]*255.), int(obj.m_color[1]*255.), int(obj.m_color[2]*255.), int(obj.m_color[3]*255.)));
+			penLabel.setColor(QColor(int(obj.m_colour[0]*255.), int(obj.m_colour[1]*255.), int(obj.m_colour[2]*255.), int(obj.m_colour[3]*255.)));
 			painter.setFont(fontLabel);
 			painter.setPen(penLabel);
 			painter.drawText(posLabel2d, obj.m_label.c_str());

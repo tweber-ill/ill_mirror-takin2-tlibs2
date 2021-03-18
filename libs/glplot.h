@@ -157,11 +157,11 @@ struct GlRenderObj
 	std::shared_ptr<QOpenGLBuffer> m_pvertexbuf;
 	std::shared_ptr<QOpenGLBuffer> m_pnormalsbuf;
 	std::shared_ptr<QOpenGLBuffer> m_puvbuf;
-	std::shared_ptr<QOpenGLBuffer> m_pcolorbuf;
+	std::shared_ptr<QOpenGLBuffer> m_pcolourbuf;
 
 	std::vector<t_vec3_gl> m_vertices, m_triangles, m_uvs;
 
-	t_vec_gl m_color = tl2::create<t_vec_gl>({ 0., 0., 1., 1. });	// rgba
+	t_vec_gl m_colour = tl2::create<t_vec_gl>({ 0., 0., 1., 1. });	// rgba
 };
 
 
@@ -199,14 +199,14 @@ extern qgl_funcs* get_gl_functions(QOpenGLWidget *pGLWidget);
 // create a triangle-based object
 extern bool create_triangle_object(QOpenGLWidget* pGLWidget, GlRenderObj& obj,
 	const std::vector<t_vec3_gl>& verts, const std::vector<t_vec3_gl>& triagverts,
-	const std::vector<t_vec3_gl>& norms, const std::vector<t_vec3_gl>& uvs, const t_vec_gl& color,
-	bool bUseVertsAsNorm, GLint attrVertex, GLint attrVertexNormal, GLint attrVertexColor, 
+	const std::vector<t_vec3_gl>& norms, const std::vector<t_vec3_gl>& uvs, const t_vec_gl& colour,
+	bool bUseVertsAsNorm, GLint attrVertex, GLint attrVertexNormal, GLint attrVertexcolour, 
 	GLint attrTextureCoords=-1);
 
 // create a line-based object
 extern bool create_line_object(QOpenGLWidget* pGLWidget, GlRenderObj& obj,
-	const std::vector<t_vec3_gl>& verts, const t_vec_gl& color,
-	GLint attrVertex, GLint attrVertexColor);
+	const std::vector<t_vec3_gl>& verts, const t_vec_gl& colour,
+	GLint attrVertex, GLint attrVertexcolour);
 // ----------------------------------------------------------------------------
 
 
@@ -315,8 +315,8 @@ public:
 
 	GlPlotObj CreateTriangleObject(const std::vector<t_vec3_gl>& verts,
 		const std::vector<t_vec3_gl>& triag_verts, const std::vector<t_vec3_gl>& norms,
-		const t_vec_gl& color, bool bUseVertsAsNorm=false);
-	GlPlotObj CreateLineObject(const std::vector<t_vec3_gl>& verts, const t_vec_gl& color);
+		const t_vec_gl& colour, bool bUseVertsAsNorm=false);
+	GlPlotObj CreateLineObject(const std::vector<t_vec3_gl>& verts, const t_vec_gl& colour);
 
 	std::size_t GetNumObjects() const { return m_objs.size(); }
 	void RemoveObject(std::size_t obj);

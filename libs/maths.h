@@ -6501,7 +6501,7 @@ requires is_mat<t_mat> && is_vec<t_vec>
 		R = prod(matMirror, R);
 	}
 
-#else if __TLIBS2_QR_METHOD == 1
+#elif __TLIBS2_QR_METHOD == 1
 	std::vector<t_vec> sysM;
 	sysM.reserve(mat.size2());
 	for(std::size_t i=0; i<mat.size2(); ++i)
