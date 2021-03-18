@@ -19,6 +19,7 @@
 //#define USE_FADDEEVA
 //#define USE_LAPACK
 //#define USE_QHULL
+#define __TLIBS2_QR_METHOD 0
 
 
 #include <cstddef>
@@ -6481,11 +6482,13 @@ requires is_mat<t_mat> && is_vec<t_vec>
 {
 #ifdef USE_LAPACK
 	return tl2_la::qr<t_mat, t_vec>(mat);
+
 #else
 	const std::size_t rows = mat.size1();
 	const std::size_t cols = mat.size2();
 	const std::size_t N = std::min(cols, rows);
 
+#if __TLIBS2_QR_METHOD == 0
 	t_mat R = mat;
 	t_mat Q = unit<t_mat>(N, N);
 
@@ -6497,6 +6500,17 @@ requires is_mat<t_mat> && is_vec<t_vec>
 		Q = prod(Q, matMirror, false);
 		R = prod(matMirror, R);
 	}
+
+#else if __TLIBS2_QR_METHOD == 1
+	std::vector<t_vec> sysM;
+	sysM.reserve(mat.size2());
+	for(std::size_t i=0; i<mat.size2(); ++i)
+		sysM.push_back(col<t_mat, t_vec>(mat, i));
+
+	std::vector<t_vec> Qsys = orthonorm_sys<t_vec, std::vector, std::vector>(sysM);
+	t_mat Q = create<t_mat>(Qsys, false);
+	t_mat R = prod(trans(Q), mat);
+#endif
 
 	return std::make_tuple(true, Q, R);
 #endif

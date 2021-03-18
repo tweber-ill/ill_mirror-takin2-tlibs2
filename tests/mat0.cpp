@@ -37,16 +37,23 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(test_equals, t_real, t_types)
 
 
 	{
-		auto [ok, Q, R] = tl2_la::qr<t_mat>(M);
-		auto [ok2, P, L, U] = tl2_la::lu<t_mat>(M);
-
+		auto [ok, Q, R] = tl2::qr<t_mat, t_vec>(M);
+		t_real d = tl2::det<t_mat>(Q);
 		auto QR = Q*R;
-		auto PLU = P*L*U;
 
 		std::cout << "\nok = " << std::boolalpha << ok << std::endl;
 		std::cout << "Q = " << Q << std::endl;
 		std::cout << "R = " << R << std::endl;
+		std::cout << "det(Q) = " << d << std::endl;
 		std::cout << "QR = " << QR << std::endl;
+
+		BOOST_TEST(ok);
+		BOOST_TEST(tl2::equals<t_real>(d, 1, 1e-4));
+		BOOST_TEST(tl2::equals(QR, M, 1e-4));
+
+#ifdef USE_LAPACK
+		auto [ok2, P, L, U] = tl2_la::lu<t_mat>(M);
+		auto PLU = P*L*U;
 
 		std::cout << "\nok2 = " << std::boolalpha << ok2 << std::endl;
 		std::cout << "P = " << P << std::endl;
@@ -54,23 +61,29 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(test_equals, t_real, t_types)
 		std::cout << "U = " << U << std::endl;
 		std::cout << "PLU = " << PLU << std::endl;
 
-		BOOST_TEST(ok);
 		BOOST_TEST(ok2);
-		BOOST_TEST(tl2::equals(QR, M, 1e-4));
 		BOOST_TEST(tl2::equals(PLU, M, 1e-4));
+#endif
 	}
 
 	{
-		auto [ok, Q, R] = tl2_la::qr<t_mat_cplx>(Z);
-		auto [ok2, P, L, U] = tl2_la::lu<t_mat_cplx>(Z);
-
+		auto [ok, Q, R] = tl2::qr<t_mat_cplx, t_vec_cplx>(Z);
+		t_cplx d = tl2::det<t_mat_cplx>(Q);
 		auto QR = Q*R;
-		auto PLU = P*L*U;
 
 		std::cout << "\nok = " << std::boolalpha << ok << std::endl;
 		std::cout << "Q = " << Q << std::endl;
 		std::cout << "R = " << R << std::endl;
+		std::cout << "det(Q) = " << d << std::endl;
 		std::cout << "QR = " << QR << std::endl;
+
+		BOOST_TEST(ok);
+		BOOST_TEST(tl2::equals<t_cplx>(d, 1, 1e-4));
+		BOOST_TEST(tl2::equals(QR, Z, 1e-4));
+
+#ifdef USE_LAPACK
+		auto [ok2, P, L, U] = tl2_la::lu<t_mat_cplx>(Z);
+		auto PLU = P*L*U;
 
 		std::cout << "\nok2 = " << std::boolalpha << ok2 << std::endl;
 		std::cout << "P = " << P << std::endl;
@@ -78,12 +91,12 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(test_equals, t_real, t_types)
 		std::cout << "U = " << U << std::endl;
 		std::cout << "PLU = " << PLU << std::endl;
 
-		BOOST_TEST(ok);
 		BOOST_TEST(ok2);
-		BOOST_TEST(tl2::equals(QR, Z, 1e-4));
 		BOOST_TEST(tl2::equals(PLU, Z, 1e-4));
+#endif
 	}
 
+#ifdef USE_LAPACK
 	{
 		auto [ok, evals, evecs] =
 			tl2_la::eigenvec<t_mat_cplx, t_vec_cplx, t_cplx>(Z, 0, 0, 1);
@@ -162,4 +175,5 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(test_equals, t_real, t_types)
 		BOOST_TEST(tl2::equals(mata, ident, 1e-4));
 		BOOST_TEST(tl2::equals(matb, ident, 1e-4));
 	}
+#endif
 }
