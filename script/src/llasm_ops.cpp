@@ -3,7 +3,7 @@
  * @author Tobias Weber <tweber@ill.fr>
  * @date apr/may-2020
  * @license see 'LICENSE' file
- * @desc Forked on 18/July/2020 from my privatly developed "matrix_calc" project (https://github.com/t-weber/matrix_calc).
+ * @desc Forked on 18/July/2020 from my privately developed "matrix_calc" project (https://github.com/t-weber/matrix_calc).
  *
  * References:
  *   - https://llvm.org/docs/LangRef.html
