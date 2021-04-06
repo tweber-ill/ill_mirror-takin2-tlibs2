@@ -119,7 +119,7 @@ using qgl_funcs = _GL_FUNC(_GL_MAJ_VER, _GL_MIN_VER, _GL_SUFFIX);
 // types
 using t_real_gl = GLfloat;
 //using t_real_gl = GLdouble;
-using t_vec2_gl = tl2::qvecN_adapter<int, 3, t_real_gl, QVector2D>;
+using t_vec2_gl = tl2::qvecN_adapter<int, 2, t_real_gl, QVector2D>;
 using t_vec3_gl = tl2::qvecN_adapter<int, 3, t_real_gl, QVector3D>;
 using t_vec_gl = tl2::qvecN_adapter<int, 4, t_real_gl, QVector4D>;
 using t_mat_gl = tl2::qmatNN_adapter<int, 4, 4, t_real_gl, QMatrix4x4>;
