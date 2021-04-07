@@ -21,7 +21,6 @@
 //#define USE_QHULL
 #define __TLIBS2_QR_METHOD 0
 
-
 #include <cstddef>
 #include <cstdint>
 #include <cassert>
@@ -53,17 +52,14 @@
 #include "str.h"
 #include "traits.h"
 
-
-
 #ifdef USE_FADDEEVA
 	#include <Faddeeva.hh>
 	using t_real_fadd = double;
 #endif
 
-
 // separator tokens
-#define COLSEP ';'
-#define ROWSEP '|'
+#define TL2_COLSEP ';'
+#define TL2_ROWSEP '|'
 
 
 namespace tl2 {
@@ -1020,7 +1016,7 @@ requires tl2::is_basic_vec<t_vec> && tl2::is_dyn_vec<t_vec>
 	{
 		ostr << vec[i];
 		if(i < N-1)
-			ostr << COLSEP << " ";
+			ostr << TL2_COLSEP << " ";
 	}
 
 	return ostr;
@@ -1040,7 +1036,7 @@ requires tl2::is_basic_vec<t_vec> && tl2::is_dyn_vec<t_vec>
 	std::getline(istr, str);
 
 	std::vector<std::string> vecstr;
-	boost::split(vecstr, str, [](auto c)->bool { return c==COLSEP; }, boost::token_compress_on);
+	boost::split(vecstr, str, [](auto c)->bool { return c==TL2_COLSEP; }, boost::token_compress_on);
 
 	for(auto& tok : vecstr)
 	{
@@ -1231,11 +1227,11 @@ requires tl2::is_basic_mat<t_mat> && tl2::is_dyn_mat<t_mat>
 		{
 			ostr << mat(row, col);
 			if(col < COLS-1)
-				ostr << COLSEP << " ";
+				ostr << TL2_COLSEP << " ";
 		}
 
 		if(row < ROWS-1)
-			ostr << ROWSEP << " ";
+			ostr << TL2_ROWSEP << " ";
 	}
 
 	return ostr;
@@ -2257,6 +2253,7 @@ requires is_mat<t_mat> && is_basic_vec<t_vec>
 	return vec;
 }
 
+
 /**
  * get a row vector from a matrix
  */
@@ -2272,6 +2269,30 @@ requires is_mat<t_mat> && is_basic_vec<t_vec>
 		vec[i] = mat(row, i);
 
 	return vec;
+}
+
+
+/**
+ * set a column vector in a matrix
+ */
+template<class t_mat, class t_vec>
+void set_col(t_mat& mat, const t_vec& vec, std::size_t col)
+requires is_mat<t_mat> && is_basic_vec<t_vec>
+{
+	for(std::size_t i=0; i<mat.size1(); ++i)
+		mat(i, col) = vec[i];
+}
+
+
+/**
+ * set a row vector in a matrix
+ */
+template<class t_mat, class t_vec>
+void set_row(t_mat& mat, const t_vec& vec, std::size_t row)
+requires is_mat<t_mat> && is_basic_vec<t_vec>
+{
+	for(std::size_t i=0; i<mat.size1(); ++i)
+		mat(row, i) = vec[i];
 }
 
 
@@ -2444,7 +2465,7 @@ requires is_basic_vec<t_vec> && is_mat<t_mat>
 
 
 // ----------------------------------------------------------------------------
-// with metric
+// operations with metric
 // ----------------------------------------------------------------------------
 
 /**
@@ -2474,6 +2495,86 @@ requires is_basic_mat<t_mat> && is_basic_vec<t_vec>
 	}
 
 	return g_co;
+}
+
+
+/**
+ * covariant metric tensor: g_{i,j} = e_i * e_j
+ * @see (Arens 2015), p. 815
+ */
+template<class t_mat>
+t_mat metric(const t_mat& basis_co)
+requires is_basic_mat<t_mat>
+{
+	t_mat basis_trans = trans(basis_co);
+	return basis_trans * basis_co;
+}
+
+
+/**
+ * get levi-civita symbol in fractional coordinates
+ * @see (Arens 2015), p. 815
+ */
+template<class t_mat>
+typename t_mat::value_type levi(const t_mat& basis_co,
+	const std::initializer_list<std::size_t>& indices)
+requires is_basic_mat<t_mat>
+{
+	using size_t = decltype(basis_co.size1());
+	using t_vec = vec<typename t_mat::value_type>;
+	t_mat mat = create<t_mat>(basis_co.size1(), basis_co.size2());
+
+	auto iter = indices.begin();
+	size_t maxcols = std::min(indices.size(), basis_co.size2());
+	for(size_t i=0; i<maxcols; ++i)
+	{
+		set_col<t_mat, t_vec>(
+			mat, col<t_mat, t_vec>(basis_co, *iter), i);
+		std::advance(iter, 1);
+	}
+
+	return det<t_mat>(mat);
+}
+
+
+/**
+ * cross product in fractional coordinates: c^l = eps_ijk g^li a^j b^k
+ * @see (Arens 2015), p. 815
+ */
+template<class t_mat, class t_vec>
+t_vec cross(const t_mat& B, const t_vec& a, const t_vec& b)
+requires is_basic_mat<t_mat> && is_basic_vec<t_vec>
+{
+	using size_t = decltype(B.size1());
+	using t_real = typename t_mat::value_type;
+
+	// metric and its inverse
+	auto G = metric<t_mat>(B);
+	auto [G_inv, ok] = inv(G);
+
+	// maximum indices
+	const size_t i_max = G_inv.size1();
+	const size_t j_max = a.size();
+	const size_t k_max = b.size();
+	const size_t l_max = G_inv.size2();
+
+	// cross product result vector
+	t_vec c = zero<t_vec>(l_max);
+
+	for(size_t i=0; i<i_max; ++i)
+	{
+		for(size_t j=0; j<j_max; ++j)
+		{
+			for(size_t k=0; k<k_max; ++k)
+			{
+				t_real eps = levi<t_mat>(B, {i,j,k});
+				for(size_t l=0; l<l_max; ++l)
+					c[l] += eps * G_inv(l,i) * a[j] * b[k];
+			}
+		}
+	}
+
+	return c;
 }
 
 
@@ -2520,7 +2621,8 @@ requires is_basic_mat<t_mat> && is_basic_vec<t_vec>
  * @see (Arens 2015), p. 808
  */
 template<class t_mat, class t_vec>
-typename t_vec::value_type inner(const t_mat& metric_co, const t_vec& vec1_contra, const t_vec& vec2_contra)
+typename t_vec::value_type inner(const t_mat& metric_co, 
+	const t_vec& vec1_contra, const t_vec& vec2_contra)
 requires is_basic_mat<t_mat> && is_basic_vec<t_vec>
 {
 	t_vec vec2_co = lower_index<t_mat, t_vec>(metric_co, vec2_contra);
@@ -5330,9 +5432,9 @@ requires is_mat<t_mat>
 	const t_real sc = std::sin(_cc);
 
 	return create<t_mat>({
-		a,			b*cc,		c*cb,
-		t_real{0},	b*sc,		c*(ca -cc*cb)/sc,
-		t_real{0}, 	t_real{0},	c*std::sqrt(t_real{1} - cb*cb - std::pow((ca - cc*cb)/sc, t_real{2}))
+		a,         b*cc,      c*cb,
+		t_real{0}, b*sc,      c*(ca - cc*cb)/sc,
+		t_real{0}, t_real{0}, c*std::sqrt(t_real{1} - cb*cb - std::pow((ca - cc*cb)/sc, t_real{2}))
 	});
 }
 
@@ -5352,10 +5454,36 @@ requires is_mat<t_mat>
 	const t_real rr = std::sqrt(1. + 2.*ca*cb*cc - (ca*ca + cb*cb + cc*cc));
 
 	return t_real{2}*pi<t_real> * create<t_mat>({
-		t_real{1}/a,				t_real{0},					t_real{0},
-		-t_real{1}/a * cc/sc,		t_real{1}/b * t_real{1}/sc,	t_real{0},
-		(cc*ca - cb)/(a*sc*rr), 	(cb*cc-ca)/(b*sc*rr),		sc/(c*rr)
+		t_real{1}/a,            t_real{0},                  t_real{0},
+		-t_real{1}/a * cc/sc,   t_real{1}/b * t_real{1}/sc, t_real{0},
+		(cc*ca - cb)/(a*sc*rr), (cb*cc-ca)/(b*sc*rr),       sc/(c*rr)
 	});
+}
+
+
+/**
+ * UB orientation matrix
+ * @see https://dx.doi.org/10.1107/S0021889805004875
+ */
+template<class t_mat, class t_vec>
+t_mat UB_matrix(const t_mat& B, 
+	const t_vec& vec1_rlu, const t_vec& vec2_rlu, const t_vec& vec3_rlu)
+requires is_mat<t_mat> && is_vec<t_vec>
+{
+	t_vec vec1_lab = B * vec1_rlu;
+	t_vec vec2_lab = B * vec2_rlu;
+	t_vec vec3_lab = B * vec3_rlu;
+
+	vec1_lab /= norm<t_vec>(vec1_lab);
+	vec2_lab /= norm<t_vec>(vec2_lab);
+	vec3_lab /= norm<t_vec>(vec3_lab);
+
+	t_mat U_lab = unit<t_mat>(B.size1(), B.size2());
+	set_row<t_mat, t_vec>(U_lab, vec1_lab, 0);
+	set_row<t_mat, t_vec>(U_lab, vec2_lab, 1);
+	set_row<t_mat, t_vec>(U_lab, vec3_lab, 2);
+
+	return U_lab * B;
 }
 
 
@@ -6608,7 +6736,7 @@ requires is_mat<t_mat>
 		for(std::size_t i=0; i<evalsRe.size(); ++i)
 			detval *= std::complex<T>{evalsRe[i], evalsIm[i]};
 
-		return std::abs(detval);
+		return detval.real();
 	}
 
 #else

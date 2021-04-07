@@ -28,20 +28,39 @@ using namespace tl2_ops;
 #endif
 BOOST_AUTO_TEST_CASE_TEMPLATE(test_xtal, t_real, t_types)
 {
-	//using t_cplx = std::complex<t_real>;
-	//using t_vec = std::vector<t_real>;
+	using t_vec = tl2::vec<t_real, std::vector>;
 	using t_mat = tl2::mat<t_real, std::vector>;
+	//using t_cplx = std::complex<t_real>;
 	//using t_vec_cplx = std::vector<t_cplx>;
 	//using t_mat_cplx = tl2::mat<t_cplx, std::vector>;
 
-	auto A = tl2::A_matrix<t_mat, t_real>(3., 4., 5., 80./180.*M_PI, 100./180.*M_PI, 60./180.*tl2::pi<t_real>);
-	auto B = tl2::B_matrix<t_mat, t_real>(3., 4., 5., 80./180.*M_PI, 100./180.*M_PI, 60./180.*tl2::pi<t_real>);
+	auto A = tl2::A_matrix<t_mat, t_real>(
+		3., 4., 5., 
+		80./180.*tl2::pi<t_real>, 
+		100./180.*tl2::pi<t_real>, 
+		60./180.*tl2::pi<t_real>);
+	auto B = tl2::B_matrix<t_mat, t_real>(
+		3., 4., 5., 
+		80./180.*tl2::pi<t_real>, 
+		100./180.*tl2::pi<t_real>, 
+		60./180.*tl2::pi<t_real>);
 	auto [B2, ok] = tl2::inv<t_mat>(A);
 	B2 = 2.*tl2::pi<t_real> * tl2::trans<t_mat>(B2);
+	auto G = tl2::metric<t_mat>(B);
+
+	t_vec vec1 = tl2::create<t_vec>({1,0,0});
+	t_vec vec2 = tl2::create<t_vec>({0,1,0});
+	t_vec vec3 = tl2::cross<t_mat, t_vec>(B, vec1, vec2);
+	t_mat UB = tl2::UB_matrix<t_mat, t_vec>(B, vec1, vec2, vec3);
 
 	std::cout << "A  = " << A << std::endl;
 	std::cout << "B  = " << B << std::endl;
 	std::cout << "B2 = " << B2 << std::endl;
+	std::cout << "G = " << G << std::endl;
+	std::cout << "UB = " << UB << std::endl;
+	//std::cout << tl2::levi<t_mat>(B, {0,1,2}) << std::endl;
+	//std::cout << tl2::levi<t_mat>(B, {0,2,1}) << std::endl;
+	//std::cout << tl2::levi<t_mat>(B, {1,2,1}) << std::endl;
 
 	BOOST_TEST(ok);
 	BOOST_TEST(tl2::equals(B, B2, std::numeric_limits<t_real>::epsilon()*1e2));

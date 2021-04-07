@@ -32,7 +32,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(test_equals, t_real, t_types)
 		auto M = tl2::create<t_mat>({
 			1., 2., 3.,
 			3., 1., 4.,
-			9., -4., 2
+			9., -4., 2.
 		});
 
 		// test determinant
@@ -41,6 +41,22 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(test_equals, t_real, t_types)
 		std::cout << "|M| = " << det << std::endl;
 
 		BOOST_TEST(tl2::equals<t_real>(det, 15., 1e-4));
+	}
+
+
+	{
+		auto M = tl2::create<t_mat>({
+			1., 3., 2.,
+			3., 4., 1.,
+			9., 2., -4.
+		});
+
+		// test determinant
+		t_real det = tl2::det(M);
+		std::cout << "M = " << M << std::endl;
+		std::cout << "|M| = " << det << std::endl;
+
+		BOOST_TEST(tl2::equals<t_real>(det, -15., 1e-4));
 	}
 
 
