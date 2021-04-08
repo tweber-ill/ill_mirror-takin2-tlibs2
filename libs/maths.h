@@ -1799,11 +1799,13 @@ template<class t_vec>
 t_vec zero(std::size_t N /* = 0*/)
 requires is_basic_vec<t_vec>
 {
+	using size_t = decltype(t_vec{}.size());
+
 	t_vec vec;
 	if constexpr(is_dyn_vec<t_vec>)
 		vec = t_vec(N);
 
-	for(std::size_t i=0; i<vec.size(); ++i)
+	for(size_t i=0; i<vec.size(); ++i)
 		vec[i] = 0;
 
 	return vec;
