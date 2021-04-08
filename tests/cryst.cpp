@@ -35,21 +35,21 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(test_xtal, t_real, t_types)
 	//using t_mat_cplx = tl2::mat<t_cplx, std::vector>;
 
 	auto A = tl2::A_matrix<t_mat, t_real>(
-		3., 4., 5., 
-		80./180.*tl2::pi<t_real>, 
-		100./180.*tl2::pi<t_real>, 
-		60./180.*tl2::pi<t_real>);
+		4.56, 4.56, 4.56, 
+		90. / 180. * tl2::pi<t_real>, 
+		90. / 180. * tl2::pi<t_real>, 
+		90. / 180. * tl2::pi<t_real>);
 	auto B = tl2::B_matrix<t_mat, t_real>(
-		3., 4., 5., 
-		80./180.*tl2::pi<t_real>, 
-		100./180.*tl2::pi<t_real>, 
-		60./180.*tl2::pi<t_real>);
+		4.56, 4.56, 4.56, 
+		90. / 180. * tl2::pi<t_real>, 
+		90. / 180. * tl2::pi<t_real>, 
+		90. / 180. * tl2::pi<t_real>);
 	auto [B2, ok] = tl2::inv<t_mat>(A);
 	B2 = 2.*tl2::pi<t_real> * tl2::trans<t_mat>(B2);
 	auto G = tl2::metric<t_mat>(B);
 
-	t_vec vec1 = tl2::create<t_vec>({1,0,0});
-	t_vec vec2 = tl2::create<t_vec>({0,1,0});
+	t_vec vec1 = tl2::create<t_vec>({1, 1, 0});
+	t_vec vec2 = tl2::create<t_vec>({1, -1, 0});
 	t_vec vec3 = tl2::cross<t_mat, t_vec>(B, vec1, vec2);
 	t_mat UB = tl2::UB_matrix<t_mat, t_vec>(B, vec1, vec2, vec3);
 
@@ -62,7 +62,18 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(test_xtal, t_real, t_types)
 	//std::cout << tl2::levi<t_mat>(B, {0,2,1}) << std::endl;
 	//std::cout << tl2::levi<t_mat>(B, {1,2,1}) << std::endl;
 
+	t_vec Q = tl2::create<t_vec>({1, -1, 0});
+	auto [a3, a4, dist] = calc_tas_a3a4<t_mat, t_vec>(B, 1.5, 1.4, Q, vec1, vec3);
+	std::cout << "a3 = " << a3 / tl2::pi<t_real> * 180. 
+		<< ", a4 = " << a4 / tl2::pi<t_real> * 180.
+		<< std::endl;
+	std::cout << "distance of Q to scattering plane: " << dist << std::endl;
+
 	BOOST_TEST(ok);
 	BOOST_TEST(tl2::equals(B, B2, std::numeric_limits<t_real>::epsilon()*1e2));
+	BOOST_TEST(tl2::equals<t_real>(dist, 0, std::numeric_limits<t_real>::epsilon()*1e2));
+	BOOST_TEST(tl2::equals<t_real>(a3/tl2::pi<t_real>*180., 44.359, 1e-3));
+	BOOST_TEST(tl2::equals<t_real>(a4/tl2::pi<t_real>*180., 84.359, 1e-3));
+
 	std::cout << std::endl;
 }

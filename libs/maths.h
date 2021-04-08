@@ -2640,6 +2640,119 @@ requires is_basic_vec<t_vec>
 {
 	return std::sqrt(inner<t_mat, t_vec>(metric_co, vec_contra, vec_contra));
 }
+
+
+/**
+ * angle between vectors under a given metric
+ * @see (Arens 2015), p. 808
+ */
+template<class t_mat, class t_vec>
+typename t_vec::value_type angle(const t_mat& metric_co, 
+	const t_vec& vec1_contra, const t_vec& vec2_contra)
+requires is_basic_mat<t_mat> && is_basic_vec<t_vec>
+{
+	using t_real = typename t_mat::value_type;
+
+	t_real len1 = norm<t_mat, t_vec>(metric_co, vec1_contra);
+	t_real len2 = norm<t_mat, t_vec>(metric_co, vec2_contra);
+
+	t_real c = inner<t_mat, t_vec>(metric_co, vec1_contra, vec2_contra);
+	c /= len1 * len2;
+	c = clamp<t_real>(c, -1, 1);
+
+	return std::acos(c);
+}
+// ----------------------------------------------------------------------------
+
+
+
+// ----------------------------------------------------------------------------
+// tas calculations
+// @see (Shirane 2002)
+// ----------------------------------------------------------------------------
+/**
+ * angle between ki and kf in the scattering triangle
+ *
+ * |Q> = |ki> - |kf>
+ * Q^2 = ki^2 + kf^2 - 2*<ki|kf>
+ * 2*<ki|kf> = ki^2 + kf^2 - Q^2
+ * cos phi = (ki^2 + kf^2 - Q^2) / (2 ki*kf)
+ */
+template<typename t_real>
+t_real calc_tas_angle_ki_kf(t_real ki, t_real kf, t_real Q, t_real sense=1)
+{
+	t_real c = (ki*ki + kf*kf - Q*Q) / (t_real(2)*ki*kf);
+	return sense*std::acos(c);
+}
+
+
+/**
+ * angle between ki and Q in the scattering triangle
+ *
+ * |Q> = |ki> - |kf>
+ * |kf> = |ki> + |Q>
+ * kf^2 = ki^2 + Q^2 - 2*<ki|Q>
+ * 2*<ki|Q> = ki^2 + Q^2 - kf^2
+ * cos phi = (ki^2 + Q^2 - kf^2) / (2 ki*Q)
+ */
+template<typename t_real>
+t_real calc_tas_angle_ki_Q(t_real ki, t_real kf, t_real Q, t_real sense=1)
+{
+	t_real c = (ki*ki + Q*Q - kf*kf) / (t_real(2)*ki*Q);
+	return sense*std::acos(c);
+}
+
+
+/**
+ * get tas a3 and a4 angles
+ * @return [a3, a4, distance of Q to the scattering plane]
+ */
+template<class t_mat, class t_vec, class t_real = typename t_mat::value_type>
+std::tuple<t_real, t_real, t_real> calc_tas_a3a4(
+	const t_mat& B, t_real ki_lab, t_real kf_lab,
+	const t_vec& Q_rlu, const t_vec& orient_rlu, const t_vec& orient_up_rlu,
+	t_real sample_sense = 1, t_real a3_offs = pi<t_real>)
+requires is_basic_mat<t_mat> && is_basic_vec<t_vec>
+{
+	// metric from crystal B matrix
+	t_mat G = tl2::metric<t_mat>(B);
+
+	// length of Q vector
+	t_real Q_len_lab = norm<t_mat, t_vec>(G, Q_rlu);
+
+	// angle xi between Q and orientation reflex
+	t_real xi = angle<t_mat, t_vec>(G, Q_rlu, orient_rlu);
+
+	// sign/direction of xi
+	t_vec xivec = cross<t_mat, t_vec>(G, orient_rlu, Q_rlu);
+	t_real xidir = inner<t_mat, t_vec>(G, xivec, orient_up_rlu);
+	if(xidir < t_real(0))
+		xi = -xi;
+
+	// angle psi between ki and Q
+	t_real psi = calc_tas_angle_ki_Q<t_real>(ki_lab, kf_lab, Q_len_lab, sample_sense);
+
+	// crystal and scattering angle
+	t_real a3 = - psi - xi + a3_offs;
+	t_real a4 = calc_tas_angle_ki_kf<t_real>(ki_lab, kf_lab, Q_len_lab);
+
+	// distance of Q to the scattering plane
+	t_real dist_Q_plane = inner<t_mat, t_vec>(G, Q_rlu, orient_up_rlu);
+	dist_Q_plane /= norm<t_mat, t_vec>(G, orient_up_rlu);
+
+	return std::make_tuple(a3, a4, dist_Q_plane);
+}
+
+
+/**
+ * get a1 or a5 angle
+ */
+template<class t_real>
+t_real calc_tas_a1(t_real k, t_real d)
+{
+	t_real theta = pi<t_real> / (k*d);
+	return std::asin(theta);
+}
 // ----------------------------------------------------------------------------
 
 
