@@ -2736,7 +2736,7 @@ requires is_basic_mat<t_mat> && is_basic_vec<t_vec>
 
 	// crystal and scattering angle
 	t_real a3 = - psi - xi + a3_offs;
-	t_real a4 = calc_tas_angle_ki_kf<t_real>(ki_lab, kf_lab, Q_len_lab);
+	t_real a4 = sample_sense*calc_tas_angle_ki_kf<t_real>(ki_lab, kf_lab, Q_len_lab);
 
 	// distance of Q to the scattering plane
 	t_real dist_Q_plane = inner<t_mat, t_vec>(G, Q_rlu, orient_up_rlu);
