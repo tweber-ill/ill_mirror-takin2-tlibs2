@@ -99,6 +99,12 @@ requires is_mat<t_mat>;
 // constants
 template<typename T=double> constexpr T pi = std::numbers::pi_v<T>;
 
+// constant calculated using scipy:
+// import scipy.constants as co
+// E_to_k2 = 2.*co.neutron_mass/(co.Planck/co.elementary_charge*1000./2./co.pi)**2. / co.elementary_charge*1000. * 1e-20
+template<typename T=double> constexpr T E_to_k2 = 0.482596423544;
+
+
 template<typename INT=int> bool is_even(INT i) { return (i%2 == 0); }
 template<typename INT=int> bool is_odd(INT i) { return !is_even<INT>(i); }
 
@@ -2672,6 +2678,7 @@ requires is_basic_mat<t_mat> && is_basic_vec<t_vec>
 // tas calculations
 // @see (Shirane 2002)
 // ----------------------------------------------------------------------------
+
 /**
  * angle between ki and kf in the scattering triangle
  *
@@ -2755,6 +2762,37 @@ t_real calc_tas_a1(t_real k, t_real d)
 	t_real theta = pi<t_real> / (k*d);
 	return std::asin(theta);
 }
+
+
+/**
+ * get ki from kf and energy transfer
+ */
+template<class t_real>
+t_real calc_tas_ki(t_real kf, t_real E)
+{
+	return std::sqrt(kf*kf + E_to_k2<t_real>*E);
+}
+
+
+/** 
+ * get kf from ki and energy transfer
+ */
+template<class t_real>
+t_real calc_tas_kf(t_real ki, t_real E)
+{
+	return std::sqrt(ki*ki - E_to_k2<t_real>*E);
+}
+
+
+/** 
+ * get energy transfer from ki and kf
+ */
+template<class t_real>
+t_real calc_tas_E(t_real ki, t_real kf)
+{
+	return (ki*ki - kf*kf) / E_to_k2<t_real>;
+}
+
 // ----------------------------------------------------------------------------
 
 
