@@ -5583,11 +5583,12 @@ requires is_mat<t_mat>
 	const t_real cb = std::cos(_bb);
 	const t_real cc = std::cos(_cc);
 	const t_real sc = std::sin(_cc);
+	const t_real sb = std::sin(_bb);
 
 	return create<t_mat>({
 		a,         b*cc,      c*cb,
 		t_real{0}, b*sc,      c*(ca - cc*cb)/sc,
-		t_real{0}, t_real{0}, c*std::sqrt(t_real{1} - cb*cb - std::pow((ca - cc*cb)/sc, t_real{2}))
+		t_real{0}, t_real{0}, c*std::sqrt(sb*sb - std::pow((ca - cc*cb)/sc, t_real{2}))
 	});
 }
 
