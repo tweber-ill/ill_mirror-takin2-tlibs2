@@ -2,8 +2,8 @@
  * tlibs2 -- GL plotter
  * @author Tobias Weber <tweber@ill.fr>
  * @date 2017-2021
+ * @note The present version was forked on 8-Nov-2018 from my privately developed "magtools" project (https://github.com/t-weber/magtools).
  * @license GPLv3, see 'LICENSE' file
- * @desc The present version was forked on 8-Nov-2018 from my privately developed "magtools" project (https://github.com/t-weber/magtools).
  *
  * References:
  *   - http://doc.qt.io/qt-5/qopenglwidget.html#details
@@ -35,7 +35,7 @@ namespace algo = boost::algorithm;
 	" and GLSL version " BOOST_PP_STRINGIZE(_GLSL_MAJ_VER) BOOST_PP_STRINGIZE(_GLSL_MIN_VER) "0.")
 
 
-
+namespace tl2 {
 // ----------------------------------------------------------------------------
 // functions
 // ----------------------------------------------------------------------------
@@ -1721,3 +1721,4 @@ void GlPlot::afterResizing()
 }
 
 // ----------------------------------------------------------------------------
+}

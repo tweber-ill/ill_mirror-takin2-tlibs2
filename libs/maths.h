@@ -5,9 +5,9 @@
  * @date 2017-2021
  * @license GPLv3, see 'LICENSE' file
  *
- * @desc The present version was forked on 8-Nov-2018 from my privately developed "magtools" project (https://github.com/t-weber/magtools).
- * @desc Additional functions forked on 7-Nov-2018 from my privately and TUM-PhD-developed "tlibs" project (https://github.com/t-weber/tlibs).
- * @desc Further functions and updates forked on 1-Feb-2021 from my privately developed "geo" and "misc" projects (https://github.com/t-weber/geo and https://github.com/t-weber/misc).
+ * @note The present version was forked on 8-Nov-2018 from my privately developed "magtools" project (https://github.com/t-weber/magtools).
+ * @note Additional functions forked on 7-Nov-2018 from my privately and TUM-PhD-developed "tlibs" project (https://github.com/t-weber/tlibs).
+ * @note Further functions and updates forked on 1-Feb-2021 and 19-Apr-2021 from my privately developed "geo" and "misc" projects (https://github.com/t-weber/geo and https://github.com/t-weber/misc).
  *
  * @desc for the references, see the 'LITERATURE' file
  */
@@ -36,6 +36,7 @@
 #include <iterator>
 #include <numeric>
 #include <numbers>
+#include <random>
 #include <utility>
 #include <memory>
 #include <iostream>
@@ -398,6 +399,24 @@ t_scalar stoval(const t_str& str)
 		std::istringstream{str} >> val;
 		return val;
 	}
+}
+
+
+template<class t_num>
+t_num get_rand(t_num min=1, t_num max=-1)
+{
+	static std::mt19937 rng{std::random_device{}()};
+
+	if(max <= min)
+	{
+		min = std::numeric_limits<t_num>::lowest() / 10.;
+		max = std::numeric_limits<t_num>::max() / 10.;
+	}
+
+	if constexpr(std::is_integral_v<t_num>)
+		return std::uniform_int_distribution<t_num>(min, max)(rng);
+	else
+		return std::uniform_real_distribution<t_num>(min, max)(rng);
 }
 // ----------------------------------------------------------------------------
 
@@ -2008,7 +2027,7 @@ requires is_basic_vec<t_vec>
 {
 	t_vec vec;
 	if constexpr(is_dyn_vec<t_vec>)
-		vec = t_vec{size};
+		vec = t_vec(size);
 
 	return vec;
 }
@@ -4032,6 +4051,22 @@ requires is_basic_vec<t_vec> && is_mat<t_mat>
 
 
 /**
+ * SO(2) rotation matrix
+ */
+template<class t_mat>
+t_mat rotation_2d(const typename t_mat::value_type angle)
+requires tl2::is_mat<t_mat>
+{
+	using t_real = typename t_mat::value_type;
+
+	const t_real c = std::cos(angle);
+	const t_real s = std::sin(angle);
+
+	return create<t_mat>({{c,s}, {-s,c}});
+}
+
+
+/**
  * SO(3) matrix to rotate around an axis (Rodrigues' formula)
  * @see (Arens 2015), p. 718 and p. 816
  * @see (Merziger 2006), p. 208
@@ -5329,6 +5364,20 @@ requires is_mat<t_mat>
 		0.,  0.,  z,   0.,
 		0.,  0.,  0.,  1.
 	});
+}
+
+
+/**
+ * shear matrix
+ * @see https://en.wikipedia.org/wiki/Shear_matrix
+ */
+template<class t_mat, class t_real = typename t_mat::value_type>
+t_mat shear(std::size_t ROWS, std::size_t COLS, std::size_t i, std::size_t j, t_real s)
+requires is_mat<t_mat>
+{
+	t_mat mat = unit<t_mat>(ROWS, COLS);
+	mat(i,j) = s;
+	return mat;
 }
 
 

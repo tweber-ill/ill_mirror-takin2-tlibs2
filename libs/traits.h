@@ -3,9 +3,10 @@
  * type traits and concepts library
  * @author Tobias Weber <tobias.weber@tum.de>, <tweber@ill.fr>
  * @date 2014-2021
+ * @note The present version was forked on 8-Nov-2018 from my privately developed "magtools" project (https://github.com/t-weber/magtools).
+ * @note Forked on 7-Nov-2018 from my privately and TUM-PhD-developed "tlibs" project (https://github.com/t-weber/tlibs).
+ * @note Further functions forked on 19-Apr-2021 from my privately developed "geo" project (https://github.com/t-weber/geo).
  * @license GPLv3, see 'LICENSE' file
- * @desc The present version was forked on 8-Nov-2018 from my privately developed "magtools" project (https://github.com/t-weber/magtools).
- * @desc Forked on 7-Nov-2018 from my privately and TUM-PhD-developed "tlibs" project (https://github.com/t-weber/tlibs).
  */
 
 #ifndef __TLIBS2_TRAITS_H__
@@ -17,7 +18,9 @@
 #include <list>
 #include <initializer_list>
 #include <utility>
-
+#if defined(__cpp_concepts) && __cplusplus >= 201709L
+	#include <concepts>
+#endif
 
 namespace tl2 {
 
@@ -154,6 +157,20 @@ namespace tl2 {
 		a*a;
 		a/a;
 	} && has_value_type<T>;
+
+
+	/**
+	 * requirements for an iterable container
+	 */
+	template<class T>
+	concept is_iterable = requires(const T& a)
+	{
+		a.begin();
+		a.end();
+
+		{ a.begin() == a.end() } -> std::same_as<bool>;
+		{ a.begin() != a.end() } -> std::same_as<bool>;
+	};
 	// ----------------------------------------------------------------------------
 
 

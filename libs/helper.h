@@ -1,8 +1,8 @@
 /**
- * tlibs2
- * helpers
+ * tlibs2 -- helpers
  * @author Tobias Weber <tweber@ill.fr>
  * @date 2019-2021
+ * @note Forked on 2018 from my privately developed "misc" project (https://github.com/t-weber/misc).
  * @license GPLv3, see 'LICENSE' file
  */
 

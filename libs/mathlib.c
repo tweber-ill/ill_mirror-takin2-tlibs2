@@ -2,11 +2,9 @@
  * tlibs2 -- (C-only) math library
  * @author Tobias Weber <tweber@ill.fr>
  * @date nov-2020
+ * @note forked on 20-nov-2020 from the runtime library of my private "matrix_calc" project (https://github.com/t-weber/matrix_calc/blob/master/src/runtime.c).
+ * @note for the references, see the 'LITERATURE' file
  * @license GPLv2 or GPLv3, see 'LICENSE' file
- *
- * @desc forked on 20-nov-2020 from the runtime library of my private "matrix_calc" project:
- *	https://github.com/t-weber/matrix_calc/blob/master/src/runtime.c
- * @desc for the references, see the 'LITERATURE' file
  */
 
 #include "mathlib.h"
