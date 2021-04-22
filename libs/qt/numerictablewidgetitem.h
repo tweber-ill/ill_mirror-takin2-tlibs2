@@ -18,19 +18,15 @@ template<class T = double>
 class NumericTableWidgetItem : public QTableWidgetItem
 {
 public:
-	NumericTableWidgetItem(T&& val)
-		: QTableWidgetItem(std::to_string(std::forward<T>(val)).c_str()),
-		  m_val{val}
+	NumericTableWidgetItem(const T& val, std::streamsize prec = 6)
+		: QTableWidgetItem(tl2::var_to_str(val, prec).c_str()),
+		  m_val{val}, m_prec{prec}
 	{}
 
-	NumericTableWidgetItem(const T& val)
-		: QTableWidgetItem(std::to_string(val).c_str()),
-		  m_val{val}
-	{}
-
-	NumericTableWidgetItem(const QString& val)
+	NumericTableWidgetItem(const QString& val, std::streamsize prec = 6)
 		: QTableWidgetItem(val),
-		  m_val{tl2::str_to_var<T>(val.toStdString())}
+		  m_val{tl2::str_to_var<T>(val.toStdString())},
+		  m_prec{prec}
 	{}
 
 	virtual bool operator<(const QTableWidgetItem& item) const override
@@ -51,13 +47,15 @@ public:
 	virtual void setData(int itemdatarole, const QVariant& var) override
 	{
 		m_val = var.value<T>();
-		QTableWidgetItem::setData(itemdatarole, std::to_string(m_val).c_str());
+		std::string str = tl2::var_to_str(m_val, m_prec);
+		QTableWidgetItem::setData(itemdatarole, str.c_str());
 	}
 
 	T GetValue() const { return m_val; }
 
 private:
 	T m_val{};
+	std::streamsize m_prec{6};
 };
 
 
