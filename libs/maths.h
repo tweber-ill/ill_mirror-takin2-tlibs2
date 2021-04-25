@@ -3347,33 +3347,59 @@ requires is_vec<t_vec>
  * @returns vector of intersections
  * insert |x> = |org> + lam*|dir> in sphere equation <x-mid | x-mid> = r^2
  *
- * @see: https://en.wikipedia.org/wiki/Line%E2%80%93sphere_intersection for solution
+ * @see https://en.wikipedia.org/wiki/Line%E2%80%93sphere_intersection for the solution.
  */
 template<class t_vec, template<class...> class t_cont = std::vector>
-t_cont<t_vec>
-intersect_line_sphere(
-	const t_vec& lineOrg, const t_vec& lineDir,
-	const t_vec& sphereOrg, typename t_vec::value_type sphereRad,
-	bool bLineDirIsNormalised = false)
 requires is_vec<t_vec>
+t_cont<t_vec> intersect_line_sphere(
+	const t_vec& lineOrg, const t_vec& _lineDir,
+	const t_vec& sphereOrg, typename t_vec::value_type sphereRad,
+	bool linedir_normalised = false, bool only_segment = false,
+	typename t_vec::value_type eps = std::numeric_limits<typename t_vec::value_type>::epsilon())
 {
 	using T = typename t_vec::value_type;
 
-	auto vecDiff = sphereOrg-lineOrg;
-	auto proj = project_scalar<t_vec>(vecDiff, lineDir, bLineDirIsNormalised);
+	t_vec lineDir = _lineDir;
+	T lenDir = linedir_normalised ? T(1) : norm<t_vec>(lineDir);
+
+	if(!linedir_normalised)
+		lineDir /= lenDir;
+
+	auto vecDiff = sphereOrg - lineOrg;
+	auto proj = project_scalar<t_vec>(vecDiff, lineDir, true);
 	auto rt = proj*proj + sphereRad*sphereRad - inner<t_vec>(vecDiff, vecDiff);
 
 	// no intersection
-	if(rt < T(0)) return t_cont<t_vec>{};
+	if(rt < T(0))
+		return t_cont<t_vec>{};
 
 	// one intersection
-	if(equals(rt, T(0))) return t_cont<t_vec>{{ lineOrg + proj*lineDir }};
+	if(equals(rt, T(0), eps))
+	{
+		T lam = proj/lenDir;
+		if(!only_segment || (only_segment && lam >= T(0) && lam < T(1)))
+			return t_cont<t_vec>{{ lineOrg + proj*lineDir }};
+		return t_cont<t_vec>{};
+	}
 
 	// two intersections
 	auto val = std::sqrt(rt);
-	auto lam1 = proj + val;
-	auto lam2 = proj - val;
-	return t_cont<t_vec>{{ lineOrg + lam1*lineDir, lineOrg + lam2*lineDir }};
+	t_cont<t_vec> inters;
+
+	T lam1 = (proj + val)/lenDir;
+	T lam2 = (proj - val)/lenDir;
+
+	if(!only_segment || (only_segment && lam1 >= T(0) && lam1 < T(1)))
+		inters.emplace_back(lineOrg + (proj + val)*lineDir);
+	if(!only_segment || (only_segment && lam2 >= T(0) && lam2 < T(1)))
+		inters.emplace_back(lineOrg + (proj - val)*lineDir);
+
+	// sort intersections by x
+	std::sort(inters.begin(), inters.end(), 
+		[](const t_vec& vec1, const t_vec& vec2) -> bool
+		{ return vec1[0] < vec2[0]; });
+
+	return inters;
 }
 
 
