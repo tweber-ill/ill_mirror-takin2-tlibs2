@@ -3454,7 +3454,8 @@ requires is_vec<t_vec>
 	const T planeD = inner<t_vec>(poly[0], planeNorm);
 
 	// intersection with plane
-	auto [vec, intersects, lam] = intersect_line_plane<t_vec>(lineOrg, lineDir, planeNorm, planeD);
+	auto [vec, intersects, lam] = 
+		intersect_line_plane<t_vec>(lineOrg, lineDir, planeNorm, planeD);
 	if(intersects != 1)
 		return std::make_tuple(t_vec(), false, T(0));
 
@@ -3523,7 +3524,8 @@ template<class t_vec>
 std::tuple<t_vec, t_vec, bool, typename t_vec::value_type, typename t_vec::value_type, typename t_vec::value_type>
 intersect_line_line(
 	const t_vec& line1Org, const t_vec& line1Dir,
-	const t_vec& line2Org, const t_vec& line2Dir)
+	const t_vec& line2Org, const t_vec& line2Dir,
+	typename t_vec::value_type eps = std::numeric_limits<typename t_vec::value_type>::epsilon())
 requires is_vec<t_vec>
 {
 	using T = typename t_vec::value_type;
@@ -3538,7 +3540,7 @@ requires is_vec<t_vec>
 	const T d_det = d11*d22 - d12*d12;
 
 	// check if matrix is invertible
-	if(equals<T>(d_det, 0))
+	if(equals<T>(d_det, 0, eps))
 		return std::make_tuple(t_vec(), t_vec(), false, 0, 0, 0);
 
 	// inverse (symmetric)
