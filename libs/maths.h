@@ -1027,7 +1027,6 @@ requires tl2::is_basic_vec<t_vec> && tl2::is_dyn_vec<t_vec>
 }
 
 
-
 /**
  * operator <<
  */
