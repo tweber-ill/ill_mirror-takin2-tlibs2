@@ -2699,6 +2699,7 @@ requires is_basic_mat<t_mat> && is_basic_vec<t_vec>
 
 /**
  * angle between ki and kf in the scattering triangle
+ * @returns nullopt if the angle can't be reached
  *
  * |Q> = |ki> - |kf>
  * Q^2 = ki^2 + kf^2 - 2*<ki|kf>
@@ -2706,15 +2707,19 @@ requires is_basic_mat<t_mat> && is_basic_vec<t_vec>
  * cos phi = (ki^2 + kf^2 - Q^2) / (2 ki*kf)
  */
 template<typename t_real>
-t_real calc_tas_angle_ki_kf(t_real ki, t_real kf, t_real Q, t_real sense=1)
+std::optional<t_real> calc_tas_angle_ki_kf(
+	t_real ki, t_real kf, t_real Q, t_real sense=1)
 {
 	t_real c = (ki*ki + kf*kf - Q*Q) / (t_real(2)*ki*kf);
+	if(std::abs(c) > t_real(1))
+		return std::nullopt;
 	return sense*std::acos(c);
 }
 
 
 /**
  * angle between ki and Q in the scattering triangle
+ * @returns nullopt if the angle can't be reached
  *
  * |Q> = |ki> - |kf>
  * |kf> = |ki> + |Q>
@@ -2723,9 +2728,12 @@ t_real calc_tas_angle_ki_kf(t_real ki, t_real kf, t_real Q, t_real sense=1)
  * cos phi = (ki^2 + Q^2 - kf^2) / (2 ki*Q)
  */
 template<typename t_real>
-t_real calc_tas_angle_ki_Q(t_real ki, t_real kf, t_real Q, t_real sense=1)
+std::optional<t_real> calc_tas_angle_ki_Q(
+	t_real ki, t_real kf, t_real Q, t_real sense=1)
 {
 	t_real c = (ki*ki + Q*Q - kf*kf) / (t_real(2)*ki*Q);
+	if(std::abs(c) > t_real(1))
+		return std::nullopt;
 	return sense*std::acos(c);
 }
 
@@ -2735,7 +2743,7 @@ t_real calc_tas_angle_ki_Q(t_real ki, t_real kf, t_real Q, t_real sense=1)
  * @return [a3, a4, distance of Q to the scattering plane]
  */
 template<class t_mat, class t_vec, class t_real = typename t_mat::value_type>
-std::tuple<t_real, t_real, t_real> calc_tas_a3a4(
+std::tuple<bool, t_real, t_real, t_real> calc_tas_a3a4(
 	const t_mat& B, t_real ki_lab, t_real kf_lab,
 	const t_vec& Q_rlu, const t_vec& orient_rlu, const t_vec& orient_up_rlu,
 	t_real sample_sense = 1, t_real a3_offs = pi<t_real>)
@@ -2757,27 +2765,37 @@ requires is_basic_mat<t_mat> && is_basic_vec<t_vec>
 		xi = -xi;
 
 	// angle psi between ki and Q
-	t_real psi = calc_tas_angle_ki_Q<t_real>(ki_lab, kf_lab, Q_len_lab, sample_sense);
+	std::optional<t_real> psi = 
+		calc_tas_angle_ki_Q<t_real>(ki_lab, kf_lab, Q_len_lab, sample_sense);
+	if(!psi)
+		return std::make_tuple(false, 0, 0, 0);
 
 	// crystal and scattering angle
-	t_real a3 = - psi - xi + a3_offs;
-	t_real a4 = sample_sense*calc_tas_angle_ki_kf<t_real>(ki_lab, kf_lab, Q_len_lab);
+	t_real a3 = - *psi - xi + a3_offs;
+	std::optional<t_real> a4 = 
+		calc_tas_angle_ki_kf<t_real>(ki_lab, kf_lab, Q_len_lab);
+	if(!a4)
+		return std::make_tuple(false, a3, 0, 0);
+	*a4 *= sample_sense;
 
 	// distance of Q to the scattering plane
 	t_real dist_Q_plane = inner<t_mat, t_vec>(G, Q_rlu, orient_up_rlu);
 	dist_Q_plane /= norm<t_mat, t_vec>(G, orient_up_rlu);
 
-	return std::make_tuple(a3, a4, dist_Q_plane);
+	return std::make_tuple(true, a3, *a4, dist_Q_plane);
 }
 
 
 /**
  * get a1 or a5 angle
+ * @returns nullopt of the angle can't be reached
  */
 template<class t_real>
-t_real calc_tas_a1(t_real k, t_real d)
+std::optional<t_real> calc_tas_a1(t_real k, t_real d)
 {
 	t_real theta = pi<t_real> / (k*d);
+	if(std::abs(theta) > t_real(1))
+		return std::nullopt;
 	return std::asin(theta);
 }
 
