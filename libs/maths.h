@@ -2739,6 +2739,20 @@ std::optional<t_real> calc_tas_angle_ki_Q(
 
 
 /**
+ * get length of Q
+ * |Q> = |ki> - |kf>
+ * Q^2 = ki^2 + kf^2 - 2*<ki|kf>
+ * Q^2 = ki^2 + kf^2 - 2*ki*kf*cos(a4)
+ */
+template<typename t_real>
+t_real calc_tas_Q_len(t_real ki, t_real kf, t_real a4)
+{
+	t_real Qsq = ki*ki + kf*kf - t_real(2)*ki*kf*std::cos(a4);
+	return std::sqrt(Qsq);
+}
+
+
+/**
  * get tas a3 and a4 angles
  * @return [a3, a4, distance of Q to the scattering plane]
  */
@@ -2783,6 +2797,43 @@ requires is_basic_mat<t_mat> && is_basic_vec<t_vec>
 	dist_Q_plane /= norm<t_mat, t_vec>(G, orient_up_rlu);
 
 	return std::make_tuple(true, a3, *a4, dist_Q_plane);
+}
+
+
+/**
+ * get hkl position of a tas
+ * @return Q_rlu
+ */
+template<class t_mat, class t_vec, class t_real = typename t_mat::value_type>
+std::optional<t_vec> calc_tas_hkl(
+	const t_mat& B, t_real ki_lab, t_real kf_lab, t_real Q_len_lab, t_real a3,
+	const t_vec& orient_rlu, const t_vec& orient_up_rlu,
+	t_real sample_sense = 1, t_real a3_offs = pi<t_real>)
+requires is_basic_mat<t_mat> && is_basic_vec<t_vec>
+{
+	auto [Binv, ok] = inv<t_mat>(B);
+	if(!ok)
+		return std::nullopt;
+
+	// angle psi between ki and Q
+	std::optional<t_real> psi = 
+		calc_tas_angle_ki_Q<t_real>(ki_lab, kf_lab, Q_len_lab, sample_sense);
+	if(!psi)
+		return std::nullopt;
+
+	// angle xi between Q and orientation reflex
+	t_real xi = a3_offs - a3 - *psi;
+
+	t_vec rotaxis_lab = B * orient_up_rlu;
+	t_mat rotmat = rotation<t_mat, t_vec>(rotaxis_lab, xi, false);
+
+	t_vec orient_lab = B * orient_rlu;
+	t_vec Q_lab = rotmat * orient_lab;
+	Q_lab /= norm<t_vec>(Q_lab);
+	Q_lab *= Q_len_lab;
+
+	t_vec Q_rlu = Binv * Q_lab;
+	return Q_rlu;
 }
 
 

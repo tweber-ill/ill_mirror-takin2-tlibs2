@@ -62,18 +62,29 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(test_xtal, t_real, t_types)
 	//std::cout << tl2::levi<t_mat>(B, {0,2,1}) << std::endl;
 	//std::cout << tl2::levi<t_mat>(B, {1,2,1}) << std::endl;
 
+	t_real ki = 1.5;
+	t_real kf = 1.4;
 	t_vec Q = tl2::create<t_vec>({1, -1, 0});
-	auto [a3, a4, dist] = calc_tas_a3a4<t_mat, t_vec>(B, 1.5, 1.4, Q, vec1, vec3);
+	auto [anglesok, a3, a4, dist] = tl2::calc_tas_a3a4<t_mat, t_vec>(B, ki, kf, Q, vec1, vec3);
 	std::cout << "a3 = " << a3 / tl2::pi<t_real> * 180. 
 		<< ", a4 = " << a4 / tl2::pi<t_real> * 180.
 		<< std::endl;
 	std::cout << "distance of Q to scattering plane: " << dist << std::endl;
+
+
+	// calculate back to Q
+	t_real Qlen = tl2::calc_tas_Q_len<t_real>(ki, kf, a4);
+	std::optional<t_vec> Qhkl = tl2::calc_tas_hkl<t_mat, t_vec>(B, ki, kf, Qlen, a3, vec1, vec3);
+	std::cout << "Q  = " << *Qhkl << std::endl;
+
 
 	BOOST_TEST(ok);
 	BOOST_TEST(tl2::equals(B, B2, std::numeric_limits<t_real>::epsilon()*1e2));
 	BOOST_TEST(tl2::equals<t_real>(dist, 0, std::numeric_limits<t_real>::epsilon()*1e2));
 	BOOST_TEST(tl2::equals<t_real>(a3/tl2::pi<t_real>*180., 44.359, 1e-3));
 	BOOST_TEST(tl2::equals<t_real>(a4/tl2::pi<t_real>*180., 84.359, 1e-3));
+	BOOST_TEST((Qhkl.operator bool()));
+	BOOST_TEST(tl2::equals<t_vec>(Q, *Qhkl, 1e-3));
 
 	std::cout << std::endl;
 }
