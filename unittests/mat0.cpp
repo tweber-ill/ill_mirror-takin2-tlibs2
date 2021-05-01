@@ -4,10 +4,10 @@
  * @date feb-19
  * @license GPLv3, see 'LICENSE' file
  *
- * g++ -std=c++20 -DUSE_LAPACK -I/usr/include/lapacke -I/usr/local/opt/lapack/include -L/usr/local/opt/lapack/lib -o la la.cpp -llapacke
+ * g++-10 -std=c++20 -DUSE_LAPACK -I.. -I/usr/include/lapacke -I/usr/local/opt/lapack/include -L/usr/local/opt/lapack/lib -o mat0 mat0.cpp -llapacke
  */
 
-#define BOOST_TEST_MODULE La1
+#define BOOST_TEST_MODULE Mat0
 #include <boost/test/included/unit_test.hpp>
 namespace test = boost::unit_test;
 namespace testtools = boost::test_tools;
@@ -19,7 +19,7 @@ namespace testtools = boost::test_tools;
 
 
 using t_types = std::tuple<double, float>;
-BOOST_AUTO_TEST_CASE_TEMPLATE(test_equals, t_real, t_types)
+BOOST_AUTO_TEST_CASE_TEMPLATE(test_mat0, t_real, t_types)
 {
 	using namespace tl2_ops;
 
@@ -28,6 +28,9 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(test_equals, t_real, t_types)
 	using t_mat = tl2::mat<t_real, std::vector>;
 	using t_vec_cplx = tl2::vec<t_cplx, std::vector>;
 	using t_mat_cplx = tl2::mat<t_cplx, std::vector>;
+
+	t_real eps = std::pow(std::numeric_limits<t_real>::epsilon(), 1./2.);
+	std::cout << "eps = " << eps << std::endl;
 
 
 	auto M = tl2::create<t_mat>({1, 2, 3, 3, 2, 6, 4, 2, 4});
@@ -48,8 +51,8 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(test_equals, t_real, t_types)
 		std::cout << "QR = " << QR << std::endl;
 
 		BOOST_TEST(ok);
-		BOOST_TEST(tl2::equals<t_real>(d, 1, 1e-4));
-		BOOST_TEST(tl2::equals(QR, M, 1e-4));
+		BOOST_TEST(tl2::equals<t_real>(d, 1, eps));
+		BOOST_TEST(tl2::equals(QR, M, eps));
 
 #ifdef USE_LAPACK
 		auto [ok2, P, L, U] = tl2_la::lu<t_mat>(M);
@@ -62,7 +65,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(test_equals, t_real, t_types)
 		std::cout << "PLU = " << PLU << std::endl;
 
 		BOOST_TEST(ok2);
-		BOOST_TEST(tl2::equals(PLU, M, 1e-4));
+		BOOST_TEST(tl2::equals(PLU, M, eps));
 #endif
 	}
 
@@ -78,8 +81,8 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(test_equals, t_real, t_types)
 		std::cout << "QR = " << QR << std::endl;
 
 		BOOST_TEST(ok);
-		BOOST_TEST(tl2::equals<t_cplx>(d, 1, 1e-4));
-		BOOST_TEST(tl2::equals(QR, Z, 1e-4));
+		BOOST_TEST(tl2::equals<t_cplx>(d, 1, eps));
+		BOOST_TEST(tl2::equals(QR, Z, eps));
 
 #ifdef USE_LAPACK
 		auto [ok2, P, L, U] = tl2_la::lu<t_mat_cplx>(Z);
@@ -92,7 +95,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(test_equals, t_real, t_types)
 		std::cout << "PLU = " << PLU << std::endl;
 
 		BOOST_TEST(ok2);
-		BOOST_TEST(tl2::equals(PLU, Z, 1e-4));
+		BOOST_TEST(tl2::equals(PLU, Z, eps));
 #endif
 	}
 
@@ -132,10 +135,10 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(test_equals, t_real, t_types)
 		auto mata2 = Z*inva;
 		auto matb1 = invb*Z;
 		auto matb2 = Z*invb;
-		BOOST_TEST(tl2::equals(mata1, ident, 1e-4));
-		BOOST_TEST(tl2::equals(matb1, ident, 1e-4));
-		BOOST_TEST(tl2::equals(mata2, ident, 1e-4));
-		BOOST_TEST(tl2::equals(matb2, ident, 1e-4));
+		BOOST_TEST(tl2::equals(mata1, ident, eps));
+		BOOST_TEST(tl2::equals(matb1, ident, eps));
+		BOOST_TEST(tl2::equals(mata2, ident, eps));
+		BOOST_TEST(tl2::equals(matb2, ident, eps));
 	}
 
 	{
@@ -172,8 +175,63 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(test_equals, t_real, t_types)
 		auto ident = tl2::unit<t_mat>(M.size1(), M.size2());
 		auto mata = inva*M;
 		auto matb = invb*M;
-		BOOST_TEST(tl2::equals(mata, ident, 1e-4));
-		BOOST_TEST(tl2::equals(matb, ident, 1e-4));
+		BOOST_TEST(tl2::equals(mata, ident, eps));
+		BOOST_TEST(tl2::equals(matb, ident, eps));
+	}
+
+	// test rotation
+	for(std::size_t iteration=0; iteration<1000; ++iteration)
+	{
+		t_vec axis = tl2::create<t_vec>({
+			tl2::get_rand<t_real>(-10., 10.),
+			tl2::get_rand<t_real>(-10., 10.),
+			tl2::get_rand<t_real>(-10., 10.) });
+		axis /= tl2::norm<t_vec>(axis);
+		t_real angle = tl2::get_rand<t_real>(-tl2::pi<t_real>, tl2::pi<t_real>);
+		t_mat rot = tl2::rotation<t_mat, t_vec>(axis, angle, 1);
+
+		auto [ok, evals_re, evals_im, evecs_re, evecs_im] =
+			tl2_la::eigenvec<t_mat, t_vec, t_real>(rot, 0, 0, 1);
+		//std::cout << "\nok = " << std::boolalpha << ok << std::endl;
+
+		bool axis_found = false;
+		for(std::size_t i=0; i<evals_re.size(); ++i)
+		{
+			if(tl2::equals<t_real>(evals_re[i], 1., eps) && tl2::equals_0<t_real>(evals_im[i], eps))
+			{
+				bool evec_ok = (tl2::equals<t_vec>(axis, evecs_re[i], eps) ||
+					tl2::equals<t_vec>(-axis, evecs_re[i], eps)) &&
+					tl2::equals_0<t_vec>(evecs_im[i], eps);
+				axis_found = true;
+				BOOST_TEST((evec_ok));
+
+				if(!evec_ok)
+				{
+					std::cerr << "rotation axis: " << axis << ", angle: " << angle << std::endl;
+					for(std::size_t j=0; j<evals_re.size(); ++j)
+					{
+						std::cerr << "eval: " << evals_re[j] << " + i*" << evals_im[j]
+							<< ", evec: " << evecs_re[j] << " +i*" << evecs_im[j] 
+							<< std::endl;
+					}
+				}
+			}
+		}
+
+		BOOST_TEST((axis_found));
+		if(!axis_found)
+		{
+			std::cerr << "Error: axis not found!" << std::endl;
+			std::cerr << "rotation axis: " << axis << ", angle: " << angle << std::endl;
+			for(std::size_t i=0; i<evals_re.size(); ++i)
+			{
+				std::cerr << "eval: " << evals_re[i] << " + i*" << evals_im[i]
+					<< ", evec: " << evecs_re[i] << " +i*" << evecs_im[i] 
+					<< std::endl;
+			}
+		}
 	}
 #endif
+
+	std::cout << "--------------------------------------------------------------------------------\n" << std::endl;
 }

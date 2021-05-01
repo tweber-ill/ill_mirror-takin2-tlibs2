@@ -17,7 +17,7 @@ namespace testtools = boost::test_tools;
 
 
 using t_types = std::tuple<double, float>;
-BOOST_AUTO_TEST_CASE_TEMPLATE(test_equals, t_real, t_types)
+BOOST_AUTO_TEST_CASE_TEMPLATE(test_mat2, t_real, t_types)
 {
 	using namespace tl2_ops;
 

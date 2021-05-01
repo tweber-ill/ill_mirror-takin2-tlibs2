@@ -41,7 +41,8 @@ namespace tl2 {
 	 */
 	template<class T>
 	concept is_scalar =
-	std::is_floating_point_v<T> || std::is_integral_v<T> /*|| std::is_arithmetic_v<T>*/;
+		std::is_floating_point_v<T> || 
+		std::is_integral_v<T> /*|| std::is_arithmetic_v<T>*/;
 
 
 	/**

@@ -20,7 +20,7 @@ using namespace tl2_ops;
 
 
 using t_types = std::tuple<double, float>;
-BOOST_AUTO_TEST_CASE_TEMPLATE(test_equals, t_real, t_types)
+BOOST_AUTO_TEST_CASE_TEMPLATE(test_mat1, t_real, t_types)
 {
 	//using t_cplx = std::complex<t_real>;
 	using t_vec = std::vector<t_real>;

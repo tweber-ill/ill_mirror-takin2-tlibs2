@@ -1895,6 +1895,17 @@ requires is_vec<t_vec> && is_mat<t_mat>
 
 
 /**
+ * tests for zero scalar
+ */
+template<class t_real>
+bool equals_0(t_real val, t_real eps = std::numeric_limits<t_real>::epsilon())
+requires is_scalar<t_real>
+{
+	return equals<t_real>(val, t_real(0), eps);
+}
+
+
+/**
  * tests for zero vector
  */
 template<class t_vec>
