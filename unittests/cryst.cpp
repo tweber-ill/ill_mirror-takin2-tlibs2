@@ -5,7 +5,7 @@
  * @license GPLv3, see 'LICENSE' file
  *
  * g++ -std=c++20 -o cryst cryst.cpp
- * g++ -std=c++20 -DUSE_LAPACK -I/usr/include/lapacke -I/usr/local/opt/lapack/include -L/usr/local/opt/lapack/lib -o cryst cryst.cpp -llapacke
+ * g++ -std=c++20 -DUSE_LAPACK -I.. -I/usr/include/lapacke -I/usr/local/opt/lapack/include -L/usr/local/opt/lapack/lib -o cryst cryst.cpp -llapacke
  */
 
 #define BOOST_TEST_MODULE Xtal Test
@@ -26,8 +26,12 @@ using namespace tl2_ops;
 #else
 	using t_types = std::tuple<long double, double, float>;
 #endif
+
+
 BOOST_AUTO_TEST_CASE_TEMPLATE(test_xtal, t_real, t_types)
 {
+	std::cout << "Test 1" << std::endl;
+
 	using t_vec = tl2::vec<t_real, std::vector>;
 	using t_mat = tl2::mat<t_real, std::vector>;
 	//using t_cplx = std::complex<t_real>;
@@ -35,14 +39,14 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(test_xtal, t_real, t_types)
 	//using t_mat_cplx = tl2::mat<t_cplx, std::vector>;
 
 	auto A = tl2::A_matrix<t_mat, t_real>(
-		4.56, 4.56, 4.56, 
-		90. / 180. * tl2::pi<t_real>, 
-		90. / 180. * tl2::pi<t_real>, 
+		4.56, 4.56, 4.56,
+		90. / 180. * tl2::pi<t_real>,
+		90. / 180. * tl2::pi<t_real>,
 		90. / 180. * tl2::pi<t_real>);
 	auto B = tl2::B_matrix<t_mat, t_real>(
-		4.56, 4.56, 4.56, 
-		90. / 180. * tl2::pi<t_real>, 
-		90. / 180. * tl2::pi<t_real>, 
+		4.56, 4.56, 4.56,
+		90. / 180. * tl2::pi<t_real>,
+		90. / 180. * tl2::pi<t_real>,
 		90. / 180. * tl2::pi<t_real>);
 	auto [B2, ok] = tl2::inv<t_mat>(A);
 	B2 = 2.*tl2::pi<t_real> * tl2::trans<t_mat>(B2);
@@ -66,7 +70,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(test_xtal, t_real, t_types)
 	t_real kf = 1.4;
 	t_vec Q = tl2::create<t_vec>({1, -1, 0});
 	auto [anglesok, a3, a4, dist] = tl2::calc_tas_a3a4<t_mat, t_vec>(B, ki, kf, Q, vec1, vec3);
-	std::cout << "a3 = " << a3 / tl2::pi<t_real> * 180. 
+	std::cout << "a3 = " << a3 / tl2::pi<t_real> * 180.
 		<< ", a4 = " << a4 / tl2::pi<t_real> * 180.
 		<< std::endl;
 	std::cout << "distance of Q to scattering plane: " << dist << std::endl;
@@ -75,7 +79,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(test_xtal, t_real, t_types)
 	// calculate back to Q
 	t_real Qlen = tl2::calc_tas_Q_len<t_real>(ki, kf, a4);
 	std::optional<t_vec> Qhkl = tl2::calc_tas_hkl<t_mat, t_vec>(B, ki, kf, Qlen, a3, vec1, vec3);
-	std::cout << "Q  = " << *Qhkl << std::endl;
+	std::cout << "Q = " << *Qhkl << std::endl;
 
 
 	BOOST_TEST(ok);
@@ -83,6 +87,56 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(test_xtal, t_real, t_types)
 	BOOST_TEST(tl2::equals<t_real>(dist, 0, std::numeric_limits<t_real>::epsilon()*1e2));
 	BOOST_TEST(tl2::equals<t_real>(a3/tl2::pi<t_real>*180., 44.359, 1e-3));
 	BOOST_TEST(tl2::equals<t_real>(a4/tl2::pi<t_real>*180., 84.359, 1e-3));
+	BOOST_TEST((Qhkl.operator bool()));
+	BOOST_TEST(tl2::equals<t_vec>(Q, *Qhkl, 1e-3));
+
+	std::cout << std::endl;
+}
+
+
+BOOST_AUTO_TEST_CASE_TEMPLATE(test_xtal2, t_real, t_types)
+{
+	std::cout << "Test 2" << std::endl;
+
+	using t_vec = tl2::vec<t_real, std::vector>;
+	using t_mat = tl2::mat<t_real, std::vector>;
+
+	auto B = tl2::B_matrix<t_mat, t_real>(
+		5., 6., 7.,
+		60. / 180. * tl2::pi<t_real>,
+		60. / 180. * tl2::pi<t_real>,
+		60. / 180. * tl2::pi<t_real>);
+
+	t_vec vec1 = tl2::create<t_vec>({1, 0, 0});
+	t_vec vec2 = tl2::create<t_vec>({0, 1, 0});
+	t_vec vec3 = tl2::cross<t_mat, t_vec>(B, vec1, vec2);
+	t_mat UB = tl2::UB_matrix<t_mat, t_vec>(B, vec1, vec2, vec3);
+	std::cout << "vec1 = " << vec1 << std::endl;
+	std::cout << "vec2 = " << vec2 << std::endl;
+	std::cout << "vec3 = " << vec3 << std::endl;
+	std::cout << "UB = " << UB << std::endl;
+
+	t_real ki = 1.4;
+	t_real kf = 1.5;
+	t_vec Q = tl2::create<t_vec>({1, 1, 0});
+	t_real a3_offs = tl2::pi<t_real>*0.5;
+	auto [anglesok, a3, a4, dist] = tl2::calc_tas_a3a4<t_mat, t_vec, t_real>(
+		B, ki, kf, Q, vec1, vec3, 1., a3_offs);
+	std::cout << "a3 = " << a3 / tl2::pi<t_real> * 180.
+		<< ", a4 = " << a4 / tl2::pi<t_real> * 180.
+		<< std::endl;
+	std::cout << "distance of Q to scattering plane: " << dist << std::endl;
+
+	// calculate back to Q
+	t_real Qlen = tl2::calc_tas_Q_len<t_real>(ki, kf, a4);
+	std::optional<t_vec> Qhkl = tl2::calc_tas_hkl<t_mat, t_vec, t_real>(
+		B, ki, kf, Qlen, a3, vec1, vec3, 1., a3_offs);
+	std::cout << "Q = " << *Qhkl << std::endl;
+
+
+	BOOST_TEST(tl2::equals<t_real>(dist, 0, std::numeric_limits<t_real>::epsilon()*1e2));
+	BOOST_TEST(tl2::equals<t_real>(a3/tl2::pi<t_real>*180., -15.84, 1e-3));
+	BOOST_TEST(tl2::equals<t_real>(a4/tl2::pi<t_real>*180., 68.895, 1e-3));
 	BOOST_TEST((Qhkl.operator bool()));
 	BOOST_TEST(tl2::equals<t_vec>(Q, *Qhkl, 1e-3));
 

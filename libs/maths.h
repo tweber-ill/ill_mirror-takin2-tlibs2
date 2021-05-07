@@ -2851,14 +2851,34 @@ requires is_basic_mat<t_mat> && is_basic_vec<t_vec>
 /**
  * get a1 or a5 angle
  * @returns nullopt of the angle can't be reached
+ * @see https://en.wikipedia.org/wiki/Bragg's_law
+ *
+ * Bragg: n lam = 2d sin(theta)
+ * n 2pi / k = 2d sin(theta)
+ * n pi / k = d sin(theta)
+ * theta = asin(n pi / (k d))
  */
 template<class t_real>
 std::optional<t_real> calc_tas_a1(t_real k, t_real d)
 {
-	t_real theta = pi<t_real> / (k*d);
-	if(std::abs(theta) > t_real(1))
+	t_real sintheta = pi<t_real> / (k*d);
+	if(std::abs(sintheta) > t_real(1))
 		return std::nullopt;
-	return std::asin(theta);
+	return std::asin(sintheta);
+}
+
+
+/**
+ * get k from crystal angle
+ * @see https://en.wikipedia.org/wiki/Bragg's_law
+ * 
+ * k = n pi / (d sin(theta))
+ */
+template<class t_real>
+t_real calc_tas_k(t_real theta, t_real d)
+{
+	t_real sintheta = std::abs(std::sin(theta));
+	return pi<t_real> / (d * sintheta);
 }
 
 
