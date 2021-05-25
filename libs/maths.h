@@ -16,9 +16,7 @@
 #define __TLIBS2_CXX20_MATH_ALGOS_H__
 
 //#define USE_LINALG_OPS
-//#define USE_FADDEEVA
 //#define USE_LAPACK
-//#define USE_QHULL
 #define __TLIBS2_QR_METHOD 0
 
 #include <cstddef>
@@ -35,7 +33,6 @@
 #include <functional>
 #include <iterator>
 #include <numeric>
-#include <numbers>
 #include <random>
 #include <utility>
 #include <memory>
@@ -43,6 +40,12 @@
 #include <sstream>
 #include <iomanip>
 #include <stdexcept>
+
+#if __has_include(<numbers>)
+	#include <numbers>
+
+	#define __TLIBS2_USE_NUMBERS__
+#endif
 
 #include <boost/algorithm/string.hpp>
 #include <boost/math/special_functions/factorials.hpp>
@@ -53,9 +56,42 @@
 #include "str.h"
 #include "traits.h"
 
-#ifdef USE_FADDEEVA
+#if __has_include(<lapacke.h>) && USE_LAPACK
+	extern "C"
+	{
+		#define lapack_complex_double std::complex<double>
+		#define lapack_complex_double_real(z) (z.real())
+		#define lapack_complex_double_imag(z) (z.imag())
+
+		#define lapack_complex_float std::complex<float>
+		#define lapack_complex_float_real(z) (z.real())
+		#define lapack_complex_float_imag(z) (z.imag())
+
+		#include <lapacke.h>
+	}
+
+	#define __TLIBS2_USE_LAPACK__
+#else
+	#pragma message("tlibs2: Disabling Lapack(e) library (not found).")
+#endif
+
+#if __has_include(<Faddeeva.hh>)
 	#include <Faddeeva.hh>
 	using t_real_fadd = double;
+
+	#define __TLIBS2_USE_FADDEEVA__
+#else
+	#pragma message("tlibs2: Disabling Faddeeva library (not found).")
+#endif
+
+#if __has_include(<Qhull.h>)
+	#include <Qhull.h>
+	#include <QhullFacetList.h>
+	#include <QhullVertexSet.h>
+
+	#define __TLIBS2_USE_QHULL__
+#else
+	#pragma message("tlibs2: Disabling QHull library (not found).")
 #endif
 
 // separator tokens
@@ -98,7 +134,14 @@ requires is_mat<t_mat>;
 // ----------------------------------------------------------------------------
 
 // constants
-template<typename T=double> constexpr T pi = std::numbers::pi_v<T>;
+#ifdef __TLIBS2_USE_NUMBERS__
+	template<typename T=double> constexpr T golden{std::numbers::phi_v<T>};
+	template<typename T=double> constexpr T pi{std::numbers::pi_v<T>};
+#else
+	// see: https://en.wikipedia.org/wiki/Golden_ratio
+	template<typename T=double> constexpr T golden{1.618033988749895};
+	template<typename T=double> constexpr T pi{M_PI};
+#endif
 
 // constant calculated using scipy:
 // import scipy.constants as co
@@ -505,7 +548,7 @@ struct complex_cast<t_real_to, t_real_from, 0>
 // -----------------------------------------------------------------------------
 // Faddeeva function
 // -----------------------------------------------------------------------------
-#ifdef USE_FADDEEVA
+#ifdef __TLIBS2_USE_FADDEEVA__
 
 /**
  * Complex error function
@@ -5035,7 +5078,7 @@ create_icosahedron(typename t_vec::value_type l = 1)
 requires is_vec<t_vec>
 {
 	using T = typename t_vec::value_type;
-	const T g = std::numbers::phi_v<T>;
+	const T g = golden<T>;
 
 	t_cont<t_vec> vertices =
 	{
@@ -5096,7 +5139,7 @@ create_dodecahedron(typename t_vec::value_type l = 1)
 requires is_vec<t_vec>
 {
 	using T = typename t_vec::value_type;
-	const T g = std::numbers::phi_v<T>;
+	const T g = golden<T>;
 
 	t_cont<t_vec> vertices =
 	{
@@ -6202,21 +6245,7 @@ requires is_mat<t_mat> && is_vec<t_vec>
 // ----------------------------------------------------------------------------
 // lapack wrappers
 // ----------------------------------------------------------------------------
-#ifdef USE_LAPACK
-
-extern "C"
-{
-	#define lapack_complex_double std::complex<double>
-	#define lapack_complex_double_real(z) (z.real())
-	#define lapack_complex_double_imag(z) (z.imag())
-
-	#define lapack_complex_float std::complex<float>
-	#define lapack_complex_float_real(z) (z.real())
-	#define lapack_complex_float_imag(z) (z.imag())
-
-	#include <lapacke.h>
-}
-
+#ifdef __TLIBS2_USE_LAPACK__
 
 namespace tl2_la {
 
@@ -6923,7 +6952,7 @@ requires (tl2::is_mat<t_mat> && tl2::is_vec<t_vec>)
 
 }
 
-#endif	// USE_LAPACK
+#endif	// __TLIBS2_USE_LAPACK__
 
 
 namespace tl2 {
@@ -6937,7 +6966,7 @@ template<class t_mat, class t_vec>
 std::tuple<bool, t_mat, t_mat> qr(const t_mat& mat)
 requires is_mat<t_mat> && is_vec<t_vec>
 {
-#ifdef USE_LAPACK
+#ifdef __TLIBS2_USE_LAPACK__
 	return tl2_la::qr<t_mat, t_vec>(mat);
 
 #else
@@ -6989,7 +7018,7 @@ requires is_mat<t_mat>
 	else
 		static_assert(t_mat::size1() == t_mat::size2());
 
-#ifdef USE_LAPACK
+#ifdef __TLIBS2_USE_LAPACK__
 	return tl2_la::inv<t_mat>(mat);
 #else
 	using T = typename t_mat::value_type;
@@ -7354,11 +7383,7 @@ requires is_vec<t_vec>
 
 
 
-#ifdef USE_QHULL
-
-#include <Qhull.h>
-#include <QhullFacetList.h>
-#include <QhullVertexSet.h>
+#ifdef __TLIBS2_USE_QHULL__
 
 namespace tl2_qh {
 
