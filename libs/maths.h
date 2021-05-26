@@ -4257,11 +4257,11 @@ requires is_vec<t_vec> && is_mat<t_mat>
 
 	// ----------------------------------------------------
 	// special cases: rotations around [100], [010], [001]
-	if(equals(axis, create<t_vec>({len,0,0})))
+	if(equals(axis, create<t_vec>({ len, 0, 0 })))
 		return create<t_mat>({{1,0,0}, {0,c,s}, {0,-s,c}});
-	else if(equals(axis, create<t_vec>({0,len,0})))
+	else if(equals(axis, create<t_vec>({ 0, len, 0 })))
 		return create<t_mat>({{c,0,-s}, {0,1,0}, {s,0,c}});
-	else if(equals(axis, create<t_vec>({0,0,len})))
+	else if(equals(axis, create<t_vec>({ 0, 0, len })))
 		return create<t_mat>({{c,s,0}, {-s,c,0}, {0,0,1}});
 
 	// ----------------------------------------------------
