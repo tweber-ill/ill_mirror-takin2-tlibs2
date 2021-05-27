@@ -35,6 +35,7 @@
 #include <numeric>
 #include <random>
 #include <utility>
+#include <optional>
 #include <memory>
 #include <iostream>
 #include <sstream>
@@ -5340,6 +5341,122 @@ requires is_vec<t_vec>
 	return std::make_tuple(center, rad);
 }
 
+
+/**
+ * calculates the bounding box of a collection of vertices
+ */
+template<class t_vec, template<class...> class t_cont = std::vector>
+std::tuple<t_vec, t_vec> bounding_box(
+	const t_cont<t_vec>& verts,
+	const t_vec* oldmin = nullptr, const t_vec* oldmax = nullptr)
+requires is_vec<t_vec>
+{
+	if(verts.size() == 0)
+		return std::make_tuple(t_vec{}, t_vec{});
+
+	using t_real = typename t_vec::value_type;
+	const std::size_t dim = verts[0].size();
+	if(dim == 0)
+		return std::make_tuple(t_vec{}, t_vec{});
+
+	t_vec min, max;
+	if(oldmin && oldmax)
+	{
+		min = *oldmin;
+		max = *oldmax;
+	}
+	else
+	{
+		min = create<t_vec>(dim);
+		for(std::size_t i=0; i<dim; ++i)
+			min[i] = std::numeric_limits<t_real>::max();
+		max = -min;
+	}
+
+	for(const t_vec& vert : verts)
+	{
+		for(std::size_t i=0; i<dim; ++i)
+		{
+			min[i] = std::min(min[i], vert[i]);
+			max[i] = std::max(max[i], vert[i]);
+		}
+	}
+
+	return std::make_tuple(min, max);
+}
+
+
+/**
+ * calculates the bounding box of a collection of vertices
+ * @see https://developer.mozilla.org/en-US/docs/Games/Techniques/3D_collision_detection
+ */
+template<class t_vec, template<class...> class t_cont = std::vector>
+std::tuple<t_vec, t_vec> bounding_box(
+	const t_cont<t_cont<t_vec>>& allverts, std::size_t dim=3)
+requires is_vec<t_vec>
+{
+	using t_real = typename t_vec::value_type;
+
+	t_vec min, max;
+	min = create<t_vec>(dim);
+	for(std::size_t i=0; i<dim; ++i)
+		min[i] = std::numeric_limits<t_real>::max();
+	max = -min;
+
+	for(const t_cont<t_vec>& verts : allverts)
+		std::tie(min, max) = bounding_box<t_vec, t_cont>(verts, &min, &max);
+
+	return std::make_tuple(min, max);
+}
+
+
+/**
+ * checks if a point is inside a bounding box
+ * @see https://developer.mozilla.org/en-US/docs/Games/Techniques/3D_collision_detection
+ */
+template<class t_vec> requires is_vec<t_vec>
+bool in_bounding_boxe(
+	const t_vec& pt, const std::tuple<t_vec, t_vec>& bb)
+{
+	const std::size_t dim = pt.size();
+
+	const t_vec& min = std::get<0>(bb);
+	const t_vec& max = std::get<1>(bb);
+
+	for(std::size_t i=0; i<dim; ++i)
+	{
+		if(pt[i] < min[i] || pt[i] > max[i])
+			return false;
+	}
+
+	return true;
+}
+
+
+/**
+ * checks for bounding box intersection
+ * @see https://developer.mozilla.org/en-US/docs/Games/Techniques/3D_collision_detection
+ */
+template<class t_vec> requires is_vec<t_vec>
+bool collide_bounding_boxes(
+	const std::tuple<t_vec, t_vec>& bb1,
+	const std::tuple<t_vec, t_vec>& bb2)
+{
+	// invalid bounding boxes?
+	if(std::get<0>(bb1).size()==0 || std::get<1>(bb1).size()==0 ||
+		std::get<0>(bb2).size()==0 || std::get<1>(bb2).size()==0)
+		return false;
+
+	const std::size_t dim = std::min(std::get<0>(bb1).size(), std::get<0>(bb2).size());
+	for(std::size_t i=0; i<dim; ++i)
+	{
+		if(std::get<0>(bb1)[i] > std::get<1>(bb2)[i])
+			return false;
+		if(std::get<0>(bb2)[i] > std::get<1>(bb1)[i])
+			return false;
+	}
+	return true;
+}
 // ----------------------------------------------------------------------------
 
 
