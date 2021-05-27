@@ -2248,6 +2248,7 @@ requires is_basic_vec<t_vec> && is_mat<t_mat>
 	using t_idx = decltype(mat.size1());
 
 	t_vec vec;
+	vec.reserve(mat.size1()*mat.size2());
 
 	for(t_idx iRow=0; iRow<mat.size1(); ++iRow)
 		for(t_idx iCol=0; iCol<mat.size2(); ++iCol)
@@ -2308,6 +2309,7 @@ t_cont<t_obj_dst> convert(const t_cont<t_obj_src>& src_objs)
 requires (is_vec<t_obj_dst> || is_mat<t_obj_dst>) && (is_vec<t_obj_src> || is_mat<t_obj_src>)
 {
 	t_cont<t_obj_dst> dst_objs;
+	dst_objs.reserve(src_objs.size());
 
 	for(const t_obj_src& src_obj : src_objs)
 		dst_objs.emplace_back(convert<t_obj_dst, t_obj_src>(src_obj));
@@ -3221,6 +3223,7 @@ t_cont_out<t_vec> orthonorm_sys(const t_cont_in<t_vec>& sys)
 requires is_vec<t_vec>
 {
 	t_cont_out<t_vec> newsys;
+	newsys.reserve(sys.size());
 
 	for(const t_vec& vecSys : sys)
 	{
@@ -3250,6 +3253,7 @@ t_vec flat_submat(const t_vec& mat,
 requires is_basic_vec<t_vec>
 {
 	t_vec vec;
+	vec.reserve(mat.size());
 
 	for(std::size_t iRow=0; iRow<iNumRows; ++iRow)
 	{
@@ -3403,6 +3407,8 @@ requires is_mat<t_mat> && is_basic_vec<t_vec>
 	basis_inv *= c;
 
 	t_cont_out<t_vec> lstRecip;
+	lstRecip.reserve(basis_inv.size1());
+
 	for(std::size_t currow=0; currow<basis_inv.size1(); ++currow)
 	{
 		const t_vec rowvec = row<t_mat, t_vec>(basis_inv, currow);
@@ -3527,6 +3533,7 @@ t_cont<t_vec> intersect_line_sphere(
 	// two intersections
 	auto val = std::sqrt(rt);
 	t_cont<t_vec> inters;
+	inters.reserve(2);
 
 	T lam1 = (proj + val)/lenDir;
 	T lam2 = (proj - val)/lenDir;
@@ -4620,6 +4627,8 @@ requires is_vec<t_vec>
 
 	t_cont<t_vec> vertices_new;
 	t_cont<t_vec> normals_new;
+	vertices_new.reserve(vertices.size());
+	normals_new.reserve(vertices.size());
 
 
 	// vertices
@@ -4759,6 +4768,7 @@ requires is_vec<t_vec>
 
 	// vertices
 	t_cont<t_vec> vertices;
+	vertices.reserve(num_points);
 
 	// inner vertex
 	for(std::size_t pt=0; pt<num_points; ++pt)
@@ -5708,6 +5718,8 @@ requires is_basic_vec<t_vec> && is_mat<typename t_vec::value_type>
 	using t_mat = typename t_vec::value_type;
 
 	t_vec vec;
+	vec.reserve(4);
+
 	if(bIncludeUnit)
 		vec.emplace_back(unit<t_mat>(2));
 	for(std::size_t i=0; i<3; ++i)
@@ -6011,6 +6023,7 @@ t_cont<t_vec> keep_atoms_in_uc(const t_cont<t_vec>& _atoms)
 requires is_vec<t_vec>
 {
 	t_cont<t_vec> newatoms;
+	newatoms.reserve(_atoms.size());
 
 	for(const auto& _atom : _atoms)
 		newatoms.emplace_back(keep_atom_in_uc<t_vec, t_real>(_atom));
@@ -6035,6 +6048,7 @@ requires is_vec<t_vec> && is_mat<t_mat>
 		atom = create<t_vec>({atom[0], atom[1], atom[2], 1});
 
 	t_cont<t_vec> newatoms;
+	newatoms.reserve(ops.size());
 
 	for(const auto& op : ops)
 	{
@@ -7403,10 +7417,6 @@ requires tl2::is_vec<t_vec>
 	using t_facetlist_iter = typename orgQhull::QhullLinkedList<orgQhull::QhullFacet>::iterator;
 	using t_vertexset_iter = typename orgQhull::QhullSet<orgQhull::QhullVertex>::iterator;
 
-	t_cont<t_cont<t_vec>> vecPolys;
-	t_cont<t_vec> vecNormals;
-	t_cont<t_real> vecDists;
-	//const t_vec vecCentre = tl2::mean(vecVerts);
 
 	// copy vertices
 	int dim = vecVerts[0].size();
@@ -7427,6 +7437,14 @@ requires tl2::is_vec<t_vec>
 	orgQhull::Qhull qhull{"tlibs2", dim, int(vecVerts.size()), mem.get(), "Qt"};
 	orgQhull::QhullFacetList facets = qhull.facetList();
 
+	t_cont<t_cont<t_vec>> vecPolys;
+	t_cont<t_vec> vecNormals;
+	t_cont<t_real> vecDists;
+	vecPolys.reserve(facets.size());
+	vecNormals.reserve(facets.size());
+	vecDists.reserve(facets.size());
+	//const t_vec vecCentre = tl2::mean(vecVerts);
+
 	for(t_facetlist_iter iter=facets.begin(); iter!=facets.end(); ++iter)
 	{
 		// triangulable?
@@ -7434,6 +7452,8 @@ requires tl2::is_vec<t_vec>
 			continue;
 
 		t_cont<t_vec> vecPoly;
+		vecPoly.reserve(vertices.size());
+
 		orgQhull::QhullVertexSet vertices = iter->vertices();
 		for(t_vertexset_iter iterVertex=vertices.begin(); iterVertex!=vertices.end(); ++iterVertex)
 		{
