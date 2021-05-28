@@ -5321,7 +5321,8 @@ requires is_vec<t_vec>
  * calculates the bounding sphere of a collection of vertices
  */
 template<class t_vec, template<class...> class t_cont = std::vector>
-std::tuple<t_vec, typename t_vec::value_type> bounding_sphere(const t_cont<t_vec>& verts)
+std::tuple<t_vec, typename t_vec::value_type> bounding_sphere(
+	const t_cont<t_vec>& verts)
 requires is_vec<t_vec>
 {
 	using t_real = typename t_vec::value_type;
@@ -5392,7 +5393,7 @@ requires is_vec<t_vec>
  */
 template<class t_vec, template<class...> class t_cont = std::vector>
 std::tuple<t_vec, t_vec> bounding_box(
-	const t_cont<t_cont<t_vec>>& allverts, std::size_t dim=3)
+	const t_cont<t_cont<t_vec>>& allverts, std::size_t dim = 3)
 requires is_vec<t_vec>
 {
 	using t_real = typename t_vec::value_type;
@@ -5411,11 +5412,64 @@ requires is_vec<t_vec>
 
 
 /**
+ * calculates the bounding box of a sphere
+ */
+template<class t_vec, class t_real=typename t_vec::value_type> requires is_vec<t_vec>
+std::tuple<t_vec, t_vec> sphere_bounding_box(const t_vec& pos, t_real rad)
+{
+	const std::size_t dim = pos.size();
+	if(dim == 0)
+		return std::make_tuple(t_vec{}, t_vec{});
+
+	t_vec min = create<t_vec>(dim);
+	t_vec max = create<t_vec>(dim);
+
+	for(std::size_t i=0; i<dim; ++i)
+	{
+		min[i] = pos[i] - rad;
+		max[i] = pos[i] + rad;
+	}
+
+	return std::make_tuple(min, max);
+}
+
+
+/**
+ * calculates the bounding box of a collection of spheres
+ */
+template<class t_vec, template<class...> class t_cont = std::vector,
+	class t_real = typename t_vec::value_type>
+std::tuple<t_vec, t_vec> sphere_bounding_box(
+	const t_cont<std::tuple<t_vec, t_real>>& spheres, std::size_t dim = 3)
+requires is_vec<t_vec>
+{
+	t_vec min = create<t_vec>(dim);
+	for(std::size_t i=0; i<dim; ++i)
+		min[i] = std::numeric_limits<t_real>::max();
+	t_vec max = -min;
+
+	for(const auto& sphere : spheres)
+	{
+		auto [spheremin, spheremax] = sphere_bounding_box<t_vec, t_real>(
+			std::get<0>(sphere), std::get<1>(sphere));
+
+		for(std::size_t i=0; i<dim; ++i)
+		{
+			min[i] = std::min(min[i], spheremin[i]);
+			max[i] = std::max(max[i], spheremax[i]);
+		}
+	}
+
+	return std::make_tuple(min, max);
+}
+
+
+/**
  * checks if a point is inside a bounding box
  * @see https://developer.mozilla.org/en-US/docs/Games/Techniques/3D_collision_detection
  */
 template<class t_vec> requires is_vec<t_vec>
-bool in_bounding_boxe(
+bool in_bounding_box(
 	const t_vec& pt, const std::tuple<t_vec, t_vec>& bb)
 {
 	const std::size_t dim = pt.size();
