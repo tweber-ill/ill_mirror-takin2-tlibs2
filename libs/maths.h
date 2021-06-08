@@ -1420,12 +1420,14 @@ public:
 	vec<T, t_cont>& operator=(const vec<T_other, t_cont_other>& other)
 	{
 		*this = convert<vec<T, t_cont>, vec<T_other, t_cont_other>>(other);
+		return *this;
 	}
 
 	template<class T_other, template<class...> class t_cont_other>
 	const vec<T, t_cont>& operator=(const vec<T_other, t_cont_other>& other) const
 	{
 		*this = convert<vec<T, t_cont>, vec<T_other, t_cont_other>>(other);
+		return *this;
 	}
 
 	vec(std::size_t SIZE, const T* arr = nullptr) : container_type(SIZE)
@@ -1502,6 +1504,8 @@ public:
 
 		this->m_rowsize = other.m_rowsize;
 		this->m_colsize = other.m_colsize;
+
+		return *this;
 	}
 
 	template<class T_other, template<class...> class t_cont_other>
@@ -1511,6 +1515,8 @@ public:
 
 		this->m_rowsize = other.m_rowsize;
 		this->m_colsize = other.m_colsize;
+
+		return *this;
 	}
 
 
