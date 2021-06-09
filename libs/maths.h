@@ -3712,7 +3712,7 @@ requires is_vec<t_vec>
 
 	const t_vec pos1 = line1Org + lam1*line1Dir;
 	const t_vec pos2 = line2Org + lam2*line2Dir;
-	const T dist = norm<t_vec>(pos2-pos1);
+	const T dist = norm<t_vec>(pos2 - pos1);
 
 	return std::make_tuple(pos1, pos2, true, dist, lam1, lam2);
 }
