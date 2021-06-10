@@ -7628,10 +7628,11 @@ requires tl2::is_vec<t_vec>
 		if(iter->isUpperDelaunay())
 			continue;
 
+		orgQhull::QhullVertexSet vertices = iter->vertices();
+
 		t_cont<t_vec> vecPoly;
 		vecPoly.reserve(vertices.size());
 
-		orgQhull::QhullVertexSet vertices = iter->vertices();
 		for(t_vertexset_iter iterVertex=vertices.begin(); iterVertex!=vertices.end(); ++iterVertex)
 		{
 			orgQhull::QhullPoint point = (*iterVertex).point();
