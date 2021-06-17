@@ -1727,8 +1727,16 @@ requires is_mat<t_mat>
 	{
 		for(std::size_t j=0; j<maxSize2; ++j)
 		{
-			if(!equals<T>(mat1(i,j), mat2(i,j), eps))
-				return false;
+			if constexpr(is_complex<decltype(eps)>)
+			{
+				if(!equals<T>(mat1(i,j), mat2(i,j), eps.real()))
+					return false;
+			}
+			else
+			{
+				if(!equals<T>(mat1(i,j), mat2(i,j), eps))
+					return false;
+			}
 		}
 	}
 
