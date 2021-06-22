@@ -992,6 +992,7 @@ void GlPlotRenderer::DoPaintGL(qgl_funcs *pGl)
 	pGl->glClearColor(1., 1., 1., 1.);
 	pGl->glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	pGl->glEnable(GL_DEPTH_TEST);
+	LOGGLERR(pGl);
 
 
 	// bind shaders

@@ -33,10 +33,13 @@ namespace tl2 {
 // ----------------------------------------------------------------------------
 // functions
 // ----------------------------------------------------------------------------
-void set_gl_format(bool bCore, int iMajorVer, int iMinorVer, int iSamples)
-{
-	QSurfaceFormat surf = QSurfaceFormat::defaultFormat();
 
+/**
+ * create a gl surface format
+ */
+extern QSurfaceFormat gl_format(
+	bool bCore, int iMajorVer, int iMinorVer, int iSamples, QSurfaceFormat surf)
+{
 	surf.setRenderableType(QSurfaceFormat::OpenGL);
 	if(bCore)
 		surf.setProfile(QSurfaceFormat::CoreProfile);
@@ -50,6 +53,16 @@ void set_gl_format(bool bCore, int iMajorVer, int iMinorVer, int iSamples)
 	if(iSamples > 0)
 		surf.setSamples(iSamples);	// multisampling
 
+	return surf;
+}
+
+
+/**
+ * set the default gl surface format
+ */
+void set_gl_format(bool bCore, int iMajorVer, int iMinorVer, int iSamples)
+{
+	QSurfaceFormat surf = gl_format(bCore, iMajorVer, iMinorVer, iSamples, QSurfaceFormat::defaultFormat());
 	QSurfaceFormat::setDefaultFormat(surf);
 }
 

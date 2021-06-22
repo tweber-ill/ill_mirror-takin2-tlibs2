@@ -99,9 +99,10 @@ using qgl_funcs = _GL_FUNC(_GL_MAJ_VER, _GL_MIN_VER, _GL_SUFFIX);
 #define LOGGLERR(pGl) { while(true) {	\
 		auto err = pGl->glGetError();	\
 		if(err == GL_NO_ERROR) break;	\
-		std::cerr << "gl error in " << __func__ \
+		std::cerr << "GL error in " << __func__ \
 			<< " line " << std::dec <<  __LINE__  \
-			<< ": " << std::hex << err << std::endl; \
+			<< ": " << std::hex << "0x" << err \
+			<< "." << std::endl; \
 	}}
 // ----------------------------------------------------------------------------
 
@@ -176,7 +177,10 @@ struct GlPlotObj : public GlRenderObj
 // ----------------------------------------------------------------------------
 // functions
 // GL surface format
-extern void set_gl_format(bool bCore=true, int iMajorVer=3, int iMinorVer=3, int iSamples=8);
+extern void set_gl_format(bool bCore = true, int iMajorVer = 3, int iMinorVer = 3, int iSamples = 8);
+extern QSurfaceFormat gl_format(
+	bool bCore = true, int iMajorVer = 3, int iMinorVer = 3, int iSamples = 8,
+	QSurfaceFormat surf = QSurfaceFormat::defaultFormat());
 
 // get gl functions
 extern qgl_funcs* get_gl_functions(QOpenGLWidget *pGLWidget);
@@ -185,7 +189,7 @@ extern qgl_funcs* get_gl_functions(QOpenGLWidget *pGLWidget);
 extern bool create_triangle_object(QOpenGLWidget* pGLWidget, GlRenderObj& obj,
 	const std::vector<t_vec3_gl>& verts, const std::vector<t_vec3_gl>& triagverts,
 	const std::vector<t_vec3_gl>& norms, const std::vector<t_vec3_gl>& uvs, const t_vec_gl& colour,
-	bool bUseVertsAsNorm, GLint attrVertex, GLint attrVertexNormal, GLint attrVertexcolour, 
+	bool bUseVertsAsNorm, GLint attrVertex, GLint attrVertexNormal, GLint attrVertexcolour,
 	GLint attrTextureCoords=-1);
 
 // create a line-based object
