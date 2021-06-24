@@ -2510,7 +2510,7 @@ requires tl2::is_basic_mat<t_mat>
  * 2-norm
  */
 template<class t_vec, class t_real = typename t_vec::value_type>
-typename t_vec::value_type norm(const t_vec& vec)
+t_real norm(const t_vec& vec)
 requires is_basic_vec<t_vec>
 {
 	t_real d = static_cast<t_real>(inner<t_vec>(vec, vec));
