@@ -3685,43 +3685,41 @@ requires is_vec<t_vec> && is_mat<t_mat>
  *
  * @see https://en.wikipedia.org/wiki/Line%E2%80%93line_intersection
  */
-template<class t_vec>
-std::tuple<t_vec, t_vec, bool, typename t_vec::value_type, typename t_vec::value_type, typename t_vec::value_type>
+template<class t_vec, class t_real = typename t_vec::value_type>
+std::tuple<t_vec, t_vec, bool, t_real, t_real, t_real>
 intersect_line_line(
 	const t_vec& line1Org, const t_vec& line1Dir,
 	const t_vec& line2Org, const t_vec& line2Dir,
-	typename t_vec::value_type eps = std::numeric_limits<typename t_vec::value_type>::epsilon())
+	t_real eps = std::numeric_limits<t_real>::epsilon())
 requires is_vec<t_vec>
 {
-	using T = typename t_vec::value_type;
-
 	const t_vec orgdiff = line1Org - line2Org;
 
 	// direction matrix (symmetric)
-	const T d11 = inner<t_vec>(line2Dir, line2Dir);
-	const T d12 = -inner<t_vec>(line2Dir, line1Dir);
-	const T d22 = inner<t_vec>(line1Dir, line1Dir);
+	const t_real d11 = inner<t_vec>(line2Dir, line2Dir);
+	const t_real d12 = -inner<t_vec>(line2Dir, line1Dir);
+	const t_real d22 = inner<t_vec>(line1Dir, line1Dir);
 
-	const T d_det = d11*d22 - d12*d12;
+	const t_real d_det = d11*d22 - d12*d12;
 
 	// check if matrix is invertible
-	if(equals<T>(d_det, 0, eps))
+	if(equals<t_real>(d_det, 0, eps))
 		return std::make_tuple(t_vec(), t_vec(), false, 0, 0, 0);
 
 	// inverse (symmetric)
-	const T d11_i = d22 / d_det;
-	const T d12_i = -d12 / d_det;
-	const T d22_i = d11 / d_det;
+	const t_real d11_i = d22 / d_det;
+	const t_real d12_i = -d12 / d_det;
+	const t_real d22_i = d11 / d_det;
 
 	const t_vec v1 = d11_i*line2Dir - d12_i*line1Dir;
 	const t_vec v2 = d12_i*line2Dir - d22_i*line1Dir;
 
-	const T lam2 = inner<t_vec>(v1, orgdiff);
-	const T lam1 = inner<t_vec>(v2, orgdiff);
+	const t_real lam2 = inner<t_vec>(v1, orgdiff);
+	const t_real lam1 = inner<t_vec>(v2, orgdiff);
 
 	const t_vec pos1 = line1Org + lam1*line1Dir;
 	const t_vec pos2 = line2Org + lam2*line2Dir;
-	const T dist = norm<t_vec>(pos2 - pos1);
+	const t_real dist = norm<t_vec>(pos2 - pos1);
 
 	return std::make_tuple(pos1, pos2, true, dist, lam1, lam2);
 }
