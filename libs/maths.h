@@ -1666,14 +1666,12 @@ requires is_complex<T>
 /**
  * are two vectors equal within an epsilon range?
  */
-template<class t_vec>
+template<class t_vec, class t_real = typename t_vec::value_type>
 bool equals(const t_vec& vec1, const t_vec& vec2,
-	typename t_vec::value_type eps = std::numeric_limits<typename t_vec::value_type>::epsilon(),
+	t_real eps = std::numeric_limits<t_real>::epsilon(),
 	int _maxSize = -1)
 requires is_basic_vec<t_vec>
 {
-	using T = typename t_vec::value_type;
-
 	// size has to be equal
 	if(vec1.size() != vec2.size())
 		return false;
@@ -1685,14 +1683,14 @@ requires is_basic_vec<t_vec>
 	// check each element
 	for(std::size_t i=0; i<maxSize; ++i)
 	{
-		if constexpr(is_complex<decltype(eps)>)
+		if constexpr(is_complex<t_real>)
 		{
-			if(!equals<T>(vec1[i], vec2[i], eps.real()))
+			if(!equals<t_real>(vec1[i], vec2[i], eps.real()))
 				return false;
 		}
 		else
 		{
-			if(!equals<T>(vec1[i], vec2[i], eps))
+			if(!equals<t_real>(vec1[i], vec2[i], eps))
 				return false;
 		}
 	}
