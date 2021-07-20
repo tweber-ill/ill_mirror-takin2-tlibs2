@@ -1012,15 +1012,20 @@ requires tl2::is_basic_vec<t_vec> && tl2::is_dyn_vec<t_vec>
 	return vec * d;
 }
 
+
 /**
  * vector / scalar
  */
 template<class t_vec>
-t_vec operator/(const t_vec& vec, typename t_vec::value_type d)
+t_vec operator/(const t_vec& vec1, typename t_vec::value_type d)
 requires tl2::is_basic_vec<t_vec> && tl2::is_dyn_vec<t_vec>
 {
-	using T = typename t_vec::value_type;
-	return vec * (T(1)/d);
+	t_vec vec(vec1.size());
+
+	for(std::size_t i=0; i<vec1.size(); ++i)
+		vec[i] = vec1[i] / d;
+
+	return vec;
 }
 
 
