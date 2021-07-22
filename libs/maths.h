@@ -3033,10 +3033,11 @@ requires is_vec<t_vec>
 /**
  * project vector vec onto another vector vecProj
  * don't multiply with direction vector
+ *
+ * @see (Arens 2015), p. 814 for the projection tensor
  */
-template<class t_vec>
-typename t_vec::value_type
-project_scalar(const t_vec& vec, const t_vec& vecProj, bool bIsNormalised = true)
+template<class t_vec, class t_real = typename t_vec::value_type>
+t_real project_scalar(const t_vec& vec, const t_vec& vecProj, bool bIsNormalised = true)
 requires is_vec<t_vec>
 {
 	if(bIsNormalised)
@@ -3055,19 +3056,22 @@ requires is_vec<t_vec>
 /**
  * project vector vec onto the line lineOrigin + lam*lineDir
  * (shifts line to go through origin, calculate projection and shift back)
- * @returns [closest point, distance]
+ * @returns [closest point, distance, projection parameter]
+ *
+ * @see https://de.wikipedia.org/wiki/Lot_(Mathematik)
  */
-template<class t_vec>
-std::tuple<t_vec, typename t_vec::value_type> project_line(const t_vec& vec,
+template<class t_vec, class t_real = typename t_vec::value_type>
+std::tuple<t_vec, t_real, t_real> project_line(const t_vec& vec,
 	const t_vec& lineOrigin, const t_vec& lineDir, bool bIsNormalised = true)
 requires is_vec<t_vec>
 {
 	const t_vec ptShifted = vec - lineOrigin;
-	const t_vec ptProj = project<t_vec>(ptShifted, lineDir, bIsNormalised);
+	const t_real paramProj = project_scalar<t_vec, t_real>(ptShifted, lineDir, bIsNormalised);
+	const t_vec ptProj = paramProj * lineDir;
 	const t_vec ptNearest = lineOrigin + ptProj;
 
-	const typename t_vec::value_type dist = norm<t_vec>(vec - ptNearest);
-	return std::make_tuple(ptNearest, dist);
+	const t_real dist = norm<t_vec>(vec - ptNearest);
+	return std::make_tuple(ptNearest, dist, paramProj);
 }
 
 
@@ -3084,7 +3088,8 @@ requires is_vec<t_vec>
 	const std::size_t dim = linePt1.size();
 
 	const t_vec lineDir = linePt2 - linePt1;
-	const auto [nearestPt, dist] = project_line<t_vec>(pt, linePt1, lineDir, false);
+	const auto [nearestPt, dist, paramProj] =
+		project_line<t_vec>(pt, linePt1, lineDir, false);
 
 
 	// get point component with max. difference
@@ -7270,7 +7275,7 @@ requires is_mat<t_mat>
 	using T = typename t_mat::value_type;
 	if(mat.size1() != mat.size2())
 		return 0;
-	
+
 #ifdef USE_LAPACK
 
 	using t_vec = vec<T>;
@@ -7279,7 +7284,7 @@ requires is_mat<t_mat>
 	{
 		const auto [ok, evals, evecs] =
 			tl2_la::eigenvec<t_mat, t_vec, T>(mat, true, false, false);
-		
+
 		T detval{1, 0};
 		for(const auto& eval : evals)
 			detval *= eval;
