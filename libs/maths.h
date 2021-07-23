@@ -3062,14 +3062,17 @@ requires is_vec<t_vec>
  */
 template<class t_vec, class t_real = typename t_vec::value_type>
 std::tuple<t_vec, t_real, t_real> project_line(const t_vec& vec,
-	const t_vec& lineOrigin, const t_vec& lineDir, bool bIsNormalised = true)
+	const t_vec& lineOrigin, const t_vec& _lineDir, bool bIsNormalised = true)
 requires is_vec<t_vec>
 {
+	const t_real lenDir = bIsNormalised ? 1 : norm<t_vec>(_lineDir);
+	const t_vec lineDir = _lineDir / lenDir;
 	const t_vec ptShifted = vec - lineOrigin;
-	const t_real paramProj = project_scalar<t_vec, t_real>(ptShifted, lineDir, bIsNormalised);
-	const t_vec ptProj = paramProj * lineDir;
-	const t_vec ptNearest = lineOrigin + ptProj;
 
+	const t_real paramProj = project_scalar<t_vec, t_real>(ptShifted, lineDir, true);
+	const t_vec ptProj = paramProj * lineDir;
+
+	const t_vec ptNearest = lineOrigin + ptProj;
 	const t_real dist = norm<t_vec>(vec - ptNearest);
 	return std::make_tuple(ptNearest, dist, paramProj);
 }
