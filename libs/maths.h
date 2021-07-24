@@ -2722,7 +2722,7 @@ requires is_basic_mat<t_mat> && is_basic_vec<t_vec>
  * @see (Arens 2015), p. 808
  */
 template<class t_mat, class t_vec>
-typename t_vec::value_type inner(const t_mat& metric_co, 
+typename t_vec::value_type inner(const t_mat& metric_co,
 	const t_vec& vec1_contra, const t_vec& vec2_contra)
 requires is_basic_mat<t_mat> && is_basic_vec<t_vec>
 {
@@ -2748,7 +2748,7 @@ requires is_basic_vec<t_vec>
  * @see (Arens 2015), p. 808
  */
 template<class t_mat, class t_vec>
-typename t_vec::value_type angle(const t_mat& metric_co, 
+typename t_vec::value_type angle(const t_mat& metric_co,
 	const t_vec& vec1_contra, const t_vec& vec2_contra)
 requires is_basic_mat<t_mat> && is_basic_vec<t_vec>
 {
@@ -2854,14 +2854,14 @@ requires is_basic_mat<t_mat> && is_basic_vec<t_vec>
 		xi = -xi;
 
 	// angle psi between ki and Q
-	std::optional<t_real> psi = 
+	std::optional<t_real> psi =
 		calc_tas_angle_ki_Q<t_real>(ki_lab, kf_lab, Q_len_lab, sample_sense);
 	if(!psi)
 		return std::make_tuple(false, 0, 0, 0);
 
 	// crystal and scattering angle
 	t_real a3 = - *psi - xi + a3_offs;
-	std::optional<t_real> a4 = 
+	std::optional<t_real> a4 =
 		calc_tas_angle_ki_kf<t_real>(ki_lab, kf_lab, Q_len_lab);
 	if(!a4)
 		return std::make_tuple(false, a3, 0, 0);
@@ -2891,7 +2891,7 @@ requires is_basic_mat<t_mat> && is_basic_vec<t_vec>
 		return std::nullopt;
 
 	// angle psi between ki and Q
-	std::optional<t_real> psi = 
+	std::optional<t_real> psi =
 		calc_tas_angle_ki_Q<t_real>(ki_lab, kf_lab, Q_len_lab, sample_sense);
 	if(!psi)
 		return std::nullopt;
@@ -2935,7 +2935,7 @@ std::optional<t_real> calc_tas_a1(t_real k, t_real d)
 /**
  * get k from crystal angle
  * @see https://en.wikipedia.org/wiki/Bragg's_law
- * 
+ *
  * k = n pi / (d sin(theta))
  */
 template<class t_real>
@@ -2956,7 +2956,7 @@ t_real calc_tas_ki(t_real kf, t_real E)
 }
 
 
-/** 
+/**
  * get kf from ki and energy transfer
  */
 template<class t_real>
@@ -2966,7 +2966,7 @@ t_real calc_tas_kf(t_real ki, t_real E)
 }
 
 
-/** 
+/**
  * get energy transfer from ki and kf
  */
 template<class t_real>
