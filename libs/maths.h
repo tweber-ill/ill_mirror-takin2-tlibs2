@@ -4320,7 +4320,8 @@ requires is_vec<t_vec> && is_mat<t_mat>
  * matrix to rotate vector vec1 into vec2
  */
 template<class t_mat, class t_vec>
-t_mat rotation(const t_vec& vec1, const t_vec& vec2)
+t_mat rotation(const t_vec& vec1, const t_vec& vec2,
+	const t_vec& normal_vec = create<t_vec>({0, 0, 1}))
 requires is_vec<t_vec> && is_mat<t_mat>
 {
 	using t_real = typename t_vec::value_type;
@@ -4328,7 +4329,7 @@ requires is_vec<t_vec> && is_mat<t_mat>
 
 	// get rotation axis from cross product
 	t_vec axis = cross<t_vec>({ vec1, vec2 });
-	const t_real lenaxis = norm<t_vec>(axis);
+	t_real lenaxis = norm<t_vec>(axis);
 
 	// rotation angle
 	const t_real angle = std::atan2(lenaxis, inner<t_vec>(vec1, vec2));
@@ -4340,15 +4341,8 @@ requires is_vec<t_vec> && is_mat<t_mat>
 	// antiparallel vectors?
 	if(equals<t_real>(std::abs(angle), pi<t_real>, eps))
 	{
-		t_mat mat = -unit<t_mat>(vec1.size());
-		auto size1 = mat.size1();
-		auto size2 = mat.size2();
-		using local_size_t = std::decay_t<decltype(size1)>;
-
-		// e.g. homogeneous coordinates -> only have -1 on the first 3 diagonal elements
-		for(local_size_t i=3; i<std::min(size1, size2); ++i)
-			mat(i,i) = 1;
-		return mat;
+		axis = normal_vec;
+		lenaxis = norm<t_vec>(axis);
 	}
 
 	axis /= lenaxis;
@@ -4751,7 +4745,8 @@ create_plane(const t_vec& norm, typename t_vec::value_type lx=1, typename t_vec:
 requires is_vec<t_vec>
 {
 	t_vec norm_old = create<t_vec>({ 0, 0, -1 });
-	t_mat rot = rotation<t_mat, t_vec>(norm_old, norm);
+	t_vec rot_vec = create<t_vec>({ 1, 0, 0 });
+	t_mat rot = rotation<t_mat, t_vec>(norm_old, norm, rot_vec);
 
 	t_cont<t_vec> vertices =
 	{
@@ -5759,10 +5754,11 @@ requires is_mat<t_mat>
  * rotation matrix in homogeneous coordinates
  */
 template<class t_mat, class t_vec>
-t_mat hom_rotation(const t_vec& vec1, const t_vec& vec2)
+t_mat hom_rotation(const t_vec& vec1, const t_vec& vec2,
+	const t_vec& vec_normal = create<t_vec>({0, 0, 1}))
 requires is_vec<t_vec> && is_mat<t_mat>
 {
-	t_mat rot = rotation<t_mat, t_vec>(vec1, vec2);
+	t_mat rot = rotation<t_mat, t_vec>(vec1, vec2, vec_normal);
 
 	return create<t_mat>({
 		rot(0,0), rot(0,1), rot(0,2), 0.,
@@ -5802,7 +5798,8 @@ t_mat get_arrow_matrix(
 	const t_vec& vecTo,
 	t_real postscale = 1, const t_vec& vecPostTrans = create<t_vec>({0,0,0.5}),
 	const t_vec& vecFrom = create<t_vec>({0,0,1}),
-	t_real prescale = 1, const t_vec& vecPreTrans = create<t_vec>({0,0,0}))
+	t_real prescale = 1, const t_vec& vecPreTrans = create<t_vec>({0,0,0}),
+	const t_vec& vecNormal = create<t_vec>({0,0,1}))
 requires is_vec<t_vec> && is_mat<t_mat>
 {
 	t_mat mat = unit<t_mat>(4);
@@ -5810,7 +5807,7 @@ requires is_vec<t_vec> && is_mat<t_mat>
 	mat *= hom_translation<t_mat>(vecPreTrans[0], vecPreTrans[1], vecPreTrans[2]);
 	mat *= hom_scaling<t_mat>(prescale, prescale, prescale);
 
-	mat *= hom_rotation<t_mat, t_vec>(vecFrom, vecTo);
+	mat *= hom_rotation<t_mat, t_vec>(vecFrom, vecTo, vecNormal);
 
 	mat *= hom_scaling<t_mat>(postscale, postscale, postscale);
 	mat *= hom_translation<t_mat>(vecPostTrans[0], vecPostTrans[1], vecPostTrans[2]);
