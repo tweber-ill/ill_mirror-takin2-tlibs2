@@ -286,7 +286,8 @@ requires is_quat<t_quat>
 /**
  * slerp
  * @see K. Shoemake, "Animating rotation with quaternion curves", http://dx.doi.org/10.1145/325334.325242
- * @see (Bronstein 2008), formula 4.207
+ * @see (Desktop Bronstein 2008), formula 4.207
+ * @see (Bronstein 2008), p. 306, formula 4.155
  */
 template<class T>
 T slerp(const T& q1, const T& q2, typename T::value_type t)
@@ -5652,6 +5653,40 @@ requires is_mat<t_mat>
  * @see https://en.wikipedia.org/wiki/Orthographic_projection
  */
 template<class t_mat, typename t_scalar=typename t_mat::value_type>
+t_mat hom_ortho_sym(
+	t_scalar n = 0.01, t_scalar f = 100.,
+	t_scalar range_lr = 2., t_scalar range_bt = 2.,
+	bool bRHS = true, bool bMap05 = false)
+requires is_mat<t_mat>
+{
+	// map ranges into [-0.5, 0.5] or [-1, 1] else
+	const t_scalar sc = bMap05 ? t_scalar{1} : t_scalar{2};
+	const t_scalar zs = bRHS ? t_scalar{1} : t_scalar{-1};
+
+	const t_scalar range_nf = std::abs(f) + std::abs(n);
+
+	// centring
+	const t_scalar tr_z = sc*t_scalar{0.5} * (n+f) / range_nf;
+
+	//         ( sc_x*x        )
+	//         ( sc_y*y        )
+	// P * x = ( sc_z*z - tr_z )
+	//         ( 1             )
+	return create<t_mat>({
+		sc/range_lr, 0.,          0.,              0.,
+		0.,          sc/range_bt, 0.,              0.,
+		0.,          0.,          -zs*sc/range_nf, -zs*tr_z,
+		0.,          0.,          0.,              1.
+	});
+}
+
+
+/**
+ * orthographic projection matrix (homogeneous 4x4)
+ * @see https://www.khronos.org/registry/OpenGL-Refpages/gl2.1/xhtml/glOrtho.xml
+ * @see https://en.wikipedia.org/wiki/Orthographic_projection
+ */
+template<class t_mat, typename t_scalar=typename t_mat::value_type>
 t_mat hom_ortho(
 	t_scalar n = 0.01, t_scalar f = 100.,
 	t_scalar l = -1., t_scalar r = 1.,
@@ -6331,7 +6366,7 @@ requires is_basic_mat<t_mat>
  * polarisation density matrix: rho = 0.5 * (1 + <P|sigma>)
  *
  * @see https://doi.org/10.1016/B978-044451050-1/50006-9
- * @see (Bronstein 2008), Ch. 21 (Zusatzkapitel.pdf), pp. 11-12 and p. 24
+ * @see (Desktop Bronstein 2008), Ch. 21 (Zusatzkapitel.pdf), pp. 11-12 and p. 24
  */
 template<class t_vec, class t_mat>
 t_mat pol_density_mat(const t_vec& P, typename t_vec::value_type c=0.5)
@@ -7699,6 +7734,7 @@ template<class t_quat> t_quat unit_quat() requires is_quat<t_quat>
 /**
  * calculates the quaternion inverse
  * @see (Bronstein 2008), Ch. 4
+ * @see (Kuipers 2002), p. 112
  */
 template<class t_quat> t_quat inv(const t_quat& q) requires is_quat<t_quat>
 {
@@ -7780,7 +7816,8 @@ requires is_quat<t_quat> && is_mat<t_mat>
 
 /**
  * quat -> 3x3 matrix
- * @see (Bronstein 2008), Formulas (4.162a/b)
+ * @see (Desktop Bronstein 2008), formulas (4.162a/b)
+ * @see (Bronstein 2008), p. 296, formulas (4.109a/b)
  */
 template<class t_quat, class t_mat>
 t_mat quat_to_rot3(const t_quat& quat)
@@ -7867,7 +7904,7 @@ requires is_quat<t_quat>
 
 /**
  * quat -> rotation axis
- * @see (Bronstein 2008), Ch. 4
+ * @see (Bronstein 2008), Ch. 4, pp. 301-302
  */
 template<class t_quat, class t_vec>
 std::pair<t_vec, typename t_vec::value_type> rotation_axis(const t_quat& quat)
@@ -7890,7 +7927,8 @@ requires is_quat<t_quat> && is_vec<t_vec>
 
 /**
  * rotation axis -> quat
- * @see (Bronstein 2008), formula (4.193)
+ * @see (Desktop Bronstein 2008), formula (4.193)
+ * @see (Bronstein 2008), p. 302
  */
 template<class t_vec, class t_quat>
 t_quat rotation_quat(const t_vec& vec, typename t_vec::value_type angle)
@@ -8035,7 +8073,8 @@ requires is_quat<t_quat>
 
 
 /**
- * @see (Bronstein 2008), formula (4.217)
+ * @see (Desktop Bronstein 2008), formula (4.217)
+ * @see (Bronstein 2008), p. 308, formula (4.165)
  */
 template<class t_quat>
 t_quat stereo_proj(const t_quat& quat)
@@ -8047,7 +8086,8 @@ requires is_quat<t_quat>
 
 
 /**
- * @see (Bronstein 2008), formula (4.217)
+ * @see (Desktop Bronstein 2008), formula (4.217)
+ * @see (Bronstein 2008), p. 308, formula (4.165)
  */
 template<class t_quat>
 t_quat stereo_proj_inv(const t_quat& quat)
