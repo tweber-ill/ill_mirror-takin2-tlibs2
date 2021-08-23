@@ -5625,13 +5625,13 @@ template<class t_mat, typename t_scalar=typename t_mat::value_type>
 t_mat hom_perspective(
 	t_scalar n = 0.01, t_scalar f = 100.,
 	t_scalar fov = 0.5*pi<typename t_mat::value_type>, t_scalar ratio = 3./4.,
-	bool bRHS = true, bool bZ01 = false)
+	bool bLHS = true, bool bZ01 = false)
 requires is_mat<t_mat>
 {
 	const t_scalar c = 1./std::tan(0.5 * fov);
 	const t_scalar n0 = bZ01 ? t_scalar{0} : n;
 	const t_scalar sc = bZ01 ? t_scalar{1} : t_scalar{2};
-	const t_scalar zs = bRHS ? t_scalar{1} : t_scalar{-1};
+	const t_scalar zs = bLHS ? t_scalar{-1} : t_scalar{1};
 	const t_scalar range_nf = std::abs(f-n);
 
 	//         ( x*c*r                           )      ( -x*c*r/z                         )
@@ -5641,8 +5641,8 @@ requires is_mat<t_mat>
 	return create<t_mat>({
 		c*ratio,  0.,  0.,                   0.,
 		0,        c,   0.,                   0.,
-		0.,       0.,  -zs*(n0+f)/range_nf,  -sc*n*f/range_nf,
-		0.,       0.,  -zs,                  0.
+		0.,       0.,  zs*(n0+f)/range_nf,   -sc*n*f/range_nf,
+		0.,       0.,  zs,                   0.
 	});
 }
 
@@ -5656,12 +5656,12 @@ template<class t_mat, typename t_scalar=typename t_mat::value_type>
 t_mat hom_ortho_sym(
 	t_scalar n = 0.01, t_scalar f = 100.,
 	t_scalar range_lr = 2., t_scalar range_bt = 2.,
-	bool bRHS = true, bool bMap05 = false)
+	bool bLHS = true, bool bMap05 = false)
 requires is_mat<t_mat>
 {
 	// map ranges into [-0.5, 0.5] or [-1, 1] else
 	const t_scalar sc = bMap05 ? t_scalar{1} : t_scalar{2};
-	const t_scalar zs = bRHS ? t_scalar{1} : t_scalar{-1};
+	const t_scalar zs = bLHS ? t_scalar{-1} : t_scalar{1};
 
 	const t_scalar range_nf = std::abs(f) + std::abs(n);
 
@@ -5675,7 +5675,7 @@ requires is_mat<t_mat>
 	return create<t_mat>({
 		sc/range_lr, 0.,          0.,              0.,
 		0.,          sc/range_bt, 0.,              0.,
-		0.,          0.,          -zs*sc/range_nf, -zs*tr_z,
+		0.,          0.,          zs*sc/range_nf,  zs*tr_z,
 		0.,          0.,          0.,              1.
 	});
 }
@@ -5691,16 +5691,16 @@ t_mat hom_ortho(
 	t_scalar n = 0.01, t_scalar f = 100.,
 	t_scalar l = -1., t_scalar r = 1.,
 	t_scalar b = -1., t_scalar t = 1.,
-	bool bRHS = true, bool bMap05 = false)
+	bool bLHS = true, bool bMap05 = false)
 requires is_mat<t_mat>
 {
 	// map ranges into [-0.5, 0.5] or [-1, 1] else
 	const t_scalar sc = bMap05 ? t_scalar{1} : t_scalar{2};
-	const t_scalar zs = bRHS ? t_scalar{1} : t_scalar{-1};
+	const t_scalar zs = bLHS ? t_scalar{-1} : t_scalar{1};
 
-	const t_scalar range_lr = std::abs(r) + std::abs(l);
-	const t_scalar range_bt = std::abs(t) + std::abs(b);
-	const t_scalar range_nf = std::abs(f) + std::abs(n);
+	const t_scalar range_lr = r - l;
+	const t_scalar range_bt = t - b;
+	const t_scalar range_nf = f - n;
 
 	// centring
 	const t_scalar tr_x = sc*t_scalar{0.5} * (l+r) / range_lr;
@@ -5712,10 +5712,10 @@ requires is_mat<t_mat>
 	// P * x = ( sc_z*z - tr_z )
 	//         ( 1             )
 	return create<t_mat>({
-		sc/range_lr, 0.,          0.,              -tr_x,
-		0.,          sc/range_bt, 0.,              -tr_y,
-		0.,          0.,          -zs*sc/range_nf, -zs*tr_z,
-		0.,          0.,          0.,              1.
+		sc/range_lr, 0.,          0.,             -tr_x,
+		0.,          sc/range_bt, 0.,             -tr_y,
+		0.,          0.,          zs*sc/range_nf, zs*tr_z,
+		0.,          0.,          0.,             1.
 	});
 }
 
