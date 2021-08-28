@@ -114,7 +114,7 @@ bool create_triangle_object(QOpenGLWidget* pGLWidget, GlRenderObj& obj,
 	obj.m_colour = colour;
 
 	// flatten vertex array into raw float array
-	auto to_float_array = [](const std::vector<t_vec3_gl>& verts, 
+	auto to_float_array = [](const std::vector<t_vec3_gl>& verts,
 		int iRepeat=1, int iElems=3, bool bNorm=false, t_real_gl lastElem=1.)
 		-> std::vector<t_real_gl>
 	{
@@ -141,8 +141,9 @@ bool create_triangle_object(QOpenGLWidget* pGLWidget, GlRenderObj& obj,
 	};
 
 	// main vertex array object
-	pGl->glGenVertexArrays(1, &obj.m_vertexarr);
-	pGl->glBindVertexArray(obj.m_vertexarr);
+	obj.m_pvertexarr = std::make_shared<QOpenGLVertexArrayObject>();
+	obj.m_pvertexarr->create();
+	obj.m_pvertexarr->bind();
 
 	// vertices
 	if(attrVertex >= 0)
@@ -255,8 +256,9 @@ bool create_line_object(QOpenGLWidget* pGLWidget, GlRenderObj& obj,
 	};
 
 	// main vertex array object
-	pGl->glGenVertexArrays(1, &obj.m_vertexarr);
-	pGl->glBindVertexArray(obj.m_vertexarr);
+	obj.m_pvertexarr = std::make_shared<QOpenGLVertexArrayObject>();
+	obj.m_pvertexarr->create();
+	obj.m_pvertexarr->bind();
 
 	{	// vertices
 		obj.m_pvertexbuf = std::make_shared<QOpenGLBuffer>(QOpenGLBuffer::VertexBuffer);
@@ -294,6 +296,21 @@ bool create_line_object(QOpenGLWidget* pGLWidget, GlRenderObj& obj,
 	LOGGLERR(pGl)
 
 	return true;
+}
+
+
+void delete_render_object(GlRenderObj& obj)
+{
+	if(obj.m_pvertexbuf)
+		obj.m_pvertexbuf->destroy();
+
+	obj.m_pvertexbuf.reset();
+	obj.m_pnormalsbuf.reset();
+	obj.m_pcolourbuf.reset();
+	obj.m_puvbuf.reset();
+
+	if(obj.m_pvertexarr)
+		obj.m_pvertexarr->destroy();
 }
 // ----------------------------------------------------------------------------
 

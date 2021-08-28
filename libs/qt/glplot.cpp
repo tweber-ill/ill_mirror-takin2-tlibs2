@@ -60,12 +60,7 @@ GlPlotRenderer::~GlPlotRenderer()
 
 	qgl_funcs* pGl = GetGlFunctions();
 	for(auto &obj : m_objs)
-	{
-		obj.m_pvertexbuf.reset();
-		obj.m_pnormalsbuf.reset();
-		obj.m_pcolourbuf.reset();
-		if(pGl) pGl->glDeleteVertexArrays(1, &obj.m_vertexarr);
-	}
+		delete_render_object(obj);
 
 	m_objs.clear();
 	LOGGLERR(pGl)
@@ -99,7 +94,7 @@ GlPlotObj GlPlotRenderer::CreateTriangleObject(const std::vector<t_vec3_gl>& ver
 	const t_vec_gl& colour, bool bUseVertsAsNorm)
 {
 	GlPlotObj obj;
-	create_triangle_object(m_pPlot, obj, verts, triagverts, norms, {}, colour, 
+	create_triangle_object(m_pPlot, obj, verts, triagverts, norms, {}, colour,
 		bUseVertsAsNorm, m_attrVertex, m_attrVertexNorm, m_attrVertexCol, -1);
 	return obj;
 }
@@ -1042,8 +1037,7 @@ void GlPlotRenderer::DoPaintGL(qgl_funcs *pGl)
 
 
 		// main vertex array object
-		pGl->glBindVertexArray(linkedObj->m_vertexarr);
-
+		linkedObj->m_pvertexarr->bind();
 
 		pGl->glEnableVertexAttribArray(m_attrVertex);
 		if(linkedObj->m_type == GlPlotObjType::TRIANGLES)

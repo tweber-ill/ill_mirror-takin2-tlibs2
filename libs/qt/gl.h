@@ -15,14 +15,22 @@
 
 #if QT_VERSION >= 0x060000
 	#include <QtOpenGL/QOpenGLShaderProgram>
+	#include <QtOpenGL/QOpenGLVertexArrayObject>
 	#include <QtOpenGL/QOpenGLBuffer>
+	#include <QtOpenGL/QOpenGLFramebufferObject>
+	#include <QtOpenGL/QOpenGLFramebufferObjectFormat>
+	#include <QtOpenGL/QOpenGLPaintDevice>
 	#include <QtOpenGLWidgets/QOpenGLWidget>
 
 	#include <QtCore/QRecursiveMutex>
 	using t_qt_mutex = QRecursiveMutex;
 #else
 	#include <QtGui/QOpenGLShaderProgram>
+	#include <QtGui/QOpenGLVertexArrayObject>
 	#include <QtGui/QOpenGLBuffer>
+	#include <QtGui/QOpenGLFramebufferObject>
+	#include <QtGui/QOpenGLFramebufferObjectFormat>
+	#include <QtGui/QOpenGLPaintDevice>
 	#include <QtWidgets/QOpenGLWidget>
 
 	#include <QtCore/QMutex>
@@ -100,7 +108,8 @@ using qgl_funcs = _GL_FUNC(_GL_MAJ_VER, _GL_MIN_VER, _GL_SUFFIX);
 		auto err = pGl->glGetError();	\
 		if(err == GL_NO_ERROR) break;	\
 		std::cerr << "GL error in " << __func__ \
-			<< " line " << std::dec <<  __LINE__  \
+			<< ", file: " << __FILE__ \
+			<< ", line " << std::dec <<  __LINE__  \
 			<< ": " << std::hex << "0x" << err \
 			<< "." << std::endl; \
 	}}
@@ -138,8 +147,8 @@ enum class GlRenderObjType
 struct GlRenderObj
 {
 	GlPlotObjType m_type = GlPlotObjType::TRIANGLES;
-	GLuint m_vertexarr = 0;
 
+	std::shared_ptr<QOpenGLVertexArrayObject> m_pvertexarr;
 	std::shared_ptr<QOpenGLBuffer> m_pvertexbuf;
 	std::shared_ptr<QOpenGLBuffer> m_pnormalsbuf;
 	std::shared_ptr<QOpenGLBuffer> m_puvbuf;
@@ -196,6 +205,9 @@ extern bool create_triangle_object(QOpenGLWidget* pGLWidget, GlRenderObj& obj,
 extern bool create_line_object(QOpenGLWidget* pGLWidget, GlRenderObj& obj,
 	const std::vector<t_vec3_gl>& verts, const t_vec_gl& colour,
 	GLint attrVertex, GLint attrVertexcolour);
+
+
+extern void delete_render_object(GlRenderObj& obj);
 // ----------------------------------------------------------------------------
 
 }
