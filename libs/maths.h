@@ -2380,7 +2380,7 @@ template<class t_mat, class t_vec>
 void set_col(t_mat& mat, const t_vec& vec, std::size_t col)
 requires is_mat<t_mat> && is_basic_vec<t_vec>
 {
-	for(std::size_t i=0; i<mat.size1(); ++i)
+	for(std::size_t i=0; i<std::min(mat.size1(), vec.size()); ++i)
 		mat(i, col) = vec[i];
 }
 
@@ -2392,7 +2392,7 @@ template<class t_mat, class t_vec>
 void set_row(t_mat& mat, const t_vec& vec, std::size_t row)
 requires is_mat<t_mat> && is_basic_vec<t_vec>
 {
-	for(std::size_t i=0; i<mat.size1(); ++i)
+	for(std::size_t i=0; i<std::min(mat.size1(), vec.size()); ++i)
 		mat(row, i) = vec[i];
 }
 
@@ -5768,6 +5768,41 @@ requires is_mat<t_mat>
 		0.,  0.,  z,   0.,
 		0.,  0.,  0.,  1.
 	});
+}
+
+
+/**
+ * "look at" matrix in homogeneous coordinates
+ * @see (Sellers 2014), pp. 78-79
+ * @see https://www.khronos.org/registry/OpenGL-Refpages/gl2.1/xhtml/gluLookAt.xml
+ */
+template<class t_mat, class t_vec>
+t_mat hom_lookat(const t_vec& pos, const t_vec& target, const t_vec& _up)
+requires is_vec<t_vec> && is_mat<t_mat>
+{
+	using t_real = typename t_mat::value_type;
+
+	// create orthonormal system
+	t_vec dir = -(target - pos);
+	dir = dir / norm<t_vec>(dir);
+
+	t_vec side = cross<t_vec>({_up, dir});
+	side = side / norm<t_vec>(side);
+
+	t_vec up = cross<t_vec>({dir, side});
+	//up = up / norm<t_vec>(up);
+
+	// inverted/transposed rotation matrix
+	t_mat rot_inv = unit<t_mat>(4);
+	set_row<t_mat, t_vec>(rot_inv, side, 0);
+	set_row<t_mat, t_vec>(rot_inv, up, 1);
+	set_row<t_mat, t_vec>(rot_inv, dir, 2);
+
+	// inverted translation matrix
+	t_mat trans_inv = hom_translation<t_mat, t_real>(
+		-pos[0], -pos[1], -pos[2]);
+
+	return rot_inv * trans_inv;
 }
 
 
