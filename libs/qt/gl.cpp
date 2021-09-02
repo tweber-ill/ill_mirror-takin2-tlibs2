@@ -10,11 +10,11 @@
  *   - http://code.qt.io/cgit/qt/qtbase.git/tree/examples/opengl/threadedqopenglwidget
  */
 
-#include "gl.h"
-
 #include <QtGui/QOpenGLContext>
 #include <QtGui/QOpenGLFunctions>
 #include <QtGui/QSurfaceFormat>
+
+#include "gl.h"
 
 #if QT_VERSION >= 0x060000
 	#include <QtOpenGL/QOpenGLVersionFunctionsFactory>

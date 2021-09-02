@@ -2380,7 +2380,7 @@ template<class t_mat, class t_vec>
 void set_col(t_mat& mat, const t_vec& vec, std::size_t col)
 requires is_mat<t_mat> && is_basic_vec<t_vec>
 {
-	for(std::size_t i=0; i<std::min(mat.size1(), vec.size()); ++i)
+	for(std::size_t i=0; i<std::min<std::size_t>(mat.size1(), vec.size()); ++i)
 		mat(i, col) = vec[i];
 }
 
@@ -2392,7 +2392,7 @@ template<class t_mat, class t_vec>
 void set_row(t_mat& mat, const t_vec& vec, std::size_t row)
 requires is_mat<t_mat> && is_basic_vec<t_vec>
 {
-	for(std::size_t i=0; i<std::min(mat.size1(), vec.size()); ++i)
+	for(std::size_t i=0; i<std::min<std::size_t>(mat.size1(), vec.size()); ++i)
 		mat(row, i) = vec[i];
 }
 
