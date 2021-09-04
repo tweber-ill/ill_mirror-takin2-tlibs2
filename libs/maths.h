@@ -8166,6 +8166,10 @@ t_cplx dft_coeff(int k, const t_cont<t_cplx>& invec, bool bInv = false)
 }
 
 
+/**
+ * dft
+ * @see http://www.fftw.org/fftw3_doc/The-1d-Discrete-Fourier-Transform-_0028DFT_0029.html#The-1d-Discrete-Fourier-Transform-_0028DFT_0029
+ */
 template<typename T = double, class t_cplx = std::complex<T>,
 	template<class...> class t_cont = std::vector>
 t_cont<t_cplx> dft(const t_cont<t_cplx>& invec, 
@@ -8187,6 +8191,10 @@ t_cont<t_cplx> dft(const t_cont<t_cplx>& invec,
 }
 
 
+/**
+ * fft
+ * @see (Scarpino 2011), ch. 14.
+ */
 template<typename T = double, class t_cplx = std::complex<T>>
 t_cplx fft_factor(T N, T k, bool bInv = false)
 {
@@ -8199,6 +8207,10 @@ t_cplx fft_factor(T N, T k, bool bInv = false)
 }
 
 
+/**
+ * fft
+ * @see (Scarpino 2011), ch. 14.
+ */
 template<typename T = double, class t_cplx = std::complex<T>,
 	template<class...> class t_cont = std::vector>
 t_cont<t_cplx> fft_reorder(const t_cont<t_cplx>& vecIn)
@@ -8216,6 +8228,10 @@ t_cont<t_cplx> fft_reorder(const t_cont<t_cplx>& vecIn)
 }
 
 
+/**
+ * fft
+ * @see (Scarpino 2011), ch. 14.
+ */
 template<typename T = double, class t_cplx = std::complex<T>,
 	template<class...> class t_cont = std::vector>
 t_cont<t_cplx> fft_merge(const t_cont<t_cplx>& vecIn, bool bInv = false)
@@ -8261,6 +8277,10 @@ t_cont<t_cplx> fft_merge(const t_cont<t_cplx>& vecIn, bool bInv = false)
 }
 
 
+/**
+ * fft
+ * @see (Scarpino 2011), ch. 14.
+ */
 template<typename T = double, class t_cplx = std::complex<T>,
 	template<class...> class t_cont = std::vector>
 t_cont<t_cplx> fft(const t_cont<t_cplx>& vecIn,
