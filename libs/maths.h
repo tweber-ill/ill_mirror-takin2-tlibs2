@@ -15,7 +15,6 @@
 #ifndef __TLIBS2_CXX20_MATH_ALGOS_H__
 #define __TLIBS2_CXX20_MATH_ALGOS_H__
 
-//#define USE_LINALG_OPS
 //#define USE_LAPACK
 #define __TLIBS2_QR_METHOD 0
 
@@ -7347,7 +7346,7 @@ requires is_mat<t_mat>
 	if(mat.size1() != mat.size2())
 		return 0;
 
-#ifdef USE_LAPACK
+#ifdef __TLIBS2_USE_LAPACK__
 
 	using t_vec = vec<T>;
 
@@ -7467,7 +7466,7 @@ requires is_vec<t_vec> && is_dyn_mat<t_mat>
 
 	if(use_pseudoinv)
 	{
-#ifdef USE_LAPACK
+#ifdef __TLIBS2_USE_LAPACK__
 		std::tie(Y, ok) = tl2_la::pseudoinv<t_mat>(XtX);
 #else
 		#pragma message("leastsq: Pseudo-inverse is not available, using standard inverse instead.")
@@ -8148,6 +8147,7 @@ requires is_quat<t_quat>
  */
 template<typename T = double, class t_cplx = std::complex<T>,
 	template<class...> class t_cont = std::vector>
+requires is_complex<t_cplx>
 t_cplx dft_coeff(int k, const t_cont<t_cplx>& invec, bool bInv = false)
 {
 	const std::size_t N = invec.size();
@@ -8172,6 +8172,7 @@ t_cplx dft_coeff(int k, const t_cont<t_cplx>& invec, bool bInv = false)
  */
 template<typename T = double, class t_cplx = std::complex<T>,
 	template<class...> class t_cont = std::vector>
+requires is_complex<t_cplx>
 t_cont<t_cplx> dft(const t_cont<t_cplx>& invec, 
 	bool bInv = false, bool bNorm = false)
 {
@@ -8196,6 +8197,7 @@ t_cont<t_cplx> dft(const t_cont<t_cplx>& invec,
  * @see (Scarpino 2011), ch. 14.
  */
 template<typename T = double, class t_cplx = std::complex<T>>
+requires is_complex<t_cplx>
 t_cplx fft_factor(T N, T k, bool bInv = false)
 {
 	T ph = bInv ? -1 : 1.;
@@ -8213,6 +8215,7 @@ t_cplx fft_factor(T N, T k, bool bInv = false)
  */
 template<typename T = double, class t_cplx = std::complex<T>,
 	template<class...> class t_cont = std::vector>
+requires is_complex<t_cplx>
 t_cont<t_cplx> fft_reorder(const t_cont<t_cplx>& vecIn)
 {
 	t_cont<std::size_t> vecIdx =
@@ -8234,6 +8237,7 @@ t_cont<t_cplx> fft_reorder(const t_cont<t_cplx>& vecIn)
  */
 template<typename T = double, class t_cplx = std::complex<T>,
 	template<class...> class t_cont = std::vector>
+requires is_complex<t_cplx>
 t_cont<t_cplx> fft_merge(const t_cont<t_cplx>& vecIn, bool bInv = false)
 {
 	const std::size_t N = vecIn.size();
@@ -8283,6 +8287,7 @@ t_cont<t_cplx> fft_merge(const t_cont<t_cplx>& vecIn, bool bInv = false)
  */
 template<typename T = double, class t_cplx = std::complex<T>,
 	template<class...> class t_cont = std::vector>
+requires is_complex<t_cplx>
 t_cont<t_cplx> fft(const t_cont<t_cplx>& vecIn,
 	bool bInv = false, bool bNorm = false)
 {
