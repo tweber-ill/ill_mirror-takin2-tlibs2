@@ -668,9 +668,10 @@ t_real fermi(t_real E, t_real mu, t_real T)
 
 
 template<class Sys, class Y>
-Y fermi(const t_energy<Sys,Y>& E, const t_energy<Sys,Y>& mu, const t_temperature<Sys,Y>& T)
+Y fermi(const t_energy<Sys,Y>& E, const t_energy<Sys,Y>& mu, 
+	const t_temperature<Sys,Y>& T)
 {
-	return fermi<Y>(Y(E/meV<Y>), Y(mu/meV<Y>), Y(T/kelvin<T>));
+	return fermi<Y>(Y(E/meV<Y>), Y(mu/meV<Y>), Y(T/kelvin<Y>));
 }
 
 // --------------------------------------------------------------------------------
