@@ -73,6 +73,7 @@ add_executable(min0 min0.cpp ../libs/log.cpp)
 add_executable(fit0 fit0.cpp ../libs/log.cpp)
 add_executable(fit1 fit1.cpp ../libs/log.cpp)
 add_executable(cov cov.cpp)
+add_executable(fft fft.cpp)
 
 target_link_libraries(expr Threads::Threads)
 target_link_libraries(mat0 ${Lapacke_LIBRARIES})
@@ -103,4 +104,5 @@ add_test(min0 min0)
 add_test(fit0 fit0)
 add_test(fit1 fit1)
 add_test(cov cov)
+add_test(fft fft)
 # -----------------------------------------------------------------------------

@@ -32,7 +32,7 @@ public:
 	 */
 	NumericTableWidgetItem(const QString& val, std::streamsize prec = 6)
 		: QTableWidgetItem(val),
-		  m_val{tl2::str_to_var<T>(val.toStdString())},
+		  m_val{tl2::str_to_var_parse<T>(val.toStdString())},
 		  m_prec{prec}
 	{}
 
@@ -42,8 +42,8 @@ public:
 	 */
 	virtual bool operator<(const QTableWidgetItem& item) const override
 	{
-		T val1 = tl2::str_to_var<T>(text().toStdString());
-		T val2 = tl2::str_to_var<T>(item.text().toStdString());
+		T val1 = tl2::str_to_var_parse<T>(text().toStdString());
+		T val2 = tl2::str_to_var_parse<T>(item.text().toStdString());
 
 		return val1 < val2;
 	}

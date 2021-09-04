@@ -609,7 +609,8 @@ protected:
 	void register_funcs()
 	{
 		// common functions
-		register_func1("abs", std::abs);
+		register_func1("abs", [](t_num t) -> t_num
+			{ return t<t_num(0) ? -t : t; });
 		register_func2("mod", expr_modfunc<t_num>);
 
 		// real functions
@@ -649,7 +650,9 @@ protected:
 		// integer functions
 		else if constexpr(std::is_integral_v<t_num>)
 		{
-			register_func2("pow", [](t_num t1, t_num t2) -> t_num { return t_num(std::pow(t1, t2)); } );
+			register_func2("pow", 
+				[](t_num t1, t_num t2) -> t_num
+				{ return t_num(std::pow(t1, t2)); } );
 		}
 	}
 

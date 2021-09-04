@@ -81,8 +81,8 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(test_eig, t_real, t_types)
 			for(std::size_t j=0; j<dim; ++j)
 				evec[j] = t_cplx{evecs_re[i][j], evecs_im[i][j]};
 
-			auto tstvec1 = mat_cplx * evec;
-			auto tstvec2 = eval * evec;
+			t_vec_cplx tstvec1 = mat_cplx * evec;
+			t_vec_cplx tstvec2 = eval * evec;
 			bool is_equal = tl2::equals<t_vec_cplx>(tstvec1, tstvec2, eps);
 			std::cout << tstvec1 << " == " << tstvec2 << ": " << std::boolalpha << is_equal << std::endl;
 			BOOST_TEST(is_equal);
@@ -135,8 +135,8 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(test_eig, t_real, t_types)
 			for(std::size_t j=0; j<dim; ++j)
 				evec[j] = t_cplx{evecs_re[i][j], evecs_im[i][j]};
 
-			auto tstvec1 = mat_cplx * evec;
-			auto tstvec2 = eval * evec;
+			t_vec_cplx tstvec1 = mat_cplx * evec;
+			t_vec_cplx tstvec2 = eval * evec;
 			bool is_equal = tl2::equals<t_vec_cplx>(tstvec1, tstvec2, eps);
 			std::cout << tstvec1 << " == " << tstvec2 << ": " << std::boolalpha << is_equal << std::endl;
 			BOOST_TEST(is_equal);
@@ -171,8 +171,8 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(test_eig, t_real, t_types)
 		BOOST_TEST(ok);
 		for(std::size_t i=0; i<dim; ++i)
 		{
-			auto tstvec1 = mat*evecs[i];
-			auto tstvec2 = evals[i]*evecs[i];
+			t_vec_cplx tstvec1 = mat*evecs[i];
+			t_vec_cplx tstvec2 = evals[i]*evecs[i];
 			bool is_equal = tl2::equals<t_vec_cplx>(tstvec1, tstvec2, eps);
 			std::cout << tstvec1 << " == " << tstvec2 << ": " << std::boolalpha << is_equal << std::endl;
 			BOOST_TEST(is_equal);
@@ -214,8 +214,8 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(test_eig, t_real, t_types)
 		BOOST_TEST(ok);
 		for(std::size_t i=0; i<dim; ++i)
 		{
-			auto tstvec1 = mat*evecs[i];
-			auto tstvec2 = evals[i]*evecs[i];
+			t_vec_cplx tstvec1 = mat*evecs[i];
+			t_vec_cplx tstvec2 = evals[i]*evecs[i];
 			bool is_equal = tl2::equals<t_vec_cplx>(tstvec1, tstvec2, eps);
 			std::cout << tstvec1 << " == " << tstvec2 << ": " << std::boolalpha << is_equal << std::endl;
 			BOOST_TEST(is_equal);

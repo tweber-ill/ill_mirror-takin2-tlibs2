@@ -538,7 +538,8 @@ T str_to_var_parse(const t_str& str)
 template<typename T, class t_str=std::string>
 T str_to_var(const t_str& str)
 {
-	return _str_to_var_impl<T, t_str, std::is_convertible<T, t_str>::value>()(str);
+	return _str_to_var_impl<T, t_str, 
+		std::is_convertible<T, t_str>::value>()(str);
 }
 
 
@@ -826,7 +827,9 @@ std::pair<bool, t_val> eval_expr(const t_str& str) noexcept
 	}
 	catch(const std::exception& ex)
 	{
+#ifdef __TLIBS2_SHOW_ERR__
 		log_err("Parsing failed with error: ", ex.what(), ".");
+#endif
 		return std::make_pair(false, t_val(0));
 	}
 }
