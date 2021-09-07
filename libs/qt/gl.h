@@ -148,13 +148,13 @@ struct GlRenderObj
 {
 	GlPlotObjType m_type = GlPlotObjType::TRIANGLES;
 
-	std::shared_ptr<QOpenGLVertexArrayObject> m_pvertexarr;
-	std::shared_ptr<QOpenGLBuffer> m_pvertexbuf;
-	std::shared_ptr<QOpenGLBuffer> m_pnormalsbuf;
-	std::shared_ptr<QOpenGLBuffer> m_puvbuf;
-	std::shared_ptr<QOpenGLBuffer> m_pcolourbuf;
+	std::shared_ptr<QOpenGLVertexArrayObject> m_pvertexarr{};
+	std::shared_ptr<QOpenGLBuffer> m_pvertexbuf{};
+	std::shared_ptr<QOpenGLBuffer> m_pnormalsbuf{};
+	std::shared_ptr<QOpenGLBuffer> m_puvbuf{};
+	std::shared_ptr<QOpenGLBuffer> m_pcolourbuf{};
 
-	std::vector<t_vec3_gl> m_vertices, m_triangles, m_uvs;
+	std::vector<t_vec3_gl> m_vertices{}, m_triangles{}, m_uvs{};
 
 	t_vec_gl m_colour = tl2::create<t_vec_gl>({ 0., 0., 1., 1. });	// rgba
 };
@@ -163,7 +163,7 @@ struct GlRenderObj
 struct GlPlotObj : public GlRenderObj
 {
 	// does not define a geometry itself, but just links to another object
-	std::optional<std::size_t> linkedObj;
+	std::optional<std::size_t> linkedObj{};
 
 	t_mat_gl m_mat = tl2::unit<t_mat_gl>();
 
@@ -173,8 +173,8 @@ struct GlPlotObj : public GlRenderObj
 	bool m_valid = true;		// object deleted?
 
 	t_vec3_gl m_labelPos = tl2::create<t_vec3_gl>({0., 0., 0.});
-	std::string m_label;
-	std::string m_datastr;
+	std::string m_label{};
+	std::string m_datastr{};
 
 	t_vec3_gl m_boundingSpherePos = tl2::create<t_vec3_gl>({ 0., 0., 0. });
 	t_real_gl m_boundingSphereRad = 0.;

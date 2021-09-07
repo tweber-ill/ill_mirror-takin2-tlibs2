@@ -3305,7 +3305,7 @@ requires is_basic_vec<t_vec>
  */
 template<class t_mat>
 t_mat submat(const t_mat& mat, decltype(mat.size1()) iRemRow, decltype(mat.size2()) iRemCol)
-requires is_dyn_mat<t_mat>
+requires is_basic_mat<t_mat> && is_dyn_mat<t_mat>
 {
 	using size_t = decltype(mat.size1());
 	t_mat matRet = create<t_mat>(mat.size1()-1, mat.size2()-1);
