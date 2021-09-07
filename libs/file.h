@@ -308,7 +308,7 @@ public:
 
 
 protected:
-	t_prop m_prop;
+	t_prop m_prop{};
 	t_ch m_chSep = '/';
 
 

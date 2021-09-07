@@ -62,7 +62,7 @@ protected:
 
 	// pair of ostream and colour flag
 	using t_pairOstr = std::pair<std::ostream*, bool>;
-	std::vector<t_pairOstr> m_vecOstrs;
+	std::vector<t_pairOstr> m_vecOstrs{};
 	using t_mapthreadOstrs = std::unordered_map<std::thread::id, std::vector<t_pairOstr>>;
 	t_mapthreadOstrs m_mapOstrsTh{};
 
@@ -139,13 +139,13 @@ class Stopwatch
 		typedef std::chrono::system_clock::duration t_dur_sys;
 
 	protected:
-		t_tp_sys m_timeStart;
-		t_tp_st m_timeStart_st, m_timeStop_st;
+		t_tp_sys m_timeStart{};
+		t_tp_st m_timeStart_st{}, m_timeStop_st{};
 
-		t_dur m_dur;
-		t_dur_sys m_dur_sys;
+		t_dur m_dur{};
+		t_dur_sys m_dur_sys{};
 
-		T m_dDur = T(0);
+		T m_dDur = T{};
 
 	public:
 		Stopwatch() = default;

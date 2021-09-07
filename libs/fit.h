@@ -192,6 +192,7 @@ protected:
 	t_real_min m_dSigma = 1.;
 	bool m_bDebug = 0;
 
+
 public:
 	Chi2Function(const FitterFuncModel<t_real_min>* fkt=0,
 		std::size_t uiLen=0, const t_real *px=0,
@@ -200,6 +201,23 @@ public:
 	{}
 
 	virtual ~Chi2Function() = default;
+
+
+	const Chi2Function<t_real> operator=(const Chi2Function<t_real>& other)
+	{
+		this->m_pfkt = other.m_pfkt;
+		this->m_px = other.m_px;
+		this->m_py = other.m_py;
+		this->m_pdy = other.m_pdy;
+		this->m_dSigma = other.m_dSigma;
+		this->m_bDebug = other.m_bDebug;
+	}
+
+	Chi2Function(const Chi2Function<t_real>& other)
+	{
+		operator=(other);
+	}
+
 
 	/*
 	 * chi^2 calculation
@@ -246,6 +264,16 @@ protected:
 public:
 	MiniFunction(const FitterFuncModel<t_real_min>* fkt=0) : m_pfkt(fkt) {}
 	virtual ~MiniFunction() = default;
+
+	MiniFunction(const MiniFunction<t_real>& other)
+		: m_pfkt(other.m_pfkt), m_dSigma(other.m_dSigma)
+	{}
+
+	const MiniFunction<t_real> operator=(const MiniFunction<t_real>& other)
+	{
+		this->m_pfkt = other.m_pfkt;
+		this->m_dSigma = other.m_dSigma;
+	}
 
 	virtual t_real_min Up() const override { return m_dSigma*m_dSigma; }
 
