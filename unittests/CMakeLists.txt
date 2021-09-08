@@ -2,7 +2,7 @@
 # tlibs2 -- tests
 # @author Tobias Weber <tweber@ill.fr>
 # @date 8-jun-2020
-# @license see 'LICENSE' file
+# @license GPLv3, see 'LICENSE' file
 #
 
 project(tlibs2_tests)
