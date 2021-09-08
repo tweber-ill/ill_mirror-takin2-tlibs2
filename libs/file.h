@@ -158,10 +158,10 @@ get_file_mem(std::basic_istream<t_char>& istr, std::size_t offs, std::size_t len
 
 // ----------------------------------------------------------------------------
 
-template<typename t_char=char>
-bool dir_exists(const t_char* pcDir)
+template<typename t_char = char>
+bool dir_exists(const std::basic_string<t_char>& strDir)
 {
-	fs::path path(pcDir);
+	fs::path path(strDir);
 	bool bExists = fs::exists(path);
 	bool bIsDir = fs::is_directory(path);
 
@@ -170,9 +170,9 @@ bool dir_exists(const t_char* pcDir)
 
 
 template<typename t_char=char>
-bool file_exists(const t_char* pcDir)
+bool file_exists(const std::basic_string<t_char>& strDir)
 {
-	fs::path path(pcDir);
+	fs::path path(strDir);
 	bool bExists = fs::exists(path);
 	bool bIsDir = fs::is_directory(path);
 	bool bIsFile = fs::is_regular_file(path);
@@ -190,17 +190,17 @@ bool file_exists(const t_char* pcDir)
  */
 template<bool bRecursive=0, class t_char = char,
 	template<class...> class t_cont = std::vector>
-t_cont<std::basic_string<t_char>> get_all_files(const t_char* pcPath)
+t_cont<std::basic_string<t_char>> get_all_files(const std::basic_string<t_char>& strPath)
 {
 	t_cont<std::basic_string<t_char>> vecFiles;
-	if(!dir_exists(pcPath))
+	if(!dir_exists(strPath))
 		return vecFiles;
 
 	using t_iter = typename std::conditional<bRecursive,
 		fs::recursive_directory_iterator,
 		fs::directory_iterator>::type;
 
-	fs::path path(pcPath);
+	fs::path path(strPath);
 	t_iter iter(path), iterEnd;
 	for(; iter!=iterEnd; ++iter)
 	{
