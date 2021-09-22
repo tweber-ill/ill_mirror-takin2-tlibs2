@@ -3108,7 +3108,7 @@ requires is_vec<t_vec>
 template<class t_vec, class t_real = typename t_vec::value_type>
 t_real dist_pt_line(const t_vec& pt,
 	const t_vec& linePt1, const t_vec& linePt2,
-	bool bLineIsFinite=true)
+	bool bLineIsInfinite = true)
 requires is_vec<t_vec>
 {
 	const std::size_t dim = linePt1.size();
@@ -3133,7 +3133,7 @@ requires is_vec<t_vec>
 
 
 	t_real t = (nearestPt[compidx]-linePt1[compidx]) / (linePt2[compidx]-linePt1[compidx]);
-	if(bLineIsFinite && t>=t_real{0} && t<=t_real{1})
+	if(bLineIsInfinite || (t>=t_real{0} && t<=t_real{1}))
 	{
 		// projection is on line -> use distance between point and projection
 		return dist;
