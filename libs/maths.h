@@ -7792,6 +7792,7 @@ template<class t_quat> t_quat unit_quat() requires is_quat<t_quat>
  * calculates the quaternion inverse
  * @see (Bronstein 2008), Ch. 4
  * @see (Kuipers 2002), p. 112
+ * @see https://en.wikipedia.org/wiki/Quaternion#Conjugation,_the_norm,_and_reciprocal
  */
 template<class t_quat> t_quat inv(const t_quat& q) requires is_quat<t_quat>
 {
@@ -7802,7 +7803,8 @@ template<class t_quat> t_quat inv(const t_quat& q) requires is_quat<t_quat>
 
 /**
  * quaternion product
- * @see (Kuipers 2002), p. 110
+ * @see (Kuipers 2002), pp. 106-110
+ * @see https://en.wikipedia.org/wiki/Quaternion#Scalar_and_vector_parts
  */
 template<class t_quat, class t_vec>
 t_quat prod(const t_quat& q1, const t_quat& q2)
@@ -7928,6 +7930,8 @@ requires is_quat<t_quat> && is_vec<t_vec>
 /**
  * quat -> complex 2x2 matrix
  * @see (Scherer 2010), p.173
+ * @see (DesktopBronstein08), ch. 4, equations (4.163a) and (4.163b)
+ * @see (Bronstein08), ch. 4, p. 296, equation (4.110a) and (4.110b)
  */
 template<class t_mat, class t_mat_cplx, class t_quat>
 t_mat_cplx quat_to_cmat(const t_quat& quat)
@@ -7962,6 +7966,8 @@ requires is_quat<t_quat>
 /**
  * quat -> rotation axis
  * @see (Bronstein 2008), Ch. 4, pp. 301-302
+ * @see https://en.wikipedia.org/wiki/Quaternion#Exponential,_logarithm,_and_power_functions
+ * @see https://en.wikipedia.org/wiki/Quaternions_and_spatial_rotation
  */
 template<class t_quat, class t_vec>
 std::pair<t_vec, typename t_vec::value_type> rotation_axis(const t_quat& quat)
@@ -7985,7 +7991,9 @@ requires is_quat<t_quat> && is_vec<t_vec>
 /**
  * rotation axis -> quat
  * @see (Desktop Bronstein 2008), formula (4.193)
- * @see (Bronstein 2008), p. 302
+ * @see (Bronstein 2008), ch. 4, pp. 301-302
+ * @see https://en.wikipedia.org/wiki/Quaternion#Exponential,_logarithm,_and_power_functions
+ * @see https://en.wikipedia.org/wiki/Quaternions_and_spatial_rotation
  */
 template<class t_vec, class t_quat>
 t_quat rotation_quat(const t_vec& vec, typename t_vec::value_type angle)
