@@ -2792,6 +2792,7 @@ requires is_basic_mat<t_mat> && is_basic_vec<t_vec>
 
 // ----------------------------------------------------------------------------
 // tas calculations
+// @see M. D. Lumsden, J. L. Robertson, and M. Yethiraj, J. Appl. Crystallogr. 38(3), pp. 405–411 (2005), doi: 10.1107/S0021889805004875.
 // @see (Shirane 2002)
 // ----------------------------------------------------------------------------
 
@@ -2853,6 +2854,7 @@ t_real calc_tas_Q_len(t_real ki, t_real kf, t_real a4)
 /**
  * get tas a3 and a4 angles
  * @return [a3, a4, distance of Q to the scattering plane]
+// @see M. D. Lumsden, et al., doi: 10.1107/S0021889805004875.
  */
 template<class t_mat, class t_vec, class t_real = typename t_mat::value_type>
 std::tuple<bool, t_real, t_real, t_real> calc_tas_a3a4(
@@ -2901,6 +2903,7 @@ requires is_basic_mat<t_mat> && is_basic_vec<t_vec>
 /**
  * get hkl position of a tas
  * @return Q_rlu
+// @see M. D. Lumsden, et al., doi: 10.1107/S0021889805004875.
  */
 template<class t_mat, class t_vec, class t_real = typename t_mat::value_type>
 std::optional<t_vec> calc_tas_hkl(
