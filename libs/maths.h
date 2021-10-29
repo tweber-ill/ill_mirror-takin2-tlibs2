@@ -4005,10 +4005,11 @@ requires is_vec<t_vec>
 	// set to limit values
 	t_vec vecmin = zero<t_vec>(verts.begin()->size());
 	t_vec vecmax = zero<t_vec>(verts.begin()->size());
+
 	for(std::size_t i=0; i<vecmin.size(); ++i)
 	{
 		vecmin[i] = std::numeric_limits<t_real>::max();
-		vecmax[i] = -std::numeric_limits<t_real>::max();
+		vecmax[i] = std::numeric_limits<t_real>::lowest();
 	}
 
 	// iterate components
@@ -5414,9 +5415,13 @@ requires is_vec<t_vec>
 	else
 	{
 		min = create<t_vec>(dim);
+		max = create<t_vec>(dim);
+
 		for(std::size_t i=0; i<dim; ++i)
+		{
 			min[i] = std::numeric_limits<t_real>::max();
-		max = -min;
+			max[i] = std::numeric_limits<t_real>::lowest();
+		}
 	}
 
 	for(const t_vec& vert : verts)
@@ -5443,11 +5448,14 @@ requires is_vec<t_vec>
 {
 	using t_real = typename t_vec::value_type;
 
-	t_vec min, max;
-	min = create<t_vec>(dim);
+	t_vec min = create<t_vec>(dim);
+	t_vec max = create<t_vec>(dim);
+
 	for(std::size_t i=0; i<dim; ++i)
+	{
 		min[i] = std::numeric_limits<t_real>::max();
-	max = -min;
+		max[i] = std::numeric_limits<t_real>::lowest();
+	}
 
 	for(const t_cont<t_vec>& verts : allverts)
 		std::tie(min, max) = bounding_box<t_vec, t_cont>(verts, &min, &max);
