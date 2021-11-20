@@ -1423,7 +1423,12 @@ public:
 
 	~vec() = default;
 
-	vec(const vec<T, t_cont>& other) : container_type{other}
+	vec(const vec<T, t_cont>& other)
+		: container_type{other}
+	{}
+
+	vec(vec<T, t_cont>&& other)
+		: container_type{std::forward<vec<T, t_cont>&&>(other)}
 	{}
 
 	template<class T_other, template<class...> class t_cont_other>
