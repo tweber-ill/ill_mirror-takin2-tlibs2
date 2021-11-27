@@ -6,6 +6,7 @@
  * @license GPLv3, see 'LICENSE' file
  *
  * References:
+ *   - R. Güting, "Übersetzerbau", ISBN: 978-3540653899 (1999, 2013).
  *   - https://de.wikipedia.org/wiki/LL(k)-Grammatik
  *   - https://www.cs.uaf.edu/~cs331/notes/FirstFollow.pdf
  *
