@@ -3602,7 +3602,7 @@ t_cont<t_vec> intersect_line_sphere(
 		inters.emplace_back(lineOrg + (proj - val)*lineDir);
 
 	// sort intersections by x
-	std::sort(inters.begin(), inters.end(), 
+	std::sort(inters.begin(), inters.end(),
 		[](const t_vec& vec1, const t_vec& vec2) -> bool
 		{ return vec1[0] < vec2[0]; });
 
@@ -3661,7 +3661,7 @@ requires is_vec<t_vec>
 	const T planeD = inner<t_vec>(poly[0], planeNorm);
 
 	// intersection with plane
-	auto [vec, intersects, lam] = 
+	auto [vec, intersects, lam] =
 		intersect_line_plane<t_vec>(lineOrg, lineDir, planeNorm, planeD);
 	if(intersects != 1)
 		return std::make_tuple(t_vec(), false, T(0));
@@ -4445,7 +4445,7 @@ requires is_vec<t_vec>
  */
 template<class t_vec, template<class...> class t_cont = std::vector>
 std::tuple<t_cont<t_vec>, t_cont<t_vec>, t_cont<t_vec>>
-create_triangles(const std::tuple<t_cont<t_vec>, t_cont<t_cont<std::size_t>>, 
+create_triangles(const std::tuple<t_cont<t_vec>, t_cont<t_cont<std::size_t>>,
 	t_cont<t_vec>, t_cont<t_cont<t_vec>>>& tup)
 requires is_vec<t_vec>
 {
@@ -6150,7 +6150,7 @@ requires is_mat<t_mat>
  * @see https://dx.doi.org/10.1107/S0021889805004875
  */
 template<class t_mat, class t_vec>
-t_mat UB_matrix(const t_mat& B, 
+t_mat UB_matrix(const t_mat& B,
 	const t_vec& vec1_rlu, const t_vec& vec2_rlu, const t_vec& vec3_rlu)
 requires is_mat<t_mat> && is_vec<t_vec>
 {
@@ -7371,7 +7371,7 @@ requires is_mat<t_mat>
 
 /**
  * determinant
- * 
+ *
  * M v = l v
  * M = V^-1 L V
  * det(M) = det(V^-1 L V) = det(V V^-1 L) = det(L) = l_1*...*l_n
@@ -8219,7 +8219,7 @@ t_cplx dft_coeff(int k, const t_cont<t_cplx>& invec, bool bInv = false)
 template<typename T = double, class t_cplx = std::complex<T>,
 	template<class...> class t_cont = std::vector>
 requires is_complex<t_cplx>
-t_cont<t_cplx> dft(const t_cont<t_cplx>& invec, 
+t_cont<t_cplx> dft(const t_cont<t_cplx>& invec,
 	bool bInv = false, bool bNorm = false)
 {
 	const std::size_t N = invec.size();
@@ -8351,8 +8351,192 @@ t_cont<t_cplx> fft(const t_cont<t_cplx>& vecIn,
 	return vecOut;
 }
 // ----------------------------------------------------------------------------
+
+
+
+// ----------------------------------------------------------------------------
+// numerical integration and differentiation
+// ----------------------------------------------------------------------------
+/**
+ * numerical differentiation
+ */
+template<class t_cont = std::vector<double>>
+t_cont diff(const t_cont& xs, const t_cont& ys)
+{
+	using t_real = typename t_cont::value_type;
+
+	const std::size_t N = xs.size();
+	t_cont new_ys{};
+	new_ys.reserve(N);
+
+	for(std::size_t i=0; i<N-1; ++i)
+	{
+		t_real diff_val = (ys[i+1]-ys[i]) / (xs[i+1]-xs[i]);
+		new_ys.push_back(diff_val);
+	}
+
+	// repeat last value
+	new_ys[N-1] = new_ys[N-2];
+}
+
+
+/**
+ * trapezoid rule
+ * @see https://en.wikipedia.org/wiki/Trapezoidal_rule
+ */
+template<class R=double, class A=double>
+R numint_trap(const std::function<R(A)>& fkt,
+	A x0, A x1)
+{
+	return R(0.5)*R(x1-x0) * (fkt(x0) + fkt(x1));
+}
+
+
+/**
+ * trapezoid rule
+ * @see https://en.wikipedia.org/wiki/Trapezoidal_rule
+ */
+template<class R=double, class A=double>
+R numint_trapN(const std::function<R(A)>& fkt,
+	A x0, A x1, std::size_t N)
+{
+	const A xstep = A(x1-x0)/A(N);
+
+	R xsum = fkt(x0) + fkt(x1);
+	for(std::size_t i=1; i<N; ++i)
+		xsum += R(2)*fkt(x0 + A(i)*xstep);
+
+	xsum *= R(0.5)*R(xstep);
+	return R(xsum);
+}
+
+
+/**
+ * rectangle rule
+ * @see https://en.wikipedia.org/wiki/Rectangle_method
+ */
+template<class R=double, class A=double>
+R numint_rect(const std::function<R(A)>& fkt,
+	A x0, A x1, std::size_t N)
+{
+	const A xstep = (x1-x0)/A(N);
+
+	R xsum = R(0);
+	for(std::size_t i=0; i<N; ++i)
+		xsum += fkt(x0 + A(i)*xstep);
+
+	xsum *= R(xstep);
+	return xsum;
+}
+
+
+/**
+ * Simpson's rule
+ * @see https://en.wikipedia.org/wiki/Simpson%27s_rule
+ */
+template<class R=double, class A=double>
+R numint_simp(const std::function<R(A)>& fkt, A x0, A x1)
+{
+	return (fkt(x0) + 4.*fkt(0.5*(x0+x1)) + fkt(x1)) * (x1-x0)/6.;
+}
+
+
+/**
+ * Simpson's rule
+ * @see https://en.wikipedia.org/wiki/Simpson%27s_rule
+ */
+template<class R=double, class A=double>
+R numint_simpN(const std::function<R(A)>& fkt, A x0, A x1, std::size_t N)
+{
+	const A xstep = (x1-x0)/A(N);
+	R xsum = fkt(x0) + fkt(x1);
+
+	for(std::size_t i=1; i<=N/2; ++i)
+	{
+		xsum += R(2) * fkt(x0 + A(2*i)*xstep);
+		xsum += R(4) * fkt(x0 + A(2*i-1)*xstep);
+	}
+	xsum -= R(2)*fkt(x0 + A(2*N/2)*xstep);
+
+	xsum *= R(xstep)/R(3);
+	return xsum;
+}
+
+
+/**
+ * convolution integral of fkt0 and fkt1
+ * @see https://en.wikipedia.org/wiki/Convolution
+ */
+template<class R=double, class A=double>
+R convolute(const std::function<R(A)>& fkt0,
+	const std::function<R(A)>& fkt1,
+	A x, A x0, A x1, std::size_t N)
+{
+	std::function<R(A,A)> fkt = [&fkt0, &fkt1](A t, A tau) -> R
+	{
+		return fkt0(tau) * fkt1(t-tau);
+	};
+
+	// ... at fixed arg x
+	std::function<R(A)> fktbnd = [&fkt, &x](A t) -> R { return fkt(x, t); };
+
+	return numint_simpN(fktbnd, x0, x1, N);
+}
+
+
+/**
+ * discrete convolution
+ * @see https://en.wikipedia.org/wiki/Convolution#Discrete_convolution
+ */
+template<class cont_type = std::vector<double>>
+cont_type convolute_discrete(const cont_type& f, const cont_type& g)
+{
+	const std::size_t M = f.size();
+	const std::size_t N = g.size();
+
+	cont_type conv;
+	conv.reserve(M+N-1);
+
+	for(std::size_t n=0; n<M+N-1; ++n)
+	{
+		typename cont_type::value_type val = 0.;
+
+		for(std::size_t m=0; m<M; ++m)
+			if(n>=m && n-m<N)
+				val += f[m] * g[n-m];
+
+		conv.push_back(val);
+	}
+
+	return conv;
+}
+
+
+/**
+ * Newton iteration
+ * @see https://en.wikipedia.org/wiki/Newton%27s_method
+ */
+template<class T = double>
+T newton(const std::function<T(T)>& fkt, const std::function<T(T)>& diff,
+	T x, std::size_t imax = 128, T eps = std::numeric_limits<T>::epsilon())
+{
+	T xnew = x;
+	for(std::size_t i=0; i<imax; ++i)
+	{
+		xnew = x - fkt(x)/diff(x);
+
+		if(std::abs(xnew - x) < eps)
+			break;
+
+		x = xnew;
+	}
+
+	return xnew;
+}
+// ----------------------------------------------------------------------------
+
+
 }
 
 // ----------------------------------------------------------------------------
-
 #endif

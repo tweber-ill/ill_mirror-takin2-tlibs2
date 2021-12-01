@@ -33,13 +33,7 @@
 
 #include "units.h"
 #include "log.h"
-
-#if defined(__cpp_concepts) && __cplusplus >= 201709L
-	#include "maths.h"
-#else
-	#pragma message("The compiler does not support C++20, trying to use old C++17 math library, if available.")
-	#include "tlibs2-extras/math17.h"
-#endif
+#include "maths.h"
 
 #include <boost/units/pow.hpp>
 
@@ -688,7 +682,7 @@ t_real fermi(t_real E, t_real mu, t_real T)
 
 
 template<class Sys, class Y>
-Y fermi(const t_energy<Sys,Y>& E, const t_energy<Sys,Y>& mu, 
+Y fermi(const t_energy<Sys,Y>& E, const t_energy<Sys,Y>& mu,
 	const t_temperature<Sys,Y>& T)
 {
 	return fermi<Y>(Y(E/meV<Y>), Y(mu/meV<Y>), Y(T/kelvin<Y>));

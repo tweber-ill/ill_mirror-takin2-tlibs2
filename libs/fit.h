@@ -5,7 +5,6 @@
  * @date 2012-2021
  * @note Forked on 7-Nov-2018 from my privately and TUM-PhD-developed "tlibs" project (https://github.com/t-weber/tlibs).
  * @license GPLv3, see 'LICENSE' file
- * @see http://seal.cern.ch/documents/minuit/mnusersguide.pdf
  *
  * ----------------------------------------------------------------------------
  * tlibs
@@ -31,11 +30,17 @@
 #ifndef __TLIBS2_FITTER_H__
 #define __TLIBS2_FITTER_H__
 
-#include <Minuit2/FCNBase.h>
-#include <Minuit2/MnFcn.h>
-#include <Minuit2/FunctionMinimum.h>
-#include <Minuit2/MnMigrad.h>
-#include <Minuit2/MnPrint.h>
+#if __has_include(<Minuit2/FCNBase.h>)
+	#include <Minuit2/FCNBase.h>
+	#include <Minuit2/MnFcn.h>
+	#include <Minuit2/FunctionMinimum.h>
+	#include <Minuit2/MnMigrad.h>
+	#include <Minuit2/MnPrint.h>
+
+	#define __TLIBS2_USE_MINUIT__
+#else
+	#pragma message("tlibs2: Disabling Minuit library (not found).")
+#endif
 
 #include <vector>
 #include <iostream>
@@ -47,16 +52,17 @@
 #include "log.h"
 #include "expr.h"
 
-#if defined(__cpp_concepts) && __cplusplus >= 201709L
-	#include "maths.h"
-#else
-	#pragma message("The compiler does not support C++20, trying to use old C++17 math library, if available.")
-	#include "tlibs2-extras/math17.h"
-#endif
+#include "maths.h"
 
 
 namespace tl2 {
 
+
+// ----------------------------------------------------------------------------
+// Minuit interface
+// @see http://seal.cern.ch/documents/minuit/mnusersguide.pdf
+// ----------------------------------------------------------------------------
+#ifdef __TLIBS2_USE_MINUIT__
 using t_real_min = typename std::result_of<
 	decltype(&ROOT::Minuit2::MnFcn::Up)(ROOT::Minuit2::MnFcn)>::type;
 
@@ -594,12 +600,15 @@ bool minimise_expr(const std::string& func, const std::vector<std::string>& vecP
 
 	return false;
 }
+
+#endif	// __TLIBS2_USE_MINUIT__
 // ----------------------------------------------------------------------------
 
 
 
 // ----------------------------------------------------------------------------
 // interpolation
+// ----------------------------------------------------------------------------
 
 /**
  * @see http://mathworld.wolfram.com/BernsteinPolynomial.html
@@ -811,7 +820,6 @@ public:
 		return lerp<T,T>((*iterLower)[1], (*iter2)[1], xpos);
 	}
 };
-
 
 // ----------------------------------------------------------------------------
 
