@@ -817,7 +817,7 @@ public:
 		T xrange = (*iter2)[0] - (*iterLower)[0];
 		T xpos = (x-(*iterLower)[0]) / xrange;
 
-		return lerp<T,T>((*iterLower)[1], (*iter2)[1], xpos);
+		return std::lerp((*iterLower)[1], (*iter2)[1], xpos);
 	}
 };
 
