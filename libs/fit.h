@@ -834,7 +834,7 @@ public:
 // ------------------------------------------------------------------------------------------------
 // peak finder
 // ------------------------------------------------------------------------------------------------
-template<class T> struct __sort_obj { std::vector<T> vec; };
+template<class T> struct __sort_obj { std::vector<T> vec{}; };
 
 template<class T>
 bool __comp_fkt(const __sort_obj<T>& t0, const __sort_obj<T>& t1)
@@ -868,34 +868,6 @@ void __sort_2(Iter begin1, Iter end1, Iter begin2)
 
 
 /**
- * simultaneously sort three arrays
- */
-template<class Iter = double*>
-void __sort_3(Iter begin1, Iter end1, Iter begin2, Iter begin3)
-{
-	using T = typename std::iterator_traits<Iter>::value_type;
-
-	const std::size_t N = end1 - begin1;
-	std::unique_ptr<__sort_obj<T>, std::default_delete<__sort_obj<T>[]>> obj{new __sort_obj<T>[N]};
-
-	for(std::size_t i=0; i<N; ++i)
-	{
-		obj.get()[i].vec.push_back(*(begin1+i));
-		obj.get()[i].vec.push_back(*(begin2+i));
-		obj.get()[i].vec.push_back(*(begin3+i));
-	}
-
-	std::stable_sort(obj.get(), obj.get()+N, __comp_fkt<T>);
-	for(std::size_t i=0; i<N; ++i)
-	{
-		*(begin1+i) = obj.get()[i].vec[0];
-		*(begin2+i) = obj.get()[i].vec[1];
-		*(begin3+i) = obj.get()[i].vec[2];
-	}
-}
-
-
-/**
  * find the zeros of a curve
  */
 template<class t_cont>
@@ -915,13 +887,17 @@ std::vector<std::size_t> find_zeroes(const t_cont& cont)
 
 
 /**
- * try to identify local maxima on a curve
+ * try to identify local minima and maxima on a curve
  */
 template<typename T>
 void find_peaks(std::size_t num_pts, const T* _px, const T* _py, unsigned int spline_order,
-	std::vector<T>& maxima_x, std::vector<T>& maxima_sizes, std::vector<T>& maxima_widths,
+	std::vector<T>& peaks_x, std::vector<T>& peaks_sizes,
+	std::vector<T>& peaks_widths, std::vector<bool>& peaks_minima,
 	std::size_t num_spline = 512, T eps = std::numeric_limits<T>::epsilon())
 {
+	if(num_pts < 1)
+		return;
+
 	using t_vec = tl2::vec<T, std::vector>;
 
 	// allocate memory
@@ -932,7 +908,7 @@ void find_peaks(std::size_t num_pts, const T* _px, const T* _py, unsigned int sp
 	T *spline_y = uptrMem.get() + 3*num_spline;
 
 
-	// sort input values
+	// sort input values by x
 	std::copy(_px, _px+num_pts, px);
 	std::copy(_py, _py+num_pts, py);
 	__sort_2<T*>(px, px+num_pts, py);
@@ -966,43 +942,44 @@ void find_peaks(std::size_t num_pts, const T* _px, const T* _py, unsigned int sp
 	{
 		const std::size_t cur_zero_idx = zeros[zero_idx];
 
-		// minima / saddle points
-		if(spline_diff2[cur_zero_idx] >= 0.)
+		// saddle point
+		if(tl2::equals_0<T>(spline_diff2[cur_zero_idx], eps))
 			continue;
 
-		maxima_x.push_back(spline_x[cur_zero_idx]);
+		// minima or maxima
+		bool is_minimum = (spline_diff2[cur_zero_idx] > 0.);
 
 		int min_idx_left = -1;
 		int min_idx_right = -1;
 		if(zero_idx > 0)
 			min_idx_left = zeros[zero_idx-1];
-		if(zero_idx+1 < zeros.size())
+		if(zero_idx < zeros.size() - 1)
 			min_idx_right = zeros[zero_idx+1];
 
 		T height = 0.;
 		T width = 0.;
 		T div = 0.;
 
-		// minimum left of the peak
-		if(min_idx_left>=0)
+		// extremum left of the peak
+		if(min_idx_left >= 0)
 		{
-			height += (spline_y[cur_zero_idx]-spline_y[min_idx_left]);
-			width += std::abs((spline_x[cur_zero_idx]-spline_x[min_idx_left]));
+			height += (spline_y[cur_zero_idx] - spline_y[min_idx_left]);
+			width += std::abs((spline_x[cur_zero_idx] - spline_x[min_idx_left]));
 			div += 1.;
 		}
 
-		// minimum right of the peak
-		if(min_idx_right>=0)
+		// extremum right of the peak
+		if(min_idx_right >= 0)
 		{
-			height += (spline_y[cur_zero_idx]-spline_y[min_idx_right]);
-			width += std::abs((spline_x[cur_zero_idx]-spline_x[min_idx_right]));
+			height += (spline_y[cur_zero_idx] - spline_y[min_idx_right]);
+			width += std::abs((spline_x[cur_zero_idx] - spline_x[min_idx_right]));
 			div += 1.;
 		}
 
-		// no adjacent minima...
-		if(min_idx_left<0 && min_idx_right<0)
+		// no adjacent extrema...
+		if(min_idx_left < 0 && min_idx_right < 0)
 		{
-			height = spline_y[cur_zero_idx]- *y_min;
+			height = spline_y[cur_zero_idx] - *y_min;
 			width = (px[num_pts-1] - px[0]) / 10.;	// guess something...
 			div = 1.;
 		}
@@ -1013,16 +990,11 @@ void find_peaks(std::size_t num_pts, const T* _px, const T* _py, unsigned int sp
 			width /= div;
 		}
 
-		maxima_sizes.push_back(height);
-		maxima_widths.push_back(width);
+		peaks_x.push_back(spline_x[cur_zero_idx]);
+		peaks_sizes.push_back(height);
+		peaks_widths.push_back(width);
+		peaks_minima.push_back(is_minimum);
 	}
-
-
-	__sort_3<typename std::vector<T>::iterator>(maxima_sizes.begin(), maxima_sizes.end(),
-		maxima_widths.begin(), maxima_x.begin());
-	std::reverse(maxima_sizes.begin(), maxima_sizes.end());
-	std::reverse(maxima_widths.begin(), maxima_widths.end());
-	std::reverse(maxima_x.begin(), maxima_x.end());
 }
 // ----------------------------------------------------------------------------
 

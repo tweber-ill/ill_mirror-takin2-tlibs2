@@ -23,6 +23,8 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * ----------------------------------------------------------------------------
+ *
+ * g++-10 -std=c++20 -I.. -o peaks peaks.cpp
  */
 
 #include "libs/maths.h"
@@ -52,23 +54,27 @@ int main()
 	}
 
 
-	std::vector<t_real> maxima_x, maxima_sizes, maxima_widths;
+	std::vector<t_real> peaks_x, peaks_sizes, peaks_widths;
+	std::vector<bool> peaks_minima;
+
 	tl2::find_peaks(x.size(), x.data(), y.data(), spline_order,
-		maxima_x, maxima_sizes, maxima_widths,
+		peaks_x, peaks_sizes, peaks_widths, peaks_minima,
 		spline_pts, 1e-8);
 
-	std::vector<t_real> minima_x, minima_sizes, minima_widths;
-	tl2::find_peaks(x.size(), x.data(), y_neg.data(), spline_order,
-		minima_x, minima_sizes, minima_widths,
-		spline_pts, 1e-8);
+	std::cout << "local extrema:" << std::endl;
+	for(std::size_t i=0; i<peaks_x.size(); ++i)
+	{
+		if(peaks_minima[i])
+			std::cout << "\tminimum: ";
+		else
+			std::cout << "\tmaximum: ";
 
-	std::cout << "local maxima:" << std::endl;
-	for(std::size_t i=0; i<maxima_x.size(); ++i)
-		std::cout << "\tx = " << maxima_x[i] << std::endl;
-
-	std::cout << "local minima:" << std::endl;
-	for(std::size_t i=0; i<minima_x.size(); ++i)
-		std::cout << "\tx = " << minima_x[i] << std::endl;
+		std::cout
+			<< "x = " << peaks_x[i]
+			<< ", h = " << peaks_sizes[i]
+			<< ", w = " << peaks_widths[i]
+			<< std::endl;
+	}
 
 	return 0;
 }
