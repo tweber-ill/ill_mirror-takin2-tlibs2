@@ -7916,13 +7916,13 @@ t_cont<t_cplx> fft(const t_cont<t_cplx>& vecIn,
 /**
  * numerical differentiation
  */
-template<class t_cont = std::vector<double>>
-t_cont diff(const t_cont& xs, const t_cont& ys)
+template<class t_cont_out = std::vector<double>, class t_cont_in = std::vector<double>>
+t_cont_out diff(const t_cont_in& xs, const t_cont_in& ys)
 {
-	using t_real = typename t_cont::value_type;
+	using t_real = typename t_cont_in::value_type;
 
 	const std::size_t N = xs.size();
-	t_cont new_ys{};
+	t_cont_out new_ys{};
 	new_ys.reserve(N);
 
 	for(std::size_t i=0; i<N-1; ++i)
@@ -7933,6 +7933,7 @@ t_cont diff(const t_cont& xs, const t_cont& ys)
 
 	// repeat last value
 	new_ys[N-1] = new_ys[N-2];
+	return new_ys;
 }
 
 
