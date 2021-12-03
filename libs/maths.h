@@ -166,11 +166,6 @@ requires is_mat<t_mat>;
 	template<typename T=double> constexpr T pi{M_PI};
 #endif
 
-// constant calculated using scipy:
-// import scipy.constants as co
-// E_to_k2 = 2.*co.neutron_mass/(co.Planck/co.elementary_charge*1000./2./co.pi)**2. / co.elementary_charge*1000. * 1e-20
-template<typename T=double> constexpr T E_to_k2 = 0.482596423544;
-
 
 template<typename INT=int> bool is_even(INT i) { return (i%2 == 0); }
 template<typename INT=int> bool is_odd(INT i) { return !is_even<INT>(i); }
@@ -224,13 +219,6 @@ template<typename T=double>
 T nextpow(T tbase, T tval)
 {
 	return T(std::pow(tbase, std::ceil(log(tbase, tval))));
-}
-
-
-template<class T, typename REAL=double>
-T lerp(const T& a, const T& b, REAL val)
-{
-	return a + T((b-a)*val);
 }
 
 
@@ -304,7 +292,6 @@ requires is_quat<t_quat>
 }
 
 
-
 /**
  * slerp
  * @see K. Shoemake, "Animating rotation with quaternion curves", http://dx.doi.org/10.1145/325334.325242
@@ -324,27 +311,17 @@ T slerp(const T& q1, const T& q2, typename T::value_type t)
 }
 
 
-
-/**
- * x = 0..1
- */
-template<typename T=double>
-T linear_interp(T x0, T x1, T x)
-{
-	return lerp<T,T>(x0, x1, x);
-}
-
-
 /**
  * x = 0..1, y = 0..1
+ * @see https://en.wikipedia.org/wiki/Bilinear_interpolation
  */
 template<typename T=double>
 T bilinear_interp(T x0y0, T x1y0, T x0y1, T x1y1, T x, T y)
 {
-	T top = linear_interp<T>(x0y1, x1y1, x);
-	T bottom = linear_interp<T>(x0y0, x1y0, x);
+	T top = std::lerp(x0y1, x1y1, x);
+	T bottom = std::lerp(x0y0, x1y0, x);
 
-	return linear_interp<T>(bottom, top, y);
+	return std::lerp(bottom, top, y);
 }
 
 
@@ -356,7 +333,7 @@ t_vec<T> linspace(const T& tmin, const T& tmax, std::size_t iNum)
 	vec.reserve(iNum);
 
 	for(std::size_t i=0; i<iNum; ++i)
-		vec.push_back(lerp<T,REAL>(tmin, tmax, REAL(i)/REAL(iNum-1)));
+		vec.push_back(std::lerp(tmin, tmax, REAL(i)/REAL(iNum-1)));
 	return vec;
 }
 
@@ -857,6 +834,7 @@ std::tuple<T,T> stereographic_proj(T twophi_crys, T twotheta_crys, T rad)
 // ----------------------------------------------------------------------------
 // adapters
 // ----------------------------------------------------------------------------
+
 template<typename size_t, size_t N, typename T, template<size_t, size_t, class...> class t_mat_base>
 class qvec_adapter : public t_mat_base<1, N, T>
 {
@@ -1685,7 +1663,7 @@ bool equals(const T& t1, const T& t2,
 requires is_complex<T>
 {
 	return (std::abs(t1.real() - t2.real()) <= eps) &&
-	(std::abs(t1.imag() - t2.imag()) <= eps);
+		(std::abs(t1.imag() - t2.imag()) <= eps);
 }
 
 // ----------------------------------------------------------------------------
@@ -1699,9 +1677,9 @@ requires is_complex<T>
 /**
  * are two vectors equal within an epsilon range?
  */
-template<class t_vec, class t_real = typename t_vec::value_type>
+template<class t_vec, class t_num = typename t_vec::value_type>
 bool equals(const t_vec& vec1, const t_vec& vec2,
-	t_real eps = std::numeric_limits<t_real>::epsilon(),
+	t_num eps = std::numeric_limits<t_num>::epsilon(),
 	int _maxSize = -1)
 requires is_basic_vec<t_vec>
 {
@@ -1716,14 +1694,14 @@ requires is_basic_vec<t_vec>
 	// check each element
 	for(std::size_t i=0; i<maxSize; ++i)
 	{
-		if constexpr(tl2::is_complex<t_real>)
+		if constexpr(tl2::is_complex<t_num>)
 		{
-			if(!equals<t_real>(vec1[i], vec2[i], eps.real()))
+			if(!equals<t_num>(vec1[i], vec2[i], eps.real()))
 				return false;
 		}
-		else
+		else if constexpr(tl2::is_scalar<t_num>)
 		{
-			if(!equals<t_real>(vec1[i], vec2[i], eps))
+			if(!equals<t_num>(vec1[i], vec2[i], eps))
 				return false;
 		}
 	}
@@ -2796,221 +2774,6 @@ requires is_basic_mat<t_mat> && is_basic_vec<t_vec>
 
 
 // ----------------------------------------------------------------------------
-// tas calculations
-// @see M. D. Lumsden, J. L. Robertson, and M. Yethiraj, J. Appl. Crystallogr. 38(3), pp. 405–411 (2005), doi: 10.1107/S0021889805004875.
-// @see (Shirane 2002)
-// ----------------------------------------------------------------------------
-
-/**
- * angle between ki and kf in the scattering triangle
- * @returns nullopt if the angle can't be reached
- *
- * |Q> = |ki> - |kf>
- * Q^2 = ki^2 + kf^2 - 2*<ki|kf>
- * 2*<ki|kf> = ki^2 + kf^2 - Q^2
- * cos phi = (ki^2 + kf^2 - Q^2) / (2 ki*kf)
- */
-template<typename t_real>
-std::optional<t_real> calc_tas_angle_ki_kf(
-	t_real ki, t_real kf, t_real Q, t_real sense=1)
-{
-	t_real c = (ki*ki + kf*kf - Q*Q) / (t_real(2)*ki*kf);
-	if(std::abs(c) > t_real(1))
-		return std::nullopt;
-	return sense*std::acos(c);
-}
-
-
-/**
- * angle between ki and Q in the scattering triangle
- * @returns nullopt if the angle can't be reached
- *
- * |Q> = |ki> - |kf>
- * |kf> = |ki> + |Q>
- * kf^2 = ki^2 + Q^2 - 2*<ki|Q>
- * 2*<ki|Q> = ki^2 + Q^2 - kf^2
- * cos phi = (ki^2 + Q^2 - kf^2) / (2 ki*Q)
- */
-template<typename t_real>
-std::optional<t_real> calc_tas_angle_ki_Q(
-	t_real ki, t_real kf, t_real Q, t_real sense=1)
-{
-	t_real c = (ki*ki + Q*Q - kf*kf) / (t_real(2)*ki*Q);
-	if(std::abs(c) > t_real(1))
-		return std::nullopt;
-	return sense*std::acos(c);
-}
-
-
-/**
- * get length of Q
- * |Q> = |ki> - |kf>
- * Q^2 = ki^2 + kf^2 - 2*<ki|kf>
- * Q^2 = ki^2 + kf^2 - 2*ki*kf*cos(a4)
- */
-template<typename t_real>
-t_real calc_tas_Q_len(t_real ki, t_real kf, t_real a4)
-{
-	t_real Qsq = ki*ki + kf*kf - t_real(2)*ki*kf*std::cos(a4);
-	return std::sqrt(Qsq);
-}
-
-
-/**
- * get tas a3 and a4 angles
- * @return [a3, a4, distance of Q to the scattering plane]
-// @see M. D. Lumsden, et al., doi: 10.1107/S0021889805004875.
- */
-template<class t_mat, class t_vec, class t_real = typename t_mat::value_type>
-std::tuple<bool, t_real, t_real, t_real> calc_tas_a3a4(
-	const t_mat& B, t_real ki_lab, t_real kf_lab,
-	const t_vec& Q_rlu, const t_vec& orient_rlu, const t_vec& orient_up_rlu,
-	t_real sample_sense = 1, t_real a3_offs = pi<t_real>)
-requires is_basic_mat<t_mat> && is_basic_vec<t_vec>
-{
-	// metric from crystal B matrix
-	t_mat G = tl2::metric<t_mat>(B);
-
-	// length of Q vector
-	t_real Q_len_lab = norm<t_mat, t_vec>(G, Q_rlu);
-
-	// angle xi between Q and orientation reflex
-	t_real xi = angle<t_mat, t_vec>(G, Q_rlu, orient_rlu);
-
-	// sign/direction of xi
-	t_vec xivec = cross<t_mat, t_vec>(G, orient_rlu, Q_rlu);
-	t_real xidir = inner<t_mat, t_vec>(G, xivec, orient_up_rlu);
-	if(xidir < t_real(0))
-		xi = -xi;
-
-	// angle psi between ki and Q
-	std::optional<t_real> psi =
-		calc_tas_angle_ki_Q<t_real>(ki_lab, kf_lab, Q_len_lab, sample_sense);
-	if(!psi)
-		return std::make_tuple(false, 0, 0, 0);
-
-	// crystal and scattering angle
-	t_real a3 = - *psi - xi + a3_offs;
-	std::optional<t_real> a4 =
-		calc_tas_angle_ki_kf<t_real>(ki_lab, kf_lab, Q_len_lab);
-	if(!a4)
-		return std::make_tuple(false, a3, 0, 0);
-	*a4 *= sample_sense;
-
-	// distance of Q to the scattering plane
-	t_real dist_Q_plane = inner<t_mat, t_vec>(G, Q_rlu, orient_up_rlu);
-	dist_Q_plane /= norm<t_mat, t_vec>(G, orient_up_rlu);
-
-	return std::make_tuple(true, a3, *a4, dist_Q_plane);
-}
-
-
-/**
- * get hkl position of a tas
- * @return Q_rlu
-// @see M. D. Lumsden, et al., doi: 10.1107/S0021889805004875.
- */
-template<class t_mat, class t_vec, class t_real = typename t_mat::value_type>
-std::optional<t_vec> calc_tas_hkl(
-	const t_mat& B, t_real ki_lab, t_real kf_lab, t_real Q_len_lab, t_real a3,
-	const t_vec& orient_rlu, const t_vec& orient_up_rlu,
-	t_real sample_sense = 1, t_real a3_offs = pi<t_real>)
-requires is_basic_mat<t_mat> && is_basic_vec<t_vec>
-{
-	auto [Binv, ok] = inv<t_mat>(B);
-	if(!ok)
-		return std::nullopt;
-
-	// angle psi between ki and Q
-	std::optional<t_real> psi =
-		calc_tas_angle_ki_Q<t_real>(ki_lab, kf_lab, Q_len_lab, sample_sense);
-	if(!psi)
-		return std::nullopt;
-
-	// angle xi between Q and orientation reflex
-	t_real xi = a3_offs - a3 - *psi;
-
-	t_vec rotaxis_lab = B * orient_up_rlu;
-	t_mat rotmat = rotation<t_mat, t_vec>(rotaxis_lab, xi, false);
-
-	t_vec orient_lab = B * orient_rlu;
-	t_vec Q_lab = rotmat * orient_lab;
-	Q_lab /= norm<t_vec>(Q_lab);
-	Q_lab *= Q_len_lab;
-
-	t_vec Q_rlu = Binv * Q_lab;
-	return Q_rlu;
-}
-
-
-/**
- * get a1 or a5 angle
- * @returns nullopt of the angle can't be reached
- * @see https://en.wikipedia.org/wiki/Bragg's_law
- *
- * Bragg: n lam = 2d sin(theta)
- * n 2pi / k = 2d sin(theta)
- * n pi / k = d sin(theta)
- * theta = asin(n pi / (k d))
- */
-template<class t_real>
-std::optional<t_real> calc_tas_a1(t_real k, t_real d)
-{
-	t_real sintheta = pi<t_real> / (k*d);
-	if(std::abs(sintheta) > t_real(1))
-		return std::nullopt;
-	return std::asin(sintheta);
-}
-
-
-/**
- * get k from crystal angle
- * @see https://en.wikipedia.org/wiki/Bragg's_law
- *
- * k = n pi / (d sin(theta))
- */
-template<class t_real>
-t_real calc_tas_k(t_real theta, t_real d)
-{
-	t_real sintheta = std::abs(std::sin(theta));
-	return pi<t_real> / (d * sintheta);
-}
-
-
-/**
- * get ki from kf and energy transfer
- */
-template<class t_real>
-t_real calc_tas_ki(t_real kf, t_real E)
-{
-	return std::sqrt(kf*kf + E_to_k2<t_real>*E);
-}
-
-
-/**
- * get kf from ki and energy transfer
- */
-template<class t_real>
-t_real calc_tas_kf(t_real ki, t_real E)
-{
-	return std::sqrt(ki*ki - E_to_k2<t_real>*E);
-}
-
-
-/**
- * get energy transfer from ki and kf
- */
-template<class t_real>
-t_real calc_tas_E(t_real ki, t_real kf)
-{
-	return (ki*ki - kf*kf) / E_to_k2<t_real>;
-}
-
-// ----------------------------------------------------------------------------
-
-
-
-// ----------------------------------------------------------------------------
 // projection operators
 // ----------------------------------------------------------------------------
 
@@ -3890,7 +3653,7 @@ requires is_mat<t_mat> && is_vec<t_vec>
 
 
 // ----------------------------------------------------------------------------
-// Statistical functions
+// statistical functions
 // ----------------------------------------------------------------------------
 
 /**
@@ -6212,80 +5975,53 @@ requires is_mat<t_mat> && is_vec<t_vec>
 }
 
 
-
 /**
- * general structure factor calculation
- * e.g. type T as vector (complex number) for magnetic (nuclear) structure factor
- * Ms_or_bs:
-	- nuclear scattering lengths for nuclear neutron scattering or
-	- atomic form factors for x-ray scattering
-	- magnetisation (* magnetic form factor) for magnetic neutron scattering
- * Rs: atomic positions
- * Q: scattering vector G for nuclear scattering or G+k for magnetic scattering with propagation vector k
- * fs: optional magnetic form factors
- *
- * @see (Shirane 2002), p. 25, equ. 2.26 for nuclear structure factor
- * @see (Shirane 2002), p. 40, equ. 2.81 for magnetic structure factor
- * @see https://doi.org/10.1016/B978-044451050-1/50002-1
+ * conjugate complex vector
  */
-template<class t_vec, class T = t_vec, template<class...> class t_cont = std::vector,
-	class t_cplx = std::complex<double>>
-T structure_factor(const t_cont<T>& Ms_or_bs, const t_cont<t_vec>& Rs, const t_vec& Q, const t_vec* fs=nullptr)
+template<class t_vec>
+t_vec conj(const t_vec& vec)
 requires is_basic_vec<t_vec>
 {
-	using t_real = typename t_cplx::value_type;
-	constexpr t_cplx cI{0,1};
-	constexpr t_real twopi = pi<t_real> * t_real{2};
-	constexpr t_real expsign = -1;
+	const std::size_t N = vec.size();
+	t_vec vecConj = zero<t_vec>(N);
 
-	T F{};
-	if(Rs.size() == 0)
-		return F;
-	if constexpr(is_vec<T>)
-		F = zero<T>(Rs.begin()->size());	// always 3 dims...
-	else if constexpr(is_complex<T>)
-		F = T(0);
-
-	auto iterM_or_b = Ms_or_bs.begin();
-	auto iterR = Rs.begin();
-	typename t_vec::const_iterator iterf;
-	if(fs) iterf = fs->begin();
-
-	while(iterM_or_b != Ms_or_bs.end() && iterR != Rs.end())
+	for(std::size_t iComp=0; iComp<N; ++iComp)
 	{
-		// if form factors are given, use them, otherwise set to 1
-		t_real f = t_real(1);
-		if(fs)
-		{
-			auto fval = *iterf;
-			if constexpr(is_complex<decltype(fval)>)
-				f = fval.real();
-			else
-				f = fval;
-		}
-
-		// structure factor
-		F += (*iterM_or_b) * f * std::exp(expsign * cI * twopi * inner<t_vec>(Q, *iterR));
-
-		// next M or b if available (otherwise keep current)
-		auto iterM_or_b_next = std::next(iterM_or_b, 1);
-		if(iterM_or_b_next != Ms_or_bs.end())
-			iterM_or_b = iterM_or_b_next;
-
-		if(fs)
-		{
-			// next form factor if available (otherwise keep current)
-			auto iterf_next = std::next(iterf, 1);
-			if(iterf_next != fs->end())
-				iterf = iterf_next;
-		}
-
-		// next atomic position
-		std::advance(iterR, 1);
+		if constexpr(is_complex<typename t_vec::value_type>)
+			vecConj[iComp] = std::conj(vec[iComp]);
+		else	// simply copy non-complex vector
+			vecConj[iComp] = vec[iComp];
 	}
 
-	return F;
+	return vecConj;
 }
+
+
+/**
+ * hermitian conjugate complex matrix
+ */
+template<class t_mat>
+t_mat herm(const t_mat& mat)
+requires is_basic_mat<t_mat>
+{
+	t_mat mat2;
+	if constexpr(is_dyn_mat<t_mat>)
+		mat2 = t_mat(mat.size2(), mat.size1());
+
+	for(std::size_t i=0; i<mat.size1(); ++i)
+	{
+		for(std::size_t j=0; j<mat.size2(); ++j)
+		{
+			if constexpr(is_complex<typename t_mat::value_type>)
+				mat2(j,i) = std::conj(mat(i,j));
+			else	// simply transpose non-complex matrix
+				mat2(j,i) = mat(i,j);
+		}
+	}
+
+	return mat2;
+}
+
 // ----------------------------------------------------------------------------
 
 
@@ -6372,186 +6108,6 @@ requires is_vec<t_vec> && is_mat<t_mat>
 }
 // ----------------------------------------------------------------------------
 
-
-
-
-// ----------------------------------------------------------------------------
-// polarisation
-// ----------------------------------------------------------------------------
-
-/**
- * conjugate complex vector
- */
-template<class t_vec>
-t_vec conj(const t_vec& vec)
-requires is_basic_vec<t_vec>
-{
-	const std::size_t N = vec.size();
-	t_vec vecConj = zero<t_vec>(N);
-
-	for(std::size_t iComp=0; iComp<N; ++iComp)
-	{
-		if constexpr(is_complex<typename t_vec::value_type>)
-			vecConj[iComp] = std::conj(vec[iComp]);
-		else	// simply copy non-complex vector
-			vecConj[iComp] = vec[iComp];
-	}
-
-	return vecConj;
-}
-
-
-/**
- * hermitian conjugate complex matrix
- */
-template<class t_mat>
-t_mat herm(const t_mat& mat)
-requires is_basic_mat<t_mat>
-{
-	t_mat mat2;
-	if constexpr(is_dyn_mat<t_mat>)
-		mat2 = t_mat(mat.size2(), mat.size1());
-
-	for(std::size_t i=0; i<mat.size1(); ++i)
-	{
-		for(std::size_t j=0; j<mat.size2(); ++j)
-		{
-			if constexpr(is_complex<typename t_mat::value_type>)
-				mat2(j,i) = std::conj(mat(i,j));
-			else	// simply transpose non-complex matrix
-				mat2(j,i) = mat(i,j);
-		}
-	}
-
-	return mat2;
-}
-
-
-/**
- * polarisation density matrix
- *   (based on a proof from a lecture by P. J. Brown, 2006)
- *
- * eigenvector expansion of a state: |psi> = a_i |xi_i>
- * mean value of operator with mixed states:
- * <A> = p_i * <a_i|A|a_i>
- * <A> = tr( A * p_i * |a_i><a_i| )
- * <A> = tr( A * rho )
- * polarisation density matrix: rho = 0.5 * (1 + <P|sigma>)
- *
- * @see https://doi.org/10.1016/B978-044451050-1/50006-9
- * @see (Desktop Bronstein 2008), Ch. 21 (Zusatzkapitel.pdf), pp. 11-12 and p. 24
- */
-template<class t_vec, class t_mat>
-t_mat pol_density_mat(const t_vec& P, typename t_vec::value_type c=0.5)
-requires is_vec<t_vec> && is_mat<t_mat>
-{
-	return (unit<t_mat>(2,2) + proj_su2<t_vec, t_mat>(P, true)) * c;
-}
-
-
-/**
- * Blume-Maleev equation
- * @returns scattering intensity and final polarisation vector
- *
- * @see https://doi.org/10.1016/B978-044451050-1/50006-9 - p. 225-226
- */
-template<class t_vec, typename t_cplx = typename t_vec::value_type>
-std::tuple<t_cplx, t_vec> blume_maleev(const t_vec& P_i, const t_vec& Mperp, const t_cplx& N)
-requires is_vec<t_vec>
-{
-	const t_vec MperpConj = conj(Mperp);
-	const t_cplx NConj = std::conj(N);
-	constexpr t_cplx imag(0, 1);
-
-	// ------------------------------------------------------------------------
-	// intensity
-	// nuclear
-	t_cplx I = NConj*N;
-
-	// nuclear-magnetic
-	I += NConj*inner<t_vec>(P_i, Mperp);
-	I += N*inner<t_vec>(Mperp, P_i);
-
-	// magnetic, non-chiral
-	I += inner<t_vec>(Mperp, Mperp);
-
-	// magnetic, chiral
-	I += imag * inner<t_vec>(P_i, cross<t_vec>({ MperpConj, Mperp }));
-	// ------------------------------------------------------------------------
-
-	// ------------------------------------------------------------------------
-	// polarisation vector
-	// nuclear
-	t_vec P_f = P_i * N*NConj;
-
-	// nuclear-magnetic
-	P_f += NConj * Mperp;
-	P_f += N * MperpConj;
-	P_f += imag * N * cross<t_vec>({ P_i, MperpConj });
-	P_f += -imag * NConj * cross<t_vec>({ P_i, Mperp });
-
-	// magnetic, non-chiral
-	P_f += Mperp * inner<t_vec>(Mperp, P_i);
-	P_f += MperpConj * inner<t_vec>(P_i, Mperp);
-	P_f += -P_i * inner<t_vec>(Mperp, Mperp);
-
-	// magnetic, chiral
-	P_f += imag * cross<t_vec>({ Mperp, MperpConj });
-	// ------------------------------------------------------------------------
-
-	return std::make_tuple(I, P_f/I);
-}
-
-
-/**
- * Blume-Maleev equation
- * calculate equation indirectly with density matrix
- *   (based on a proof from a lecture by P. J. Brown, 2006)
- *
- * V   = N*1 + <Mperp|sigma>
- * I   = tr( <V|V> rho )
- * P_f = tr( <V|sigma|V> rho ) / I
- *
- * @returns scattering intensity and final polarisation vector
- *
- * @see https://doi.org/10.1016/B978-044451050-1/50006-9 - p. 225-226
- */
-template<class t_mat, class t_vec, typename t_cplx = typename t_vec::value_type>
-std::tuple<t_cplx, t_vec> blume_maleev_indir(const t_vec& P_i, const t_vec& Mperp, const t_cplx& N)
-requires is_mat<t_mat> && is_vec<t_vec>
-{
-	// spin-1/2
-	constexpr t_cplx c = 0.5;
-
-	// vector of pauli matrices
-	const auto sigma = su2_matrices<std::vector<t_mat>>(false);
-
-	// density matrix
-	const auto density = pol_density_mat<t_vec, t_mat>(P_i, c);
-
-	// potential
-	const auto V_mag = proj_su2<t_vec, t_mat>(Mperp, true);
-	const auto V_nuc = N * unit<t_mat>(2);
-	const auto V = V_nuc + V_mag;
-	const auto VConj = herm(V);
-
-	// scattering intensity
-	t_cplx I = trace(VConj*V * density);
-
-	// ------------------------------------------------------------------------
-	// scattered polarisation vector
-	const auto m0 = (VConj * sigma[0]) * V * density;
-	const auto m1 = (VConj * sigma[1]) * V * density;
-	const auto m2 = (VConj * sigma[2]) * V * density;
-
-	t_vec P_f = create<t_vec>({ trace(m0), trace(m1), trace(m2) });
-	// ------------------------------------------------------------------------
-
-	return std::make_tuple(I, P_f/I);
-}
-
-
-// ----------------------------------------------------------------------------
 }
 
 

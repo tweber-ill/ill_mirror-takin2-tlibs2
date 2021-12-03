@@ -103,7 +103,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(test_eig, t_real, t_types)
 
 			t_vec_cplx tstvec1 = mat_cplx * evec;
 			t_vec_cplx tstvec2 = eval * evec;
-			bool is_equal = tl2::equals<t_vec_cplx>(tstvec1, tstvec2, eps);
+			bool is_equal = tl2::equals<t_vec_cplx, t_cplx>(tstvec1, tstvec2, eps);
 			std::cout << tstvec1 << " == " << tstvec2 << ": " << std::boolalpha << is_equal << std::endl;
 			BOOST_TEST(is_equal);
 		}
@@ -157,7 +157,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(test_eig, t_real, t_types)
 
 			t_vec_cplx tstvec1 = mat_cplx * evec;
 			t_vec_cplx tstvec2 = eval * evec;
-			bool is_equal = tl2::equals<t_vec_cplx>(tstvec1, tstvec2, eps);
+			bool is_equal = tl2::equals<t_vec_cplx, t_cplx>(tstvec1, tstvec2, eps);
 			std::cout << tstvec1 << " == " << tstvec2 << ": " << std::boolalpha << is_equal << std::endl;
 			BOOST_TEST(is_equal);
 		}
@@ -193,7 +193,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(test_eig, t_real, t_types)
 		{
 			t_vec_cplx tstvec1 = mat*evecs[i];
 			t_vec_cplx tstvec2 = evals[i]*evecs[i];
-			bool is_equal = tl2::equals<t_vec_cplx>(tstvec1, tstvec2, eps);
+			bool is_equal = tl2::equals<t_vec_cplx, t_cplx>(tstvec1, tstvec2, eps);
 			std::cout << tstvec1 << " == " << tstvec2 << ": " << std::boolalpha << is_equal << std::endl;
 			BOOST_TEST(is_equal);
 		}
@@ -236,7 +236,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(test_eig, t_real, t_types)
 		{
 			t_vec_cplx tstvec1 = mat*evecs[i];
 			t_vec_cplx tstvec2 = evals[i]*evecs[i];
-			bool is_equal = tl2::equals<t_vec_cplx>(tstvec1, tstvec2, eps);
+			bool is_equal = tl2::equals<t_vec_cplx, t_cplx>(tstvec1, tstvec2, eps);
 			std::cout << tstvec1 << " == " << tstvec2 << ": " << std::boolalpha << is_equal << std::endl;
 			BOOST_TEST(is_equal);
 		}

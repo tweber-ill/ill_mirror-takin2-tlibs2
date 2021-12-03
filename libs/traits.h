@@ -167,6 +167,8 @@ concept is_mat = requires(const T& a)
 template<class T>
 concept is_complex = requires(const T& a)
 {
+	T(0, 0);		// constructor
+
 	std::conj(a);
 	a.real();		// must have a real() member function
 	a.imag();		// must have an imag() member function
