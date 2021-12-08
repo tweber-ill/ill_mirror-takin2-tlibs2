@@ -35,7 +35,7 @@
 #ifndef __MAG_GL_COMMON_H__
 #define __MAG_GL_COMMON_H__
 
-#if QT_VERSION >= 0x060000
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
 	#include <QtOpenGL/QOpenGLShaderProgram>
 	#include <QtOpenGL/QOpenGLVertexArrayObject>
 	#include <QtOpenGL/QOpenGLBuffer>
@@ -43,9 +43,6 @@
 	#include <QtOpenGL/QOpenGLFramebufferObjectFormat>
 	#include <QtOpenGL/QOpenGLPaintDevice>
 	#include <QtOpenGLWidgets/QOpenGLWidget>
-
-	#include <QtCore/QRecursiveMutex>
-	using t_qt_mutex = QRecursiveMutex;
 #else
 	#include <QtGui/QOpenGLShaderProgram>
 	#include <QtGui/QOpenGLVertexArrayObject>
@@ -54,7 +51,12 @@
 	#include <QtGui/QOpenGLFramebufferObjectFormat>
 	#include <QtGui/QOpenGLPaintDevice>
 	#include <QtWidgets/QOpenGLWidget>
+#endif
 
+#if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
+	#include <QtCore/QRecursiveMutex>
+	using t_qt_mutex = QRecursiveMutex;
+#else
 	#include <QtCore/QMutex>
 	using t_qt_mutex = QMutex;
 #endif
@@ -111,7 +113,7 @@
 
 
 // GL functions include
-#if QT_VERSION >= 0x060000
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
 	#define _GL_INC_IMPL(MAJ, MIN, SUFF) <QtOpenGL/QOpenGLFunctions_ ## MAJ ## _ ## MIN ## SUFF>
 #else
 	#define _GL_INC_IMPL(MAJ, MIN, SUFF) <QtGui/QOpenGLFunctions_ ## MAJ ## _ ## MIN ## SUFF>

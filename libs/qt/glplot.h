@@ -60,7 +60,7 @@ class GlPlot;
 class GlPlotRenderer : public QObject
 { Q_OBJECT
 private:
-#if QT_VERSION >= 0x060000
+#if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
 	t_qt_mutex m_mutexObj;
 #else
 	t_qt_mutex m_mutexObj{QMutex::Recursive};
@@ -256,7 +256,7 @@ protected:
 	virtual void wheelEvent(QWheelEvent *pEvt) override;
 
 private:
-#if QT_VERSION >= 0x060000
+#if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
 	mutable t_qt_mutex m_mutex;
 #else
 	mutable t_qt_mutex m_mutex{QMutex::Recursive};
