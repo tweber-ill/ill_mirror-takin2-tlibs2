@@ -65,6 +65,7 @@ struct tl2_list* tl2_lst_append(struct tl2_list *lst, void *elem)
 void tl2_lst_remove(struct tl2_list *lst, void *elem)
 {
 	struct tl2_list *lst_prev = 0;
+
 	while(lst)
 	{
 		if(lst->elem == elem)
@@ -74,11 +75,19 @@ void tl2_lst_remove(struct tl2_list *lst, void *elem)
 	}
 
 	// remove element
-	if(lst && lst_prev)
+	if(lst)
 	{
-		lst_prev->next = lst->next;
-		free(lst->elem);
-		free(lst);
+		if(lst->elem)
+		{
+			free(lst->elem);
+			lst->elem = 0;
+		}
+
+		if(lst_prev)
+		{
+			free(lst);
+			lst_prev->next = lst->next;
+		}
 	}
 }
 
