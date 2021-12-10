@@ -1,5 +1,5 @@
 #
-# finds the qcp libs
+# finds the qcustomplot libs
 # @author Tobias Weber <tweber@ill.fr>
 # @date 16-sep-2020
 # @license GPLv3
