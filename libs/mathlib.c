@@ -74,19 +74,20 @@ void tl2_lst_remove(struct tl2_list *lst, void *elem)
 		lst = lst->next;
 	}
 
-	// remove element
 	if(lst)
 	{
+		// remove element
 		if(lst->elem)
 		{
 			free(lst->elem);
 			lst->elem = 0;
 		}
 
+		// unlink lst
 		if(lst_prev)
 		{
-			free(lst);
 			lst_prev->next = lst->next;
+			free(lst);
 		}
 	}
 }
