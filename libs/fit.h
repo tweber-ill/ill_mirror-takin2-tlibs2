@@ -30,7 +30,7 @@
 #ifndef __TLIBS2_FITTER_H__
 #define __TLIBS2_FITTER_H__
 
-#if __has_include(<Minuit2/FCNBase.h>)
+#if __has_include(<Minuit2/FCNBase.h>) && __has_include(<Minuit2/MnTraceObject.h>)
 	#include <Minuit2/FCNBase.h>
 	#include <Minuit2/MnFcn.h>
 	#include <Minuit2/FunctionMinimum.h>
