@@ -5898,12 +5898,13 @@ requires is_mat<t_mat>
 	const t_real ca = std::cos(_aa);
 	const t_real cb = std::cos(_bb);
 	const t_real cc = std::cos(_cc);
-	const t_real rr = std::sqrt(1. + 2.*ca*cb*cc - (ca*ca + cb*cb + cc*cc));
+	const t_real rr = std::sqrt(
+		t_real{1} + t_real{2}*ca*cb*cc - (ca*ca + cb*cb + cc*cc));
 
 	return t_real{2}*pi<t_real> * create<t_mat>({
-		t_real{1}/a,            t_real{0},                  t_real{0},
-		-t_real{1}/a * cc/sc,   t_real{1}/b * t_real{1}/sc, t_real{0},
-		(cc*ca - cb)/(a*sc*rr), (cb*cc-ca)/(b*sc*rr),       sc/(c*rr)
+		t_real{1}/a,             t_real{0},                   t_real{0},
+		-t_real{1}/a * cc/sc,    t_real{1}/b * t_real{1}/sc,  t_real{0},
+		(cc*ca - cb)/(a*sc*rr),  (cb*cc - ca)/(b*sc*rr),      sc/(c*rr)
 	});
 }
 
