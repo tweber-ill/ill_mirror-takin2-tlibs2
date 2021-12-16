@@ -39,6 +39,7 @@
 	#include <QtOpenGL/QOpenGLShaderProgram>
 	#include <QtOpenGL/QOpenGLVertexArrayObject>
 	#include <QtOpenGL/QOpenGLBuffer>
+	#include <QtOpenGL/QOpenGLTexture>
 	#include <QtOpenGL/QOpenGLFramebufferObject>
 	#include <QtOpenGL/QOpenGLFramebufferObjectFormat>
 	#include <QtOpenGL/QOpenGLPaintDevice>
@@ -47,6 +48,7 @@
 	#include <QtGui/QOpenGLShaderProgram>
 	#include <QtGui/QOpenGLVertexArrayObject>
 	#include <QtGui/QOpenGLBuffer>
+	#include <QtGui/QOpenGLTexture>
 	#include <QtGui/QOpenGLFramebufferObject>
 	#include <QtGui/QOpenGLFramebufferObjectFormat>
 	#include <QtGui/QOpenGLPaintDevice>
