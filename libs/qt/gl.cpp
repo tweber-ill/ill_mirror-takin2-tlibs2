@@ -59,7 +59,7 @@ namespace tl2 {
 /**
  * create a gl surface format
  */
-extern QSurfaceFormat gl_format(
+QSurfaceFormat gl_format(
 	bool bCore, int iMajorVer, int iMinorVer, int iSamples, QSurfaceFormat surf)
 {
 	surf.setRenderableType(QSurfaceFormat::OpenGL);
