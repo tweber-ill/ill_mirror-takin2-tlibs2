@@ -212,9 +212,12 @@ struct GlPlotObj : public GlRenderObj
 // ----------------------------------------------------------------------------
 // functions
 // GL surface format
-extern void set_gl_format(bool bCore = true, int iMajorVer = 3, int iMinorVer = 3, int iSamples = 8);
-extern QSurfaceFormat gl_format(
-	bool bCore = true, int iMajorVer = 3, int iMinorVer = 3, int iSamples = 8,
+extern void set_gl_format(bool bCore = true,
+	int iMajorVer = 3, int iMinorVer = 3,
+	int iSamples = 8);
+
+extern QSurfaceFormat gl_format(bool bCore = true,
+	int iMajorVer = 3, int iMinorVer = 3, int iSamples = 8,
 	QSurfaceFormat surf = QSurfaceFormat::defaultFormat());
 
 // get gl functions
