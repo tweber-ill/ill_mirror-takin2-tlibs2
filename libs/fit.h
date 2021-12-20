@@ -834,11 +834,17 @@ public:
 // ------------------------------------------------------------------------------------------------
 // peak finder
 // ------------------------------------------------------------------------------------------------
-template<class T> struct __sort_obj { std::vector<T> vec{}; };
+template<class T, std::size_t N> struct __sort_obj
+{
+	T vec[N];
+};
 
-template<class T>
-bool __comp_fkt(const __sort_obj<T>& t0, const __sort_obj<T>& t1)
-{ return t0.vec[0] < t1.vec[0]; }
+
+template<class T, std::size_t N>
+bool __comp_fkt(const __sort_obj<T, N>& t0, const __sort_obj<T, N>& t1)
+{
+	return t0.vec[0] < t1.vec[0];
+}
 
 
 /**
@@ -850,15 +856,16 @@ void __sort_2(Iter begin1, Iter end1, Iter begin2)
 	using T = typename std::iterator_traits<Iter>::value_type;
 
 	const std::size_t N = end1 - begin1;
-	std::unique_ptr<__sort_obj<T>, std::default_delete<__sort_obj<T>[]>> obj{new __sort_obj<T>[N]};
+	std::unique_ptr<__sort_obj<T, 2>[]>obj{new __sort_obj<T, 2>[N]};
 
 	for(std::size_t i=0; i<N; ++i)
 	{
-		obj.get()[i].vec.push_back(*(begin1+i));
-		obj.get()[i].vec.push_back(*(begin2+i));
+		obj.get()[i].vec[0] = *(begin1+i);
+		obj.get()[i].vec[1] = *(begin2+i);
 	}
 
-	std::stable_sort(obj.get(), obj.get()+N, __comp_fkt<T>);
+	std::stable_sort(obj.get(), obj.get()+N, __comp_fkt<T, 2>);
+
 	for(std::size_t i=0; i<N; ++i)
 	{
 		*(begin1+i) = obj.get()[i].vec[0];
@@ -901,11 +908,11 @@ void find_peaks(std::size_t num_pts, const T* _px, const T* _py, unsigned int sp
 	using t_vec = tl2::vec<T, std::vector>;
 
 	// allocate memory
-	std::unique_ptr<T, std::default_delete<T[]>> uptrMem{new T[4*num_spline]};
-	T *px = uptrMem.get() + 0*num_spline;
-	T *py = uptrMem.get() + 1*num_spline;
-	T *spline_x = uptrMem.get() + 2*num_spline;
-	T *spline_y = uptrMem.get() + 3*num_spline;
+	std::unique_ptr<T[]> uptrMem{new T[2*num_pts + 2*num_spline]};
+	T *px = uptrMem.get() + 0*num_pts;
+	T *py = uptrMem.get() + 1*num_pts;
+	T *spline_x = uptrMem.get() + 2*num_pts + 0*num_spline;
+	T *spline_y = uptrMem.get() + 2*num_pts + 1*num_spline;
 
 
 	// sort input values by x
