@@ -4866,12 +4866,48 @@ requires is_vec<t_vec>
 
 	t_cont<t_cont<t_vec>> uvs =
 	{
-		{ create<t_vec>({0,0}), create<t_vec>({1,0}), create<t_vec>({1,1}), create<t_vec>({0,1}) },	// -z face
-		{ create<t_vec>({0,0}), create<t_vec>({1,0}), create<t_vec>({1,1}), create<t_vec>({0,1}) },	// +z face
-		{ create<t_vec>({0,0}), create<t_vec>({1,0}), create<t_vec>({1,1}), create<t_vec>({0,1}) },	// -y face
-		{ create<t_vec>({0,0}), create<t_vec>({1,0}), create<t_vec>({1,1}), create<t_vec>({0,1}) },	// +y face
-		{ create<t_vec>({0,0}), create<t_vec>({1,0}), create<t_vec>({1,1}), create<t_vec>({0,1}) },	// -x face
-		{ create<t_vec>({0,0}), create<t_vec>({1,0}), create<t_vec>({1,1}), create<t_vec>({0,1}) },	// +x face
+		// -z face
+		{
+			create<t_vec>({0,0}),
+			create<t_vec>({1,0}),
+			create<t_vec>({1,1}),
+			create<t_vec>({0,1})
+		},
+		// +z face
+		{
+			create<t_vec>({0,1}),
+			create<t_vec>({1,1}),
+			create<t_vec>({1,0}),
+			create<t_vec>({0,0})
+		},
+		// -y face
+		{
+			create<t_vec>({0,1}),
+			create<t_vec>({1,1}),
+			create<t_vec>({1,0}),
+			create<t_vec>({0,0}),
+		},
+		// +y face
+		{
+			create<t_vec>({1,0}),
+			create<t_vec>({0,0}),
+			create<t_vec>({0,1}),
+			create<t_vec>({1,1})
+		},
+		// -x face
+		{
+			create<t_vec>({1,1}),
+			create<t_vec>({1,0}),
+			create<t_vec>({0,0}),
+			create<t_vec>({0,1})
+		},
+		// +x face
+		{
+			create<t_vec>({0,0}),
+			create<t_vec>({0,1}),
+			create<t_vec>({1,1}),
+			create<t_vec>({1,0})
+		},
 	};
 
 	return std::make_tuple(vertices, faces, normals, uvs);
