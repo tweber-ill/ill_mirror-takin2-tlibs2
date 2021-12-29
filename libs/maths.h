@@ -2371,7 +2371,8 @@ requires is_mat<t_mat> && is_basic_vec<t_vec>
 	if constexpr(is_dyn_vec<t_vec>)
 		vec = t_vec(mat.size2());
 
-	for(std::size_t i=0; i<mat.size2(); ++i)
+	auto size = std::min(mat.size2(), vec.size());
+	for(std::size_t i=0; i<std::size_t(size); ++i)
 		vec[i] = mat(row, i);
 
 	return vec;
