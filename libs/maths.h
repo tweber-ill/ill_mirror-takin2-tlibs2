@@ -5443,9 +5443,11 @@ std::tuple<t_vec, t_vec> hom_line_from_screen_coords(
 	const t_mat* pmatViewport = nullptr, bool bFlipY = false, bool bFlipX = false)
 requires is_vec<t_vec> && is_mat<t_mat>
 {
-	const t_vec lineOrg = hom_from_screen_coords<t_mat, t_vec>(xScreen, yScreen, z1, matModelView_inv, matProj_inv,
+	const t_vec lineOrg = hom_from_screen_coords<t_mat, t_vec>(
+		xScreen, yScreen, z1, matModelView_inv, matProj_inv,
 		matViewport_inv, pmatViewport, bFlipY, bFlipX);
-	const t_vec linePos2 = hom_from_screen_coords<t_mat, t_vec>(xScreen, yScreen, z2, matModelView_inv, matProj_inv,
+	const t_vec linePos2 = hom_from_screen_coords<t_mat, t_vec>(
+		xScreen, yScreen, z2, matModelView_inv, matProj_inv,
 		matViewport_inv, pmatViewport, bFlipY, bFlipX);
 
 	t_vec lineDir = linePos2 - lineOrg;
