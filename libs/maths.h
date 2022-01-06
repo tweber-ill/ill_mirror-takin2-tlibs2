@@ -4599,7 +4599,9 @@ requires is_vec<t_vec>
 		t_vec vert = create<t_vec>({ r*c, r*s, 0 });
 		vertices.emplace_back(std::move(vert));
 
-		t_vec uv = create<t_vec>({ (1.+c)*0.5, (1.+s)*0.5 });
+		t_vec uv = create<t_vec>({
+			(t_real(1)+c) / t_real(2),
+			(t_real(1)+s) / t_real(2) });
 		all_uvs.emplace_back(std::move(uv));
 	}
 
