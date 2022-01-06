@@ -4577,16 +4577,18 @@ requires is_vec<t_vec>
  */
 template<class t_vec, template<class...> class t_cont = std::vector>
 std::tuple<t_cont<t_vec>, t_cont<t_cont<std::size_t>>, t_cont<t_vec>, t_cont<t_cont<t_vec>>>
-create_disk(typename t_vec::value_type r = 1, std::size_t num_points=32)
+create_disk(typename t_vec::value_type r=1, std::size_t num_points=32)
 requires is_vec<t_vec>
 {
 	using t_real = typename t_vec::value_type;
 
-	// vertices
+	// vertices and uvs
 	t_cont<t_vec> vertices;
+	t_cont<t_vec> all_uvs;
 	vertices.reserve(num_points);
+	all_uvs.reserve(num_points);
 
-	// inner vertex
+	// vertices
 	for(std::size_t pt=0; pt<num_points; ++pt)
 	{
 		const t_real phi = t_real(pt)/t_real(num_points) * t_real(2)*pi<t_real>;
@@ -4596,17 +4598,27 @@ requires is_vec<t_vec>
 		// outer vertices
 		t_vec vert = create<t_vec>({ r*c, r*s, 0 });
 		vertices.emplace_back(std::move(vert));
+
+		t_vec uv = create<t_vec>({ (1.+c)*0.5, (1.+s)*0.5 });
+		all_uvs.emplace_back(std::move(uv));
 	}
 
 	// faces, normals & uvs
 	t_cont<t_cont<std::size_t>> faces;
 	t_cont<t_vec> normals;
-	t_cont<t_cont<t_vec>> uvs;	// TODO
+	t_cont<t_cont<t_vec>> uvs;
 
 	t_cont<std::size_t> face(num_points);
 	std::iota(face.begin(), face.end(), 0);
-	faces.push_back(face);
-	normals.push_back(create<t_vec>({0,0,1}));
+	faces.emplace_back(std::move(face));
+
+	normals.emplace_back(create<t_vec>({0,0,1}));
+
+	t_cont<t_vec> uv;
+	uv.reserve(num_points);
+	for(std::size_t vert_idx : faces[0])
+		uv.push_back(all_uvs[vert_idx]);
+	uvs.emplace_back(std::move(uv));
 
 	return std::make_tuple(vertices, faces, normals, uvs);
 }
@@ -4626,9 +4638,10 @@ requires is_vec<t_vec>
 
 	// vertices
 	t_cont<t_vec> vertices;
+	vertices.reserve(num_points + 1);
 
 	// inner vertex
-	vertices.push_back(create<t_vec>({ 0, 0, h }));
+	vertices.emplace_back(create<t_vec>({ 0, 0, h }));
 
 	for(std::size_t pt=0; pt<num_points; ++pt)
 	{
@@ -4646,25 +4659,30 @@ requires is_vec<t_vec>
 	t_cont<t_vec> normals;
 	t_cont<t_cont<t_vec>> uvs;	// TODO
 
+	faces.reserve(num_points);
+	normals.reserve(num_points);
+	uvs.reserve(num_points);
+
 	for(std::size_t face=0; face<num_points; ++face)
 	{
-			std::size_t idx0 = face + 1;	// outer 1
-			std::size_t idx1 = (face == num_points-1 ? 1 : face + 2);	// outer 2
-			std::size_t idx2 = 0;	// inner
+		std::size_t idx0 = face + 1;	// outer 1
+		std::size_t idx1 = (face == num_points-1 ? 1 : face + 2);	// outer 2
+		std::size_t idx2 = 0;	// inner
 
-			faces.push_back({ idx0, idx1, idx2 });
+		faces.push_back({ idx0, idx1, idx2 });
 
+		t_vec n = cross<t_vec>({
+			vertices[idx2]-vertices[idx0],
+			vertices[idx1]-vertices[idx0] });
+		n /= norm<t_vec>(n);
 
-			t_vec n = cross<t_vec>({vertices[idx2]-vertices[idx0], vertices[idx1]-vertices[idx0]});
-			n /= norm<t_vec>(n);
-
-			normals.push_back(n);
+		normals.emplace_back(std::move(n));
 	}
-
 
 	if(bWithCap)
 	{
-		const auto [disk_vertices, disk_faces, disk_normals, disk_uvs] = create_disk<t_vec, t_cont>(r, num_points);
+		const auto [disk_vertices, disk_faces, disk_normals, disk_uvs]
+			= create_disk<t_vec, t_cont>(r, num_points);
 
 		// vertex indices have to be adapted for merging
 		const std::size_t vert_start_idx = vertices.size();
@@ -4707,6 +4725,9 @@ requires is_vec<t_vec>
 	t_cont<t_vec> vertices;
 	t_cont<t_real> vertices_u;
 
+	vertices.reserve(num_points*2);
+	vertices_u.reserve(num_points*2);
+
 	for(std::size_t pt=0; pt<num_points; ++pt)
 	{
 		const t_real u = t_real(pt)/t_real(num_points);
@@ -4728,6 +4749,10 @@ requires is_vec<t_vec>
 	t_cont<t_vec> normals;
 	t_cont<t_cont<t_vec>> uvs;
 
+	faces.reserve(num_points);
+	normals.reserve(num_points);
+	uvs.reserve(num_points);
+
 	for(std::size_t face=0; face<num_points; ++face)
 	{
 		std::size_t idx0 = face*2 + 0;	// top 1
@@ -4735,23 +4760,26 @@ requires is_vec<t_vec>
 		std::size_t idx2 = (face >= num_points-1 ? 1 : face*2 + 3);	// bottom 2
 		std::size_t idx3 = (face >= num_points-1 ? 0 : face*2 + 2);	// top 2
 
-		t_vec n = cross<t_vec>({vertices[idx1]-vertices[idx0], vertices[idx3]-vertices[idx0]});
+		t_vec n = cross<t_vec>({
+			vertices[idx1]-vertices[idx0],
+			vertices[idx3]-vertices[idx0] });
 		n /= norm<t_vec>(n);
 
 		faces.push_back({ idx0, idx1, idx2, idx3 });
 		normals.emplace_back(std::move(n));
 
-
 		t_real u1 = vertices_u[idx0];
 		t_real u2 = (face >= num_points-1 ? 1 : vertices_u[idx3]);
-		uvs.push_back({ create<t_vec>({u1,1}), create<t_vec>({u1,0}),
-			create<t_vec>({u2,0}), create<t_vec>({u2,1}) });
+		uvs.push_back({
+			create<t_vec>({u1, 1}), create<t_vec>({u1, 0}),
+			create<t_vec>({u2, 0}), create<t_vec>({u2, 1})
+		});
 	}
-
 
 	if(cyltype > 0)
 	{
-		const auto [disk_vertices, disk_faces, disk_normals, disk_uvs] = create_disk<t_vec, t_cont>(r, num_points);
+		const auto [disk_vertices, disk_faces, disk_normals, disk_uvs]
+			= create_disk<t_vec, t_cont>(r, num_points);
 
 		// bottom lid
 		// vertex indices have to be adapted for merging
