@@ -4994,7 +4994,10 @@ requires is_vec<t_vec>
 
 
 	t_cont<t_vec> normals;
+	t_cont<t_cont<t_vec>> uvs;
+
 	normals.reserve(faces.size());
+	uvs.reserve(faces.size());
 
 	for(const auto& face : faces)
 	{
@@ -5006,15 +5009,16 @@ requires is_vec<t_vec>
 		const t_vec vec12 = vec2 - vec1;
 		const t_vec vec13 = vec3 - vec1;
 
+		// TODO
+		uvs.emplace_back(t_cont<t_vec>{{
+			create<t_vec>({0, 0}),
+			create<t_vec>({0, 0}),
+			create<t_vec>({0, 0}) }});
+
 		t_vec n = cross<t_vec>({vec12, vec13});
 		n /= norm<t_vec>(n);
 		normals.emplace_back(std::move(n));
 	}
-
-	// TODO
-	t_cont<t_cont<t_vec>> uvs =
-	{
-	};
 
 	return std::make_tuple(vertices, faces, normals, uvs);
 }
@@ -5061,7 +5065,10 @@ requires is_vec<t_vec>
 
 
 	t_cont<t_vec> normals;
+	t_cont<t_cont<t_vec>> uvs;
+
 	normals.reserve(faces.size());
+	uvs.reserve(faces.size());
 
 	for(const auto& face : faces)
 	{
@@ -5073,15 +5080,16 @@ requires is_vec<t_vec>
 		const t_vec vec12 = vec2 - vec1;
 		const t_vec vec13 = vec3 - vec1;
 
+		// TODO
+		uvs.emplace_back(t_cont<t_vec>{{
+			create<t_vec>({0, 0}),
+			create<t_vec>({0, 0}),
+			create<t_vec>({0, 0}) }});
+
 		t_vec n = cross<t_vec>({vec12, vec13});
 		n /= norm<t_vec>(n);
 		normals.emplace_back(std::move(n));
 	}
-
-	// TODO
-	t_cont<t_cont<t_vec>> uvs =
-	{
-	};
 
 	return std::make_tuple(vertices, faces, normals, uvs);
 }
