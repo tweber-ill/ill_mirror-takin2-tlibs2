@@ -1110,7 +1110,9 @@ requires tl2::is_basic_vec<t_vec> && tl2::is_dyn_vec<t_vec>
 	std::getline(istr, str);
 
 	std::vector<std::string> vecstr;
-	boost::split(vecstr, str, [](auto c)->bool { return c==TL2_COLSEP; }, boost::token_compress_on);
+	boost::split(vecstr, str, 
+		[](auto c) -> bool { return c==TL2_COLSEP; }, 
+		boost::token_compress_on);
 
 	for(auto& tok : vecstr)
 	{
@@ -5045,14 +5047,14 @@ requires is_vec<t_vec>
 		create<t_vec>({ -l, l, l }), create<t_vec>({ -l, l, -l }),
 		create<t_vec>({ -l, -l, l }), create<t_vec>({ -l, -l, -l }),
 
-		create<t_vec>({ 0, T{l}/g, g }), create<t_vec>({ 0, T{l}/g, -g }),
-		create<t_vec>({ 0, -T{l}/g, g }), create<t_vec>({ 0, -T{l}/g, -g }),
+		create<t_vec>({ 0, T{l}/g, g*l }), create<t_vec>({ 0, T{l}/g, -g*l }),
+		create<t_vec>({ 0, -T{l}/g, g*l }), create<t_vec>({ 0, -T{l}/g, -g*l }),
 
-		create<t_vec>({ g, 0, T{l}/g }), create<t_vec>({ g, 0, -T{l}/g }),
-		create<t_vec>({ -g, 0, T{l}/g }), create<t_vec>({ -g, 0, -T{l}/g }),
+		create<t_vec>({ g*l, 0, T{l}/g }), create<t_vec>({ g*l, 0, -T{l}/g }),
+		create<t_vec>({ -g*l, 0, T{l}/g }), create<t_vec>({ -g*l, 0, -T{l}/g }),
 
-		create<t_vec>({ T{l}/g, g, 0 }), create<t_vec>({ T{l}/g, -g, 0 }),
-		create<t_vec>({ -T{l}/g, g, 0 }), create<t_vec>({ -T{l}/g, -g, 0 }),
+		create<t_vec>({ T{l}/g, g*l, 0 }), create<t_vec>({ T{l}/g, -g*l, 0 }),
+		create<t_vec>({ -T{l}/g, g*l, 0 }), create<t_vec>({ -T{l}/g, -g*l, 0 }),
 	};
 
 	t_cont<t_cont<std::size_t>> faces =
