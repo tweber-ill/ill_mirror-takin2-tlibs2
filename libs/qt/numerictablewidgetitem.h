@@ -43,7 +43,7 @@ public:
 	/**
 	 * construct a numeric table widget item from a numeric value
 	 */
-	NumericTableWidgetItem(const T& val, std::streamsize prec = 6)
+	explicit NumericTableWidgetItem(const T& val, std::streamsize prec = 6)
 		: QTableWidgetItem(tl2::var_to_str(val, prec).c_str()),
 		  m_val{val}, m_prec{prec}
 	{}
@@ -52,7 +52,7 @@ public:
 	/**
 	 * construct a numeric table widget item from a string value
 	 */
-	NumericTableWidgetItem(const QString& val, std::streamsize prec = 6)
+	explicit NumericTableWidgetItem(const QString& val, std::streamsize prec = 6)
 		: QTableWidgetItem(val),
 		  m_val{tl2::str_to_var_parse<T>(val.toStdString())},
 		  m_prec{prec}
@@ -76,29 +76,19 @@ public:
 	 */
 	virtual QTableWidgetItem* clone() const override
 	{
-		auto item = new(std::nothrow) NumericTableWidgetItem<T>(m_val);
+		auto item = new (std::nothrow) NumericTableWidgetItem<T>(m_val, m_prec);
 		if(item)
-			item->setData(Qt::UserRole, this->data(Qt::UserRole));
+			*static_cast<QTableWidgetItem*>(item) = *this;
+
 		return item;
 	};
-
-
-	/**
-	 * set user data
-	 */
-	virtual void setData(int itemdatarole, const QVariant& var) override
-	{
-		m_val = var.value<T>();
-		std::string str = tl2::var_to_str(m_val, m_prec);
-		QTableWidgetItem::setData(itemdatarole, str.c_str());
-	}
 
 
 	/**
 	 * get the numerical value
 	 */
 	T GetValue() const
-	{ 
+	{
 		return m_val;
 	}
 

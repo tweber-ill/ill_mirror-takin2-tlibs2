@@ -37,7 +37,7 @@
 #ifndef __TLIBS2_CXX20_MATH_ALGOS_H__
 #define __TLIBS2_CXX20_MATH_ALGOS_H__
 
-//#define USE_LAPACK
+//#define USE_LAPACK 1
 #define __TLIBS2_QR_METHOD 0
 
 #include <cstddef>

@@ -988,7 +988,7 @@ void GlPlotRenderer::tick(const std::chrono::milliseconds& ms)
  */
 void GlPlotRenderer::DoPaintGL(qgl_funcs *pGl)
 {
-	if(!pGl)
+	if(!m_bInitialised || !pGl || thread() != QThread::currentThread())
 		return;
 
 	// options
