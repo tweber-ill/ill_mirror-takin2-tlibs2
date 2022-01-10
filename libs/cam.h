@@ -13,6 +13,11 @@
  *   - (Sellers 2014) G. Sellers et al., ISBN: 978-0-321-90294-8 (2014).
  *
  * ----------------------------------------------------------------------------
+ * tlibs
+ * Copyright (C) 2017-2021  Tobias WEBER (Institut Laue-Langevin (ILL),
+ *                          Grenoble, France).
+ * Copyright (C) 2015-2017  Tobias WEBER (Technische Universitaet Muenchen
+ *                          (TUM), Garching, Germany).
  * TAS-Paths (part of the Takin software suite)
  * Copyright (C) 2021       Tobias WEBER (Institut Laue-Langevin (ILL),
  *                          Grenoble, France).
