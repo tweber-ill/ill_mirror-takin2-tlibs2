@@ -3,6 +3,7 @@
  * @author Tobias Weber <tweber@ill.fr>
  * @date feb-2021
  * @note Code forked from my privately developed "misc" and "magtools" project (https://github.com/t-weber/misc and https://github.com/t-weber/magtools).
+ * @note Class moved over to tlibs on 10-jan-2022 from my "TAS-Paths" project (https://code.ill.fr/scientific-software/takin/paths).
  * @license GPLv3, see 'LICENSE' file
  *
  * References:
