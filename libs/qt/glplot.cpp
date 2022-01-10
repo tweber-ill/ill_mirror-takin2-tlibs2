@@ -199,9 +199,9 @@ void GlPlotRenderer::RemoveObject(std::size_t idx)
 {
 	m_objs[idx].m_valid = false;
 
-	m_objs[idx].m_pvertexbuf.reset();
-	m_objs[idx].m_pnormalsbuf.reset();
-	m_objs[idx].m_pcolourbuf.reset();
+	m_objs[idx].m_vertex_buffer.reset();
+	m_objs[idx].m_normals_buffer.reset();
+	m_objs[idx].m_colour_buffer.reset();
 
 	m_objs[idx].m_vertices.clear();
 	m_objs[idx].m_triangles.clear();
@@ -1059,7 +1059,7 @@ void GlPlotRenderer::DoPaintGL(qgl_funcs *pGl)
 
 
 		// main vertex array object
-		linkedObj->m_pvertexarr->bind();
+		linkedObj->m_vertex_array->bind();
 
 		pGl->glEnableVertexAttribArray(m_attrVertex);
 		if(linkedObj->m_type == GlPlotObjType::TRIANGLES)

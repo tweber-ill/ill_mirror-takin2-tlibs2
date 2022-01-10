@@ -84,7 +84,9 @@ QSurfaceFormat gl_format(
  */
 void set_gl_format(bool bCore, int iMajorVer, int iMinorVer, int iSamples)
 {
-	QSurfaceFormat surf = gl_format(bCore, iMajorVer, iMinorVer, iSamples, QSurfaceFormat::defaultFormat());
+	QSurfaceFormat surf = gl_format(bCore,
+		iMajorVer, iMinorVer,
+		iSamples, QSurfaceFormat::defaultFormat());
 	QSurfaceFormat::setDefaultFormat(surf);
 }
 
@@ -123,11 +125,15 @@ bool create_triangle_object(QOpenGLWidget* pGLWidget, GlRenderObj& obj,
 	const std::vector<t_vec3_gl>& verts, const std::vector<t_vec3_gl>& triagverts,
 	const std::vector<t_vec3_gl>& norms, const std::vector<t_vec3_gl>& uvs,
 	const t_vec_gl& colour, bool bUseVertsAsNorm,
-	GLint attrVertex, GLint attrVertexNormal, GLint attrVertexcolour, GLint attrTextureCoords)
+	GLint attrVertex, GLint attrVertexNormal,
+	GLint attrVertexcolour, GLint attrTextureCoords)
 {
 	// TODO: move context to calling thread
+	BOOST_SCOPE_EXIT(pGLWidget)
+	{
+		pGLWidget->doneCurrent();
+	} BOOST_SCOPE_EXIT_END
 	pGLWidget->makeCurrent();
-	BOOST_SCOPE_EXIT(pGLWidget) { pGLWidget->doneCurrent(); } BOOST_SCOPE_EXIT_END
 
 	qgl_funcs* pGl = get_gl_functions(pGLWidget);
 	if(!pGl) return false;
@@ -163,48 +169,67 @@ bool create_triangle_object(QOpenGLWidget* pGLWidget, GlRenderObj& obj,
 	};
 
 	// main vertex array object
-	obj.m_pvertexarr = std::make_shared<QOpenGLVertexArrayObject>();
-	obj.m_pvertexarr->create();
-	obj.m_pvertexarr->bind();
+	obj.m_vertex_array = std::make_shared<QOpenGLVertexArrayObject>();
+	obj.m_vertex_array->create();
+	obj.m_vertex_array->bind();
 
 	// vertices
 	if(attrVertex >= 0)
 	{
-		obj.m_pvertexbuf = std::make_shared<QOpenGLBuffer>(QOpenGLBuffer::VertexBuffer);
+		obj.m_vertex_buffer = std::make_shared<QOpenGLBuffer>(
+			QOpenGLBuffer::VertexBuffer);
 
-		if(!obj.m_pvertexbuf->create())
+		BOOST_SCOPE_EXIT(&obj)
+		{
+			obj.m_vertex_buffer->release();
+		} BOOST_SCOPE_EXIT_END
+
+		if(!obj.m_vertex_buffer->create())
 			std::cerr << "Cannot create vertex buffer." << std::endl;
-		if(!obj.m_pvertexbuf->bind())
+		if(!obj.m_vertex_buffer->bind())
 			std::cerr << "Cannot bind vertex buffer." << std::endl;
-		BOOST_SCOPE_EXIT(&obj) { obj.m_pvertexbuf->release(); } BOOST_SCOPE_EXIT_END
 
 		auto vecVerts = to_float_array(triagverts, 1, 4, false, 1.);
-		obj.m_pvertexbuf->allocate(vecVerts.data(), vecVerts.size()*sizeof(typename decltype(vecVerts)::value_type));
+		obj.m_vertex_buffer->allocate(
+			vecVerts.data(), 
+			vecVerts.size()*sizeof(typename decltype(vecVerts)::value_type));
 		pGl->glVertexAttribPointer(attrVertex, 4, GL_FLOAT, 0, 0, nullptr);
 	}
 
 	// normals
 	if(attrVertexNormal >= 0)
 	{
-		obj.m_pnormalsbuf = std::make_shared<QOpenGLBuffer>(QOpenGLBuffer::VertexBuffer);
+		obj.m_normals_buffer = std::make_shared<QOpenGLBuffer>(
+			QOpenGLBuffer::VertexBuffer);
 
-		obj.m_pnormalsbuf->create();
-		obj.m_pnormalsbuf->bind();
-		BOOST_SCOPE_EXIT(&obj) { obj.m_pnormalsbuf->release(); } BOOST_SCOPE_EXIT_END
+		BOOST_SCOPE_EXIT(&obj)
+		{
+			obj.m_normals_buffer->release();
+		} BOOST_SCOPE_EXIT_END
+
+		obj.m_normals_buffer->create();
+		obj.m_normals_buffer->bind();
 
 		auto vecNorms = bUseVertsAsNorm ? to_float_array(triagverts, 1, 4, true, 0.) : to_float_array(norms, 3, 4, false, 0.);
-		obj.m_pnormalsbuf->allocate(vecNorms.data(), vecNorms.size()*sizeof(typename decltype(vecNorms)::value_type));
+		obj.m_normals_buffer->allocate(
+			vecNorms.data(),
+			vecNorms.size()*sizeof(typename decltype(vecNorms)::value_type));
 		pGl->glVertexAttribPointer(attrVertexNormal, 4, GL_FLOAT, 0, 0, nullptr);
 	}
 
 	// colours
 	if(attrVertexcolour >= 0)
 	{
-		obj.m_pcolourbuf = std::make_shared<QOpenGLBuffer>(QOpenGLBuffer::VertexBuffer);
+		obj.m_colour_buffer = std::make_shared<QOpenGLBuffer>(
+			QOpenGLBuffer::VertexBuffer);
 
-		obj.m_pcolourbuf->create();
-		obj.m_pcolourbuf->bind();
-		BOOST_SCOPE_EXIT(&obj) { obj.m_pcolourbuf->release(); } BOOST_SCOPE_EXIT_END
+		BOOST_SCOPE_EXIT(&obj)
+		{
+			obj.m_colour_buffer->release();
+		} BOOST_SCOPE_EXIT_END
+
+		obj.m_colour_buffer->create();
+		obj.m_colour_buffer->bind();
 
 		std::vector<t_real_gl> vecCols;
 		vecCols.reserve(4*triagverts.size());
@@ -214,21 +239,30 @@ bool create_triangle_object(QOpenGLWidget* pGLWidget, GlRenderObj& obj,
 				vecCols.push_back(obj.m_colour[icol]);
 		}
 
-		obj.m_pcolourbuf->allocate(vecCols.data(), vecCols.size()*sizeof(typename decltype(vecCols)::value_type));
+		obj.m_colour_buffer->allocate(
+			vecCols.data(),
+			vecCols.size()*sizeof(typename decltype(vecCols)::value_type));
 		pGl->glVertexAttribPointer(attrVertexcolour, 4, GL_FLOAT, 0, 0, nullptr);
 	}
 
 	// texture uv coordinates
 	if(attrTextureCoords >= 0)
 	{
-		obj.m_puvbuf = std::make_shared<QOpenGLBuffer>(QOpenGLBuffer::VertexBuffer);
+		obj.m_uv_buffer = std::make_shared<QOpenGLBuffer>(
+			QOpenGLBuffer::VertexBuffer);
 
-		obj.m_puvbuf->create();
-		obj.m_puvbuf->bind();
-		BOOST_SCOPE_EXIT(&obj) { obj.m_puvbuf->release(); } BOOST_SCOPE_EXIT_END
+		BOOST_SCOPE_EXIT(&obj)
+		{
+			obj.m_uv_buffer->release();
+		} BOOST_SCOPE_EXIT_END
+
+		obj.m_uv_buffer->create();
+		obj.m_uv_buffer->bind();
 
 		auto vecUVs = to_float_array(uvs, 1, 2);
-		obj.m_puvbuf->allocate(vecUVs.data(), vecUVs.size()*sizeof(typename decltype(vecUVs)::value_type));
+		obj.m_uv_buffer->allocate(
+			vecUVs.data(),
+			vecUVs.size()*sizeof(typename decltype(vecUVs)::value_type));
 		pGl->glVertexAttribPointer(attrTextureCoords, 2, GL_FLOAT, 0, 0, nullptr);
 	}
 
@@ -250,8 +284,11 @@ bool create_line_object(QOpenGLWidget* pGLWidget, GlRenderObj& obj,
 	GLint attrVertex, GLint attrVertexcolour)
 {
 	// TODO: move context to calling thread
+	BOOST_SCOPE_EXIT(pGLWidget)
+	{
+		pGLWidget->doneCurrent();
+	} BOOST_SCOPE_EXIT_END
 	pGLWidget->makeCurrent();
-	BOOST_SCOPE_EXIT(pGLWidget) { pGLWidget->doneCurrent(); } BOOST_SCOPE_EXIT_END
 
 	qgl_funcs* pGl = get_gl_functions(pGLWidget);
 	if(!pGl) return false;
@@ -278,28 +315,40 @@ bool create_line_object(QOpenGLWidget* pGLWidget, GlRenderObj& obj,
 	};
 
 	// main vertex array object
-	obj.m_pvertexarr = std::make_shared<QOpenGLVertexArrayObject>();
-	obj.m_pvertexarr->create();
-	obj.m_pvertexarr->bind();
+	obj.m_vertex_array = std::make_shared<QOpenGLVertexArrayObject>();
+	obj.m_vertex_array->create();
+	obj.m_vertex_array->bind();
 
 	{	// vertices
-		obj.m_pvertexbuf = std::make_shared<QOpenGLBuffer>(QOpenGLBuffer::VertexBuffer);
+		obj.m_vertex_buffer = std::make_shared<QOpenGLBuffer>(
+			QOpenGLBuffer::VertexBuffer);
 
-		obj.m_pvertexbuf->create();
-		obj.m_pvertexbuf->bind();
-		BOOST_SCOPE_EXIT(&obj) { obj.m_pvertexbuf->release(); } BOOST_SCOPE_EXIT_END
+		BOOST_SCOPE_EXIT(&obj)
+		{
+			obj.m_vertex_buffer->release();
+		} BOOST_SCOPE_EXIT_END
+
+		obj.m_vertex_buffer->create();
+		obj.m_vertex_buffer->bind();
 
 		auto vecVerts = to_float_array(verts, 3);
-		obj.m_pvertexbuf->allocate(vecVerts.data(), vecVerts.size()*sizeof(typename decltype(vecVerts)::value_type));
+		obj.m_vertex_buffer->allocate(
+			vecVerts.data(),
+			vecVerts.size()*sizeof(typename decltype(vecVerts)::value_type));
 		pGl->glVertexAttribPointer(attrVertex, 3, GL_FLOAT, 0, 0, nullptr);
 	}
 
 	{	// colours
-		obj.m_pcolourbuf = std::make_shared<QOpenGLBuffer>(QOpenGLBuffer::VertexBuffer);
+		obj.m_colour_buffer = std::make_shared<QOpenGLBuffer>(
+			QOpenGLBuffer::VertexBuffer);
 
-		obj.m_pcolourbuf->create();
-		obj.m_pcolourbuf->bind();
-		BOOST_SCOPE_EXIT(&obj) { obj.m_pcolourbuf->release(); } BOOST_SCOPE_EXIT_END
+		BOOST_SCOPE_EXIT(&obj)
+		{
+			obj.m_colour_buffer->release();
+		} BOOST_SCOPE_EXIT_END
+
+		obj.m_colour_buffer->create();
+		obj.m_colour_buffer->bind();
 
 		std::vector<t_real_gl> vecCols;
 		vecCols.reserve(4*verts.size());
@@ -309,7 +358,9 @@ bool create_line_object(QOpenGLWidget* pGLWidget, GlRenderObj& obj,
 				vecCols.push_back(obj.m_colour[icol]);
 		}
 
-		obj.m_pcolourbuf->allocate(vecCols.data(), vecCols.size()*sizeof(typename decltype(vecCols)::value_type));
+		obj.m_colour_buffer->allocate(
+			vecCols.data(),
+			vecCols.size()*sizeof(typename decltype(vecCols)::value_type));
 		pGl->glVertexAttribPointer(attrVertexcolour, 4, GL_FLOAT, 0, 0, nullptr);
 	}
 
@@ -323,16 +374,26 @@ bool create_line_object(QOpenGLWidget* pGLWidget, GlRenderObj& obj,
 
 void delete_render_object(GlRenderObj& obj)
 {
-	if(obj.m_pvertexbuf)
-		obj.m_pvertexbuf->destroy();
+	if(obj.m_vertex_buffer)
+	{
+		obj.m_vertex_buffer->destroy();
+		obj.m_vertex_buffer.reset();
+	}
 
-	obj.m_pvertexbuf.reset();
-	obj.m_pnormalsbuf.reset();
-	obj.m_pcolourbuf.reset();
-	obj.m_puvbuf.reset();
+	if(obj.m_normals_buffer)
+		obj.m_normals_buffer.reset();
 
-	if(obj.m_pvertexarr)
-		obj.m_pvertexarr->destroy();
+	if(obj.m_colour_buffer)
+		obj.m_colour_buffer.reset();
+
+	if(obj.m_uv_buffer)
+		obj.m_uv_buffer.reset();
+
+	if(obj.m_vertex_array)
+	{
+		obj.m_vertex_array->destroy();
+		obj.m_vertex_array.reset();
+	}
 }
 // ----------------------------------------------------------------------------
 

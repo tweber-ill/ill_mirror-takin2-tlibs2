@@ -174,11 +174,11 @@ struct GlRenderObj
 {
 	GlPlotObjType m_type = GlPlotObjType::TRIANGLES;
 
-	std::shared_ptr<QOpenGLVertexArrayObject> m_pvertexarr{};
-	std::shared_ptr<QOpenGLBuffer> m_pvertexbuf{};
-	std::shared_ptr<QOpenGLBuffer> m_pnormalsbuf{};
-	std::shared_ptr<QOpenGLBuffer> m_puvbuf{};
-	std::shared_ptr<QOpenGLBuffer> m_pcolourbuf{};
+	std::shared_ptr<QOpenGLVertexArrayObject> m_vertex_array{};
+	std::shared_ptr<QOpenGLBuffer> m_vertex_buffer{};
+	std::shared_ptr<QOpenGLBuffer> m_normals_buffer{};
+	std::shared_ptr<QOpenGLBuffer> m_uv_buffer{};
+	std::shared_ptr<QOpenGLBuffer> m_colour_buffer{};
 
 	std::vector<t_vec3_gl> m_vertices{}, m_triangles{}, m_uvs{};
 

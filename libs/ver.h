@@ -1,7 +1,7 @@
 /**
  * tlibs2
  * @author Tobias Weber <tobias.weber@tum.de>
- * @date 2012-2021
+ * @date 2012-2022
  * @license GPLv3, see 'LICENSE' file
  *
  * ----------------------------------------------------------------------------
