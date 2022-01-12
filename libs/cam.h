@@ -52,6 +52,8 @@
 #include "maths.h"
 
 
+namespace tl2{
+
 template<class t_mat, class t_vec, class t_vec3, class t_real>
 requires tl2::is_mat<t_mat> && tl2::is_vec<t_vec> && tl2::is_vec<t_vec3>
 class Camera
@@ -59,6 +61,10 @@ class Camera
 public:
 	Camera() = default;
 	~Camera() = default;
+
+	Camera(const Camera<t_mat, t_vec, t_vec3, t_real>&) = default;
+	Camera<t_mat, t_vec, t_vec3, t_real>& operator=(
+		const Camera<t_mat, t_vec, t_vec3, t_real>&) = default;
 
 
 	/**
@@ -68,7 +74,7 @@ public:
 	{
 		m_matTrans(0,3) = -objmat(0,3);
 		m_matTrans(1,3) = -objmat(1,3);
-		//m_matTrans(2,3) = -objmat(2,3);
+		m_matTrans(2,3) = -objmat(2,3);
 
 		m_trafo_needs_update = true;
 	}
@@ -109,6 +115,25 @@ public:
 	t_real GetZoom() const
 	{
 		return m_zoom;
+	}
+
+
+	/**
+	 * set the camera's distance from the translation centre
+	 */
+	void SetDist(t_real dist)
+	{
+		m_dist = dist;
+		m_trafo_needs_update = true;
+	}
+
+
+	/**
+	 * get the camera's distance from the translation centre
+	 */
+	t_real GetDist() const
+	{
+		return m_dist;
 	}
 
 
@@ -263,8 +288,6 @@ public:
 	 */
 	const t_mat& GetTransformation() const
 	{
-		//if(m_trafo_needs_update)
-		//	UpdateTransformation();
 		return m_mat;
 	}
 
@@ -274,8 +297,6 @@ public:
 	 */
 	const t_mat& GetInverseTransformation() const
 	{
-		//if(m_trafo_needs_update)
-		//	UpdateTransformation();
 		return m_mat_inv;
 	}
 
@@ -285,8 +306,6 @@ public:
 	 */
 	const t_mat& GetPerspective() const
 	{
-		//if(m_persp_needs_update)
-		//	UpdatePerspective();
 		return m_matPerspective;
 	}
 
@@ -296,8 +315,6 @@ public:
 	 */
 	const t_mat& GetInversePerspective() const
 	{
-		//if(m_persp_needs_update)
-		//	UpdatePerspective();
 		return m_matPerspective_inv;
 	}
 
@@ -307,8 +324,6 @@ public:
 	 */
 	const t_mat& GetViewport() const
 	{
-		//if(m_viewport_needs_update)
-		//	UpdateViewport();
 		return m_matViewport;
 	}
 
@@ -318,8 +333,6 @@ public:
 	 */
 	const t_mat& GetInverseViewport() const
 	{
-		//if(m_viewport_needs_update)
-		//	UpdateViewport();
 		return m_matViewport_inv;
 	}
 
@@ -454,9 +467,6 @@ public:
 	 */
 	std::unordered_set<int> GetFrustumSides(const t_vec& vec) const
 	{
-		//t_vec vec = tl2::create<t_vec>(
-		//	{_vec[0], _vec[1], _vec[2], t_real(1.)});
-
 		// projected vector
 		t_vec vec_trafo = m_matPerspective * m_mat * vec;
 		vec_trafo /= vec_trafo[3];
@@ -580,13 +590,6 @@ public:
 	 */
 	void UpdateTransformation()
 	{
-		t_mat matCamTrans = m_matTrans;
-		matCamTrans(2,3) = 0.;
-		t_mat matCamTrans_inv = matCamTrans;
-		matCamTrans_inv(0,3) = -matCamTrans(0,3);
-		matCamTrans_inv(1,3) = -matCamTrans(1,3);
-		matCamTrans_inv(2,3) = -matCamTrans(2,3);
-
 		const t_vec3 vecCamDir[2] =
 		{
 			tl2::create<t_vec3>({1., 0., 0.}),
@@ -598,10 +601,8 @@ public:
 		m_matRot *= tl2::hom_rotation<t_mat, t_vec3>(
 			vecCamDir[1], m_phi, 0);
 
-		m_mat = tl2::unit<t_mat>();
-		m_mat *= m_matTrans;
-		m_mat(2,3) /= m_zoom;
-		m_mat *= matCamTrans_inv * m_matRot * matCamTrans;
+		t_mat matDist = hom_translation<t_mat, t_real>(0., 0., -m_dist / m_zoom);
+		m_mat = matDist * m_matRot * m_matTrans;
 		std::tie(m_mat_inv, std::ignore) = tl2::inv<t_mat>(m_mat);
 
 		m_trafo_needs_update = false;
@@ -655,8 +656,7 @@ private:
 
 	// rotation and translation matrices
 	t_mat m_matRot = tl2::unit<t_mat>();
-	t_mat m_matTrans = tl2::create<t_mat>
-		({ 1,0,0,0, 0,1,0,0, 0,0,1,-15, 0,0,0,1 });
+	t_mat m_matTrans = tl2::unit<t_mat>();
 
 	// field of view
 	t_real m_FOV = tl2::pi<t_real>*t_real(0.5);
@@ -669,8 +669,11 @@ private:
 	t_real m_phi = 0, m_theta = 0;
 	t_real m_phi_saved = 0, m_theta_saved = 0;
 
-	// camera zoom
+	// camera zoom (giving the fraction of m_dist towards the translation centre)
 	t_real m_zoom = 1.;
+
+	// distance from camera centre
+	t_real m_dist = 15.;
 
 	// perspective matrix and its inverse
 	t_mat m_matPerspective = tl2::unit<t_mat>();
@@ -701,5 +704,7 @@ private:
 	// does the perspective matrix need an update?
 	bool m_viewport_needs_update = true;
 };
+
+}
 
 #endif
