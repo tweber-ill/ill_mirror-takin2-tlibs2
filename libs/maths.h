@@ -3193,6 +3193,24 @@ requires is_basic_mat<t_mat> && is_dyn_mat<t_mat>
 
 
 /**
+ * add submatrix at given starting indices
+ */
+template<class t_mat>
+void add_submat(t_mat& mat, const t_mat& submat,
+	decltype(mat.size1()) row_start, decltype(mat.size2()) col_start)
+requires is_basic_mat<t_mat> && is_dyn_mat<t_mat>
+{
+	using size_t = decltype(mat.size1());
+
+	for(size_t row=0; row<submat.size1(); ++row)
+	{
+		for(size_t col=0; col<submat.size2(); ++col)
+			mat(row+row_start, col+col_start) += submat(row, col);
+	}
+}
+
+
+/**
  * determinant from a square matrix stored in a vector container
  * @see (Merziger 2006), p. 185
  */
