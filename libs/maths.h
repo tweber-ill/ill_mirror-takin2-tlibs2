@@ -2430,6 +2430,24 @@ requires is_basic_vec<t_vec>
 
 
 /**
+ * inner product <vec1|vec2> (without conjugation of complex vector)
+ */
+template<class t_vec>
+typename t_vec::value_type inner_noconj(const t_vec& vec1, const t_vec& vec2)
+requires is_basic_vec<t_vec>
+{
+	typename t_vec::value_type val{0};
+	auto size = vec1.size();
+	using local_size_t = std::decay_t<decltype(size)>;
+
+	for(local_size_t i=0; i<size; ++i)
+		val += vec1[i] * vec2[i];
+
+	return val;
+}
+
+
+/**
  * inner product between two vectors of different type
  */
 template<class t_vec1, class t_vec2>
