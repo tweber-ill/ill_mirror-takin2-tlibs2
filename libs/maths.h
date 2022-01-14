@@ -1110,8 +1110,8 @@ requires tl2::is_basic_vec<t_vec> && tl2::is_dyn_vec<t_vec>
 	std::getline(istr, str);
 
 	std::vector<std::string> vecstr;
-	boost::split(vecstr, str, 
-		[](auto c) -> bool { return c==TL2_COLSEP; }, 
+	boost::split(vecstr, str,
+		[](auto c) -> bool { return c==TL2_COLSEP; },
 		boost::token_compress_on);
 
 	for(auto& tok : vecstr)
@@ -1373,6 +1373,7 @@ requires tl2::is_basic_mat<t_mat> && tl2::is_dyn_mat<t_mat>
 
 	return vecRet;
 }
+
 // ----------------------------------------------------------------------------
 }
 
@@ -2573,6 +2574,28 @@ requires is_basic_vec<t_vec> && is_mat<t_mat>
 }
 
 
+/**
+ * outer product (without conjugation of complex vector)
+ */
+template<class t_mat, class t_vec>
+t_mat outer_noconj(const t_vec& vec1, const t_vec& vec2)
+requires is_basic_vec<t_vec> && is_mat<t_mat>
+{
+	const std::size_t N1 = vec1.size();
+	const std::size_t N2 = vec2.size();
+
+	t_mat mat;
+	if constexpr(is_dyn_mat<t_mat>)
+		mat = t_mat(N1, N2);
+
+	for(std::size_t n1=0; n1<N1; ++n1)
+		for(std::size_t n2=0; n2<N2; ++n2)
+			mat(n1, n2) = vec1[n1]*vec2[n2];
+
+	return mat;
+}
+
+
 
 // ----------------------------------------------------------------------------
 // operations with metric
@@ -3126,6 +3149,46 @@ requires is_basic_mat<t_mat> && is_dyn_mat<t_mat>
 	}
 
 	return matRet;
+}
+
+
+/**
+ * submatrix of a given size starting at given indices
+ */
+template<class t_mat>
+t_mat submat(const t_mat& mat,
+	decltype(mat.size1()) row_start, decltype(mat.size2()) col_start,
+	decltype(mat.size1()) num_rows, decltype(mat.size2()) num_cols)
+requires is_basic_mat<t_mat> && is_dyn_mat<t_mat>
+{
+	using size_t = decltype(mat.size1());
+	t_mat matRet = create<t_mat>(num_rows, num_cols);
+
+	for(size_t row=0; row<num_rows; ++row)
+	{
+		for(size_t col=0; col<num_cols; ++col)
+			matRet(row, col) = mat(row+row_start, col+col_start);
+	}
+
+	return matRet;
+}
+
+
+/**
+ * set submatrix at given starting indices
+ */
+template<class t_mat>
+void set_submat(t_mat& mat, const t_mat& submat,
+	decltype(mat.size1()) row_start, decltype(mat.size2()) col_start)
+requires is_basic_mat<t_mat> && is_dyn_mat<t_mat>
+{
+	using size_t = decltype(mat.size1());
+
+	for(size_t row=0; row<submat.size1(); ++row)
+	{
+		for(size_t col=0; col<submat.size2(); ++col)
+			mat(row+row_start, col+col_start) = submat(row, col);
+	}
 }
 
 
@@ -6076,6 +6139,32 @@ requires is_basic_vec<t_vec>
 	}
 
 	return vecConj;
+}
+
+
+/**
+ * conjugate complex matrix
+ */
+template<class t_mat>
+t_mat conj(const t_mat& mat)
+requires is_basic_mat<t_mat>
+{
+	t_mat mat2;
+	if constexpr(is_dyn_mat<t_mat>)
+		mat2 = t_mat(mat.size2(), mat.size1());
+
+	for(std::size_t i=0; i<mat.size1(); ++i)
+	{
+		for(std::size_t j=0; j<mat.size2(); ++j)
+		{
+			if constexpr(is_complex<typename t_mat::value_type>)
+				mat2(i,j) = std::conj(mat(i,j));
+			else	// simply transpose non-complex matrix
+				mat2(i,j) = mat(i,j);
+		}
+	}
+
+	return mat2;
 }
 
 
