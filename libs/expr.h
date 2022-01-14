@@ -673,7 +673,7 @@ protected:
 		// integer functions
 		else if constexpr(std::is_integral_v<t_num>)
 		{
-			register_func2("pow", 
+			register_func2("pow",
 				[](t_num t1, t_num t2) -> t_num
 				{ return t_num(std::pow(t1, t2)); } );
 		}
@@ -762,7 +762,7 @@ protected:
 
 		if constexpr(std::is_floating_point_v<t_num>)
 		{	// real
-			std::regex regex{"[0-9]+(\\.[0-9]*)?|\\.[0-9]+([eE][-+]?[0-9]+)?"};
+			std::regex regex{"[0-9]+(\\.)?[0-9]*(E|e|E\\+|E-|e\\+|e-)?[0-9]*"};
 			std::smatch smatch;
 			if(std::regex_match(str, smatch, regex))
 			{

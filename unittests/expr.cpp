@@ -66,6 +66,11 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(test_expr_real, t_real, t_types_real)
 	result = parser.eval();
 	BOOST_TEST(ok);
 	BOOST_TEST(tl2::equals<t_real>(result, -0.6228, 1e-3));
+
+	ok = parser.parse("-1.23e+1 + 5e-4");
+	result = parser.eval();
+	BOOST_TEST(ok);
+	BOOST_TEST(tl2::equals<t_real>(result, -12.2995, 1e-3));
 }
 
 
