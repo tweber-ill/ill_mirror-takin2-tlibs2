@@ -4229,7 +4229,8 @@ requires is_vec<t_vec> && is_mat<t_mat>
 	t_real lenaxis = norm<t_vec>(axis);
 
 	// rotation angle
-	const t_real angle = std::atan2(lenaxis, inner<t_vec>(vec1, vec2));
+	const t_real angle = std::atan2(
+		lenaxis, inner<t_vec>(vec1, vec2));
 
 	// collinear vectors?
 	if(equals<t_real>(angle, 0, eps))
