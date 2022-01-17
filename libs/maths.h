@@ -2002,9 +2002,9 @@ requires is_mat<t_mat>
 /**
  * tests for symmetric or hermitian matrix
  */
-template<class t_mat>
+template<class t_mat, class t_real = typename t_mat::value_type>
 bool is_symm_or_herm(const t_mat& mat,
-	typename t_mat::value_type eps = std::numeric_limits<typename t_mat::value_type>::epsilon())
+	t_real eps = std::numeric_limits<t_real>::epsilon())
 requires is_mat<t_mat>
 {
 	using t_elem = typename t_mat::value_type;
