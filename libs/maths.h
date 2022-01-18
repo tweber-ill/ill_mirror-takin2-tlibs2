@@ -2063,10 +2063,25 @@ requires is_mat<t_mat>
  */
 template<typename t_real>
 void set_eps_0(t_real& d, t_real eps = std::numeric_limits<t_real>::epsilon())
-requires is_scalar<t_real>
+requires is_scalar<t_real> && (!is_complex<t_real>)
 {
 	if(std::abs(d) < eps)
 		d = t_real(0);
+};
+
+
+/**
+ * set values lower than epsilon to zero
+ * complex version
+ */
+template<typename t_cplx, class t_real = typename t_cplx::value_type>
+void set_eps_0(t_cplx& c, t_real eps = std::numeric_limits<t_real>::epsilon())
+requires is_complex<t_cplx> && is_scalar<t_real>
+{
+	if(std::abs(c.real()) < eps)
+		c.real(t_real(0));
+	if(std::abs(c.imag()) < eps)
+		c.imag(t_real(0));
 };
 
 
