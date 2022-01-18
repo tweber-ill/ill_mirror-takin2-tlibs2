@@ -166,6 +166,7 @@ requires is_mat<t_mat>;
 	template<typename T=double> constexpr T pi{M_PI};
 #endif
 
+template<bool value, class=void> constexpr bool bool_value = value;
 
 template<typename INT=int> bool is_even(INT i) { return (i%2 == 0); }
 template<typename INT=int> bool is_odd(INT i) { return !is_even<INT>(i); }
@@ -6371,16 +6372,42 @@ requires tl2::is_mat<t_mat>
 	if constexpr(tl2::is_complex<t_scalar>)
 	{
 		if constexpr(std::is_same_v<t_real, float>)
-			err = LAPACKE_cgetrf(LAPACK_ROW_MAJOR, rows, cols, outmat.data(), cols, outpivots.data());
+		{
+			err = LAPACKE_cgetrf(LAPACK_ROW_MAJOR,
+				rows, cols, outmat.data(), cols,
+				outpivots.data());
+		}
 		else if constexpr(std::is_same_v<t_real, double>)
-			err = LAPACKE_zgetrf(LAPACK_ROW_MAJOR, rows, cols, outmat.data(), cols, outpivots.data());
+		{
+			err = LAPACKE_zgetrf(LAPACK_ROW_MAJOR,
+				rows, cols, outmat.data(), cols,
+				outpivots.data());
+		}
+		else
+		{
+			static_assert(tl2::bool_value<0, t_real>, "Invalid element type");
+			//throw std::domain_error("Invalid element type.");
+		}
 	}
 	else
 	{
 		if constexpr(std::is_same_v<t_real, float>)
-			err = LAPACKE_sgetrf(LAPACK_ROW_MAJOR, rows, cols, outmat.data(), cols, outpivots.data());
+		{
+			err = LAPACKE_sgetrf(LAPACK_ROW_MAJOR,
+				rows, cols, outmat.data(), cols,
+				outpivots.data());
+		}
 		else if constexpr(std::is_same_v<t_real, double>)
-			err = LAPACKE_dgetrf(LAPACK_ROW_MAJOR, rows, cols, outmat.data(), cols, outpivots.data());
+		{
+			err = LAPACKE_dgetrf(LAPACK_ROW_MAJOR,
+				rows, cols, outmat.data(), cols,
+				outpivots.data());
+		}
+		else
+		{
+			static_assert(tl2::bool_value<0, t_real>, "Invalid element type");
+			//throw std::domain_error("Invalid element type.");
+		}
 	}
 
 	return std::make_tuple(err == 0, outmat, outpivots);
@@ -6391,6 +6418,7 @@ requires tl2::is_mat<t_mat>
  * LU decomposition of a matrix, mat = P * L * U
  * @returns [ok, P, L, U]
  * @see http://www.math.utah.edu/software/lapack/lapack-d/dgetrf.html
+ * @see http://www.math.utah.edu/software/lapack/lapack-z/zgetrf.html
  */
 template<class t_mat, template<class...> class t_vec = std::vector>
 std::tuple<bool, t_mat, t_mat, t_mat> lu(const t_mat& mat)
@@ -6461,16 +6489,42 @@ requires tl2::is_mat<t_mat>
 	if constexpr(tl2::is_complex<t_scalar>)
 	{
 		if constexpr(std::is_same_v<t_real, float>)
-			err = LAPACKE_cgetri(LAPACK_ROW_MAJOR, rows, lumat.data(), rows, pivots.data());
+		{
+			err = LAPACKE_cgetri(LAPACK_ROW_MAJOR,
+				rows, lumat.data(), rows,
+				pivots.data());
+		}
 		else if constexpr(std::is_same_v<t_real, double>)
-			err = LAPACKE_zgetri(LAPACK_ROW_MAJOR, rows, lumat.data(), rows, pivots.data());
+		{
+			err = LAPACKE_zgetri(LAPACK_ROW_MAJOR,
+				rows, lumat.data(), rows,
+				pivots.data());
+		}
+		else
+		{
+			static_assert(tl2::bool_value<0, t_real>, "Invalid element type");
+			//throw std::domain_error("Invalid element type.");
+		}
 	}
 	else
 	{
 		if constexpr(std::is_same_v<t_real, float>)
-			err = LAPACKE_sgetri(LAPACK_ROW_MAJOR, rows, lumat.data(), rows, pivots.data());
+		{
+			err = LAPACKE_sgetri(LAPACK_ROW_MAJOR,
+				rows, lumat.data(), rows,
+				pivots.data());
+		}
 		else if constexpr(std::is_same_v<t_real, double>)
-			err = LAPACKE_dgetri(LAPACK_ROW_MAJOR, rows, lumat.data(), rows, pivots.data());
+		{
+			err = LAPACKE_dgetri(LAPACK_ROW_MAJOR,
+				rows, lumat.data(), rows,
+				pivots.data());
+		}
+		else
+		{
+			static_assert(tl2::bool_value<0, t_real>, "Invalid element type");
+			//throw std::domain_error("Invalid element type.");
+		}
 	}
 
 
@@ -6486,6 +6540,7 @@ requires tl2::is_mat<t_mat>
  * QR decomposition of a matrix, mat = QR
  * @returns [ok, Q, R]
  * @see http://www.math.utah.edu/software/lapack/lapack-d/dgeqrf.html
+ * @see http://www.math.utah.edu/software/lapack/lapack-z/zgeqrf.html
  */
 template<class t_mat, class t_vec = std::vector<typename t_mat::value_type>>
 std::tuple<bool, t_mat, t_mat> qr(const t_mat& mat)
@@ -6513,16 +6568,42 @@ requires tl2::is_mat<t_mat>
 	if constexpr(tl2::is_complex<t_scalar>)
 	{
 		if constexpr(std::is_same_v<t_real, float>)
-			err = LAPACKE_cgeqrf(LAPACK_ROW_MAJOR, rows, cols, outmat.data(), cols, outvec.data());
+		{
+			err = LAPACKE_cgeqrf(LAPACK_ROW_MAJOR,
+				rows, cols, outmat.data(), cols,
+				outvec.data());
+		}
 		else if constexpr(std::is_same_v<t_real, double>)
-			err = LAPACKE_zgeqrf(LAPACK_ROW_MAJOR, rows, cols, outmat.data(), cols, outvec.data());
+		{
+			err = LAPACKE_zgeqrf(LAPACK_ROW_MAJOR,
+				rows, cols, outmat.data(), cols,
+				outvec.data());
+		}
+		else
+		{
+			static_assert(tl2::bool_value<0, t_real>, "Invalid element type");
+			//throw std::domain_error("Invalid element type.");
+		}
 	}
 	else
 	{
 		if constexpr(std::is_same_v<t_real, float>)
-			err = LAPACKE_sgeqrf(LAPACK_ROW_MAJOR, rows, cols, outmat.data(), cols, outvec.data());
+		{
+			err = LAPACKE_sgeqrf(LAPACK_ROW_MAJOR,
+				rows, cols, outmat.data(), cols,
+				outvec.data());
+		}
 		else if constexpr(std::is_same_v<t_real, double>)
-			err = LAPACKE_dgeqrf(LAPACK_ROW_MAJOR, rows, cols, outmat.data(), cols, outvec.data());
+		{
+			err = LAPACKE_dgeqrf(LAPACK_ROW_MAJOR,
+				rows, cols, outmat.data(), cols,
+				outvec.data());
+		}
+		else
+		{
+			static_assert(tl2::bool_value<0, t_real>, "Invalid element type");
+			//throw std::domain_error("Invalid element type.");
+		}
 	}
 
 	for(std::size_t i=0; i<rows; ++i)
@@ -6549,17 +6630,94 @@ requires tl2::is_mat<t_mat>
 
 
 /**
+ * cholesky decomposition of a matrix, mat = C^H C
+ * @returns [ok, C]
+ * @see http://www.math.utah.edu/software/lapack/lapack-d/dpotrf.html
+ * @see http://www.math.utah.edu/software/lapack/lapack-z/zpotrf.html
+ * @see http://www.netlib.org/utk/papers/factor/node9.html
+ */
+template<class t_mat, class t_vec = std::vector<typename t_mat::value_type>>
+std::tuple<bool, t_mat> chol(const t_mat& mat)
+requires tl2::is_mat<t_mat>
+{
+	using namespace tl2_ops;
+	using t_scalar = typename t_mat::value_type;
+	using t_real = tl2::underlying_value_type<t_scalar>;
+
+	if constexpr(tl2::is_dyn_mat<t_mat>)
+		assert((mat.size1() == mat.size2()));
+	else
+		static_assert(t_mat::size1() == t_mat::size2());
+
+	const std::size_t N = mat.size1();
+	t_vec outmat(N*N);
+
+	for(std::size_t i=0; i<N; ++i)
+		for(std::size_t j=0; j<N; ++j)
+			outmat[i*N + j] = (j >= i ? mat(i, j) : 0.);
+
+	int err = -1;
+	if constexpr(tl2::is_complex<t_scalar>)
+	{
+		if constexpr(std::is_same_v<t_real, float>)
+		{
+			err = LAPACKE_cpotrf(LAPACK_ROW_MAJOR,
+				'U', N, outmat.data(), N);
+		}
+		else if constexpr(std::is_same_v<t_real, double>)
+		{
+			err = LAPACKE_zpotrf(LAPACK_ROW_MAJOR,
+				'U', N, outmat.data(), N);
+		}
+		else
+		{
+			static_assert(tl2::bool_value<0, t_real>, "Invalid element type");
+			//throw std::domain_error("Invalid element type.");
+		}
+	}
+	else
+	{
+		if constexpr(std::is_same_v<t_real, float>)
+		{
+			err = LAPACKE_spotrf(LAPACK_ROW_MAJOR,
+				'U', N, outmat.data(), N);
+		}
+		else if constexpr(std::is_same_v<t_real, double>)
+		{
+			err = LAPACKE_dpotrf(LAPACK_ROW_MAJOR,
+				'U', N, outmat.data(), N);
+		}
+		else
+		{
+			static_assert(tl2::bool_value<0, t_real>, "Invalid element type");
+			//throw std::domain_error("Invalid element type.");
+		}
+	}
+
+	t_mat C = tl2::create<t_mat>(N, N);
+
+	for(std::size_t i=0; i<N; ++i)
+		for(std::size_t j=0; j<N; ++j)
+			C(i, j) = outmat[i*N + j];
+
+	//std::cerr << "error value: " << err << std::endl;
+	return std::make_tuple(err == 0, C);
+}
+
+
+/**
  * eigenvectors and -values of a complex matrix
  * @returns [ok, evals, evecs]
  */
 template<class t_mat_cplx, class t_vec_cplx, class t_cplx = typename t_mat_cplx::value_type,
     class t_real = typename t_cplx::value_type>
 std::tuple<bool, std::vector<t_cplx>, std::vector<t_vec_cplx>>
-eigenvec(const t_mat_cplx& mat, bool only_evals=false, bool is_hermitian=false, bool normalise=false,
+eigenvec(const t_mat_cplx& mat,
+	bool only_evals=false, bool is_hermitian=false, bool normalise=false,
 	t_real mineval=-1, t_real maxeval=-2, t_real eps=-1)
 	requires tl2::is_mat<t_mat_cplx> && tl2::is_vec<t_vec_cplx> && tl2::is_complex<t_cplx>
 {
-    bool only_selected_evals = (mineval <= maxeval);
+	bool only_selected_evals = (mineval <= maxeval);
 	bool use_selective_func = only_selected_evals;
 	//use_selective_func = true;
 
@@ -6601,11 +6759,24 @@ eigenvec(const t_mat_cplx& mat, bool only_evals=false, bool is_hermitian=false, 
 		if(!use_selective_func)
 		{
 			if constexpr(std::is_same_v<t_real, float>)
-				err = LAPACKE_cheev(LAPACK_COL_MAJOR, only_evals ? 'N' : 'V', 'L', N, inmat.data(), N, outevals_real.data());
+			{
+				err = LAPACKE_cheev(LAPACK_COL_MAJOR,
+					only_evals ? 'N' : 'V',
+					'L', N, inmat.data(), N,
+					outevals_real.data());
+			}
 			else if constexpr(std::is_same_v<t_real, double>)
-				err = LAPACKE_zheev(LAPACK_COL_MAJOR, only_evals ? 'N' : 'V', 'L', N, inmat.data(), N, outevals_real.data());
+			{
+				err = LAPACKE_zheev(LAPACK_COL_MAJOR,
+					only_evals ? 'N' : 'V',
+					'L', N, inmat.data(), N,
+					outevals_real.data());
+			}
 			else
-				throw std::domain_error("Invalid real type.");
+			{
+				static_assert(tl2::bool_value<0, t_real>, "Invalid element type");
+				//throw std::domain_error("Invalid element type.");
+			}
 		}
 
 		// only selected eigenvalues
@@ -6621,23 +6792,47 @@ eigenvec(const t_mat_cplx& mat, bool only_evals=false, bool is_hermitian=false, 
 			if(eps < t_real{0})
 			{
 				if constexpr(std::is_same_v<t_real, float>)
+				{
 					eps = LAPACKE_slamch('S');
+				}
 				else if constexpr(std::is_same_v<t_real, double>)
+				{
 					eps = LAPACKE_dlamch('S');
+				}
 				else
-					throw std::domain_error("Invalid real type.");
+				{
+					static_assert(tl2::bool_value<0, t_real>, "Invalid element type");
+					//throw std::domain_error("Invalid element type.");
+				}
 			}
 
 			if constexpr(std::is_same_v<t_real, float>)
-				err = LAPACKE_cheevr(LAPACK_COL_MAJOR, (only_evals ? 'N' : 'V'), (only_selected_evals?'V':'A'), 'L',
-					N, inmat.data(), N, mineval, maxeval, minidx, maxidx,
-					eps, &iNumFound, outevals_real.data(), outevecs.data(), N, uptrIdxArr.get());
+			{
+				err = LAPACKE_cheevr(LAPACK_COL_MAJOR,
+					only_evals ? 'N' : 'V',
+					only_selected_evals ? 'V' : 'A',
+					'L', N, inmat.data(), N,
+					mineval, maxeval, minidx, maxidx,
+					eps, &iNumFound,
+					outevals_real.data(), outevecs.data(),
+					N, uptrIdxArr.get());
+			}
 			else if constexpr(std::is_same_v<t_real, double>)
-				err = LAPACKE_zheevr(LAPACK_COL_MAJOR, (only_evals ? 'N' : 'V'), (only_selected_evals?'V':'A'), 'L',
-					N, inmat.data(), N, mineval, maxeval, minidx, maxidx,
-					eps, &iNumFound, outevals_real.data(), outevecs.data(), N, uptrIdxArr.get());
+			{
+				err = LAPACKE_zheevr(LAPACK_COL_MAJOR,
+					only_evals ? 'N' : 'V',
+					only_selected_evals ? 'V' : 'A',
+					'L', N, inmat.data(), N,
+					mineval, maxeval, minidx, maxidx,
+					eps, &iNumFound,
+					outevals_real.data(), outevecs.data(),
+					N, uptrIdxArr.get());
+			}
 			else
-				throw std::domain_error("Invalid real type.");
+			{
+				static_assert(tl2::bool_value<0, t_real>, "Invalid element type");
+				//throw std::domain_error("Invalid element type.");
+			}
 
 			// resize to actual number of eigenvalues and -vectors
 			if(std::size_t(iNumFound) != N)
@@ -6655,19 +6850,22 @@ eigenvec(const t_mat_cplx& mat, bool only_evals=false, bool is_hermitian=false, 
 	{
 		if constexpr(std::is_same_v<t_real, float>)
 		{
-			err = LAPACKE_cgeev(LAPACK_COL_MAJOR, 'N', only_evals ? 'N' : 'V', N,
+			err = LAPACKE_cgeev(LAPACK_COL_MAJOR,
+				'N', only_evals ? 'N' : 'V', N,
 				inmat.data(), N, evals.data(), nullptr, N,
 				only_evals ? nullptr : outevecs.data(), N);
 		}
 		else if constexpr(std::is_same_v<t_real, double>)
 		{
-			err = LAPACKE_zgeev(LAPACK_COL_MAJOR, 'N', only_evals ? 'N' : 'V', N,
+			err = LAPACKE_zgeev(LAPACK_COL_MAJOR,
+				'N', only_evals ? 'N' : 'V', N,
 				inmat.data(), N, evals.data(), nullptr, N,
 				only_evals ? nullptr : outevecs.data(), N);
 		}
 		else
 		{
-			throw std::domain_error("Invalid real type.");
+			static_assert(tl2::bool_value<0, t_real>, "Invalid element type");
+			//throw std::domain_error("Invalid real type.");
 		}
 	}
 
@@ -6686,7 +6884,7 @@ eigenvec(const t_mat_cplx& mat, bool only_evals=false, bool is_hermitian=false, 
 				if(!tl2::equals<t_cplx>(n, t_cplx{0,0}))
 					evecs[i] /= n;
 			}
-        }
+		}
 	}
 
 	return std::make_tuple(err == 0, evals, evecs);
@@ -6746,11 +6944,24 @@ eigenvec(const t_mat& mat, bool only_evals=false, bool is_symmetric=false, bool 
 		{
 			// evals of symmetric matrix are purely real
 			if constexpr(std::is_same_v<t_real, float>)
-				err = LAPACKE_ssyev(LAPACK_COL_MAJOR, (only_evals ? 'N' : 'V'), 'L', N, inmat.data(), N, evals_re.data());
+			{
+				err = LAPACKE_ssyev(LAPACK_COL_MAJOR,
+					(only_evals ? 'N' : 'V'),
+					'L', N, inmat.data(), N, 
+					evals_re.data());
+			}
 			else if constexpr(std::is_same_v<t_real, double>)
-				err = LAPACKE_dsyev(LAPACK_COL_MAJOR, (only_evals ? 'N' : 'V'), 'L', N, inmat.data(), N, evals_re.data());
+			{
+				err = LAPACKE_dsyev(LAPACK_COL_MAJOR,
+					(only_evals ? 'N' : 'V'),
+					'L', N, inmat.data(), N,
+					evals_re.data());
+			}
 			else
-				throw std::domain_error("Invalid real type.");
+			{
+				static_assert(tl2::bool_value<0, t_real>, "Invalid element type");
+				//throw std::domain_error("Invalid element type.");
+			}
 		}
 
 		// only selected eigenvalues
@@ -6766,23 +6977,45 @@ eigenvec(const t_mat& mat, bool only_evals=false, bool is_symmetric=false, bool 
 			if(eps < t_real{0})
 			{
 				if constexpr(std::is_same_v<t_real, float>)
+				{
 					eps = LAPACKE_slamch('S');
+				}
 				else if constexpr(std::is_same_v<t_real, double>)
+				{
 					eps = LAPACKE_dlamch('S');
+				}
 				else
-					throw std::domain_error("Invalid real type.");
+				{
+					static_assert(tl2::bool_value<0, t_real>, "Invalid element type");
+					//throw std::domain_error("Invalid element type.");
+				}
 			}
 
 			if constexpr(std::is_same_v<t_real, float>)
-				err = LAPACKE_ssyevr(LAPACK_COL_MAJOR, (only_evals?'N':'V'), (only_selected_evals?'V':'A'), 'L',
-					N, inmat.data(), N, mineval, maxeval, minidx, maxidx,
-					eps, &iNumFound, evals_re.data(), outevecs.data(), N, uptrIdxArr.get());
+			{
+				err = LAPACKE_ssyevr(LAPACK_COL_MAJOR,
+					only_evals ? 'N' : 'V',
+					only_selected_evals ? 'V' : 'A',
+					'L', N, inmat.data(), N,
+					mineval, maxeval, minidx, maxidx,
+					eps, &iNumFound, evals_re.data(),
+					outevecs.data(), N, uptrIdxArr.get());
+			}
 			else if constexpr(std::is_same_v<t_real, double>)
-				err = LAPACKE_dsyevr(LAPACK_COL_MAJOR, (only_evals?'N':'V'), (only_selected_evals?'V':'A'), 'L',
-					N, inmat.data(), N, mineval, maxeval, minidx, maxidx,
-					eps, &iNumFound, evals_re.data(), outevecs.data(), N, uptrIdxArr.get());
+			{
+				err = LAPACKE_dsyevr(LAPACK_COL_MAJOR,
+					only_evals ? 'N' : 'V',
+					only_selected_evals ? 'V' : 'A',
+					'L', N, inmat.data(), N,
+					mineval, maxeval, minidx, maxidx,
+					eps, &iNumFound, evals_re.data(),
+					outevecs.data(), N, uptrIdxArr.get());
+			}
 			else
-				throw std::domain_error("Invalid real type.");
+			{
+				static_assert(tl2::bool_value<0, t_real>, "Invalid element type");
+				//throw std::domain_error("Invalid element type.");
+			}
 
 			// resize to actual number of eigenvalues and -vectors
 			if(std::size_t(iNumFound) != N)
@@ -6798,19 +7031,26 @@ eigenvec(const t_mat& mat, bool only_evals=false, bool is_symmetric=false, bool 
 	{
 		if constexpr(std::is_same_v<t_real, float>)
 		{
-			err = LAPACKE_sgeev(LAPACK_COL_MAJOR, 'N', (only_evals ? 'N' : 'V'), N,
-				inmat.data(), N, evals_re.data(), evals_im.data(), nullptr, N,
+			err = LAPACKE_sgeev(LAPACK_COL_MAJOR,
+				'N', only_evals ? 'N' : 'V', N,
+				inmat.data(), N,
+				evals_re.data(), evals_im.data(),
+				nullptr, N, 
 				only_evals ? nullptr : outevecs.data(), N);
 		}
 		else if constexpr(std::is_same_v<t_real, double>)
 		{
-			err = LAPACKE_dgeev(LAPACK_COL_MAJOR, 'N', (only_evals ? 'N' : 'V'), N,
-				inmat.data(), N, evals_re.data(), evals_im.data(), nullptr, N,
+			err = LAPACKE_dgeev(LAPACK_COL_MAJOR,
+				'N', only_evals ? 'N' : 'V', N,
+				inmat.data(), N,
+				evals_re.data(), evals_im.data(),
+				nullptr, N,
 				only_evals ? nullptr : outevecs.data(), N);
 		}
 		else
 		{
-			throw std::domain_error("Invalid real type.");
+			static_assert(tl2::bool_value<0, t_real>, "Invalid element type");
+			//throw std::domain_error("Invalid element type.");
 		}
 	}
 
@@ -6901,20 +7141,50 @@ requires tl2::is_mat<t_mat>
 	if constexpr(tl2::is_complex<t_scalar>)
 	{
 		if constexpr(std::is_same_v<t_real, float>)
-			err = LAPACKE_cgesvd(LAPACK_ROW_MAJOR, 'A', 'A', rows, cols, inmat.data(), cols,
-				vals.data(), outU.data(), rows, outVh.data(), cols, _tmp.data());
+		{
+			err = LAPACKE_cgesvd(LAPACK_ROW_MAJOR,
+				'A', 'A', rows, cols,
+				inmat.data(), cols,
+				vals.data(), outU.data(),
+				rows, outVh.data(),
+				cols, _tmp.data());
+		}
+		else if constexpr(std::is_same_v<t_real, double>)
+		{
+			err = LAPACKE_zgesvd(LAPACK_ROW_MAJOR,
+				'A', 'A', rows, cols,
+				inmat.data(), cols,
+				vals.data(), outU.data(),
+				rows, outVh.data(),
+				cols, _tmp.data());
+		}
 		else
-			err = LAPACKE_zgesvd(LAPACK_ROW_MAJOR, 'A', 'A', rows, cols, inmat.data(), cols,
-				vals.data(), outU.data(), rows, outVh.data(), cols, _tmp.data());
+		{
+			static_assert(tl2::bool_value<0, t_real>, "Invalid element type");
+			//throw std::domain_error("Invalid element type.");
+		}
 	}
 	else
 	{
 		if constexpr(std::is_same_v<t_real, float>)
-			err = LAPACKE_sgesvd(LAPACK_ROW_MAJOR, 'A', 'A', rows, cols, inmat.data(), cols,
-				vals.data(), outU.data(), rows, outVh.data(), cols, _tmp.data());
+		{
+			err = LAPACKE_sgesvd(LAPACK_ROW_MAJOR,
+				'A', 'A', rows, cols, inmat.data(), cols,
+				vals.data(), outU.data(),
+				rows, outVh.data(), cols, _tmp.data());
+		}
+		else if constexpr(std::is_same_v<t_real, double>)
+		{
+			err = LAPACKE_dgesvd(LAPACK_ROW_MAJOR,
+				'A', 'A', rows, cols, inmat.data(), cols,
+				vals.data(), outU.data(),
+				rows, outVh.data(), cols, _tmp.data());
+		}
 		else
-			err = LAPACKE_dgesvd(LAPACK_ROW_MAJOR, 'A', 'A', rows, cols, inmat.data(), cols,
-				vals.data(), outU.data(), rows, outVh.data(), cols, _tmp.data());
+		{
+			static_assert(tl2::bool_value<t_real>, "Invalid element type");
+			//throw std::domain_error("Invalid element type.");
+		}
 	}
 
 

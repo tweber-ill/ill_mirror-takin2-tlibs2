@@ -4,7 +4,7 @@
  * @date 25-jul-20
  * @license GPLv3, see 'LICENSE' file
  *
- * g++ -std=c++20 -DUSE_LAPACK -I.. -I/usr/include/lapacke -Iext/lapacke/include -Lext/lapacke/lib -o eig eig.cpp -llapacke
+ * g++ -std=c++20 -DUSE_LAPACK -I.. -I/usr/include/lapacke -Iext/lapacke/include -Lext/lapacke/lib -I/usr/local/opt/lapack/include -L/usr/local/opt/lapack/lib -o eig eig.cpp -llapacke
  *
  * ----------------------------------------------------------------------------
  * tlibs
