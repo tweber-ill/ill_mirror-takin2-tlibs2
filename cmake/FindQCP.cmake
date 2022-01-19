@@ -33,7 +33,7 @@ find_path(QCP_INCLUDE_DIRS
 
 
 find_library(QCP_LIBRARIES
-	NAMES qcustomplot
+	NAMES qcustomplot qcustomplot-qt5
 	HINTS /usr/local/lib64 /usr/local/lib /usr/lib/x86_64-linux-gnu /usr/lib64 /usr/lib /opt/local/lib
 	DOC "QCP library"
 )

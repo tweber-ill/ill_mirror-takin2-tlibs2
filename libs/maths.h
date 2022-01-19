@@ -1909,6 +1909,7 @@ requires is_basic_vec<t_vec>
 
 /**
  * row permutation matrix
+ * @see https://en.wikipedia.org/wiki/Permutation_matrix
  */
 template<class t_mat>
 t_mat perm(std::size_t N1, std::size_t N2, std::size_t from, std::size_t to)
@@ -1922,6 +1923,24 @@ requires is_basic_mat<t_mat>
 
 	mat(from, from) = mat(to, to) = 0;
 	mat(from, to) = mat(to, from) = 1;
+
+	return mat;
+}
+
+
+/**
+ * create matrix representation of a permutation
+ * @see https://en.wikipedia.org/wiki/Permutation_matrix
+ */
+template<class t_mat, class t_perm=std::vector<std::size_t>>
+t_mat perm(const t_perm& perm)
+requires is_basic_mat<t_mat>
+{
+	auto N = perm.size();
+	t_mat mat = zero<t_mat>(N, N);
+
+	for(decltype(N) i=0; i<perm.size(); ++i)
+		mat(i, perm[i]) = mat(perm[i], i) = 1;
 
 	return mat;
 }
@@ -6629,8 +6648,9 @@ requires tl2::is_mat<t_mat>
 }
 
 
+
 /**
- * cholesky decomposition of a matrix, mat = C^H C
+ * cholesky decomposition of a hermitian, positive-definite matrix, mat = C^H C
  * @returns [ok, C]
  * @see http://www.math.utah.edu/software/lapack/lapack-d/dpotrf.html
  * @see http://www.math.utah.edu/software/lapack/lapack-z/zpotrf.html
@@ -6650,13 +6670,14 @@ requires tl2::is_mat<t_mat>
 		static_assert(t_mat::size1() == t_mat::size2());
 
 	const std::size_t N = mat.size1();
-	t_vec outmat(N*N);
+	int err = -1;
+
+	std::vector<t_scalar> outmat(N*N);
 
 	for(std::size_t i=0; i<N; ++i)
 		for(std::size_t j=0; j<N; ++j)
 			outmat[i*N + j] = (j >= i ? mat(i, j) : 0.);
 
-	int err = -1;
 	if constexpr(tl2::is_complex<t_scalar>)
 	{
 		if constexpr(std::is_same_v<t_real, float>)
@@ -6702,6 +6723,100 @@ requires tl2::is_mat<t_mat>
 
 	//std::cerr << "error value: " << err << std::endl;
 	return std::make_tuple(err == 0, C);
+}
+
+
+
+/**
+ * cholesky decomposition of a hermitian matrix, mat = C D C^H
+ * @returns [ok, C, D]
+ * @see http://www.math.utah.edu/software/lapack/lapack-z/zhptrf.html
+ * @see http://www.math.utah.edu/software/lapack/lapack-d/dsptrf.html
+ */
+template<class t_mat, class t_vec = std::vector<typename t_mat::value_type>>
+std::tuple<bool, t_mat, t_mat> chol2(const t_mat& mat)
+requires tl2::is_mat<t_mat>
+{
+	using namespace tl2_ops;
+	using t_scalar = typename t_mat::value_type;
+	using t_real = tl2::underlying_value_type<t_scalar>;
+
+	if constexpr(tl2::is_dyn_mat<t_mat>)
+		assert((mat.size1() == mat.size2()));
+	else
+		static_assert(t_mat::size1() == t_mat::size2());
+
+	const std::size_t N = mat.size1();
+	int err = -1;
+
+	std::vector<t_scalar> outmat(N*(N+1)/2);
+	std::vector<int> outvec(N);
+
+	std::size_t lin_idx = 0;
+	for(std::size_t i=0; i<N; ++i)
+		for(std::size_t j=0; j<=i; ++j)
+			outmat[lin_idx++] = mat(i, j);
+
+	if constexpr(tl2::is_complex<t_scalar>)
+	{
+		if constexpr(std::is_same_v<t_real, float>)
+		{
+			err = LAPACKE_chptrf(LAPACK_ROW_MAJOR,
+				'L', N, outmat.data(), outvec.data());
+		}
+		else if constexpr(std::is_same_v<t_real, double>)
+		{
+			err = LAPACKE_zhptrf(LAPACK_ROW_MAJOR,
+				'L', N, outmat.data(), outvec.data());
+		}
+		else
+		{
+			static_assert(tl2::bool_value<0, t_real>, "Invalid element type");
+			//throw std::domain_error("Invalid element type.");
+		}
+	}
+	else
+	{
+		if constexpr(std::is_same_v<t_real, float>)
+		{
+			err = LAPACKE_ssptrf(LAPACK_ROW_MAJOR,
+				'L', N, outmat.data(), outvec.data());
+		}
+		else if constexpr(std::is_same_v<t_real, double>)
+		{
+			err = LAPACKE_dsptrf(LAPACK_ROW_MAJOR,
+				'L', N, outmat.data(), outvec.data());
+		}
+		else
+		{
+			static_assert(tl2::bool_value<0, t_real>, "Invalid element type");
+			//throw std::domain_error("Invalid element type.");
+		}
+	}
+
+	t_mat C = tl2::unit<t_mat>(N, N);
+	t_mat D = tl2::unit<t_mat>(N);
+
+	lin_idx = 0;
+	for(std::size_t i=0; i<N; ++i)
+	{
+		for(std::size_t j=0; j<=i; ++j)
+		{
+			if(i == j)
+				D(i, j) = outmat[lin_idx++];
+			else
+				C(i, j) = outmat[lin_idx++];
+		}
+	}
+
+	// TODO: only correct for unit permutation so far...
+	for(int& i : outvec)
+		i = std::abs(i)-1;
+	t_mat perm = tl2::perm<t_mat>(outvec);
+	C = perm * C;
+
+	//std::cerr << "error value: " << err << std::endl;
+	return std::make_tuple(err == 0, C, D);
 }
 
 
