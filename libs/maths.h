@@ -2113,8 +2113,10 @@ template<typename t_vec, typename t_real = typename t_vec::value_type>
 void set_eps_0(t_vec& vec, t_real eps = std::numeric_limits<t_real>::epsilon())
 requires is_basic_vec<t_vec>
 {
+	using t_elem = typename t_vec::value_type;
+
 	for(t_real& d : vec)
-		set_eps_0<t_real>(d, eps);
+		set_eps_0<t_elem>(d, eps);
 };
 
 
@@ -2126,9 +2128,11 @@ template<typename t_mat, typename t_real = typename t_mat::value_type>
 void set_eps_0(t_mat& mat, t_real eps = std::numeric_limits<t_real>::epsilon())
 requires is_basic_mat<t_mat>
 {
+	using t_elem = typename t_mat::value_type;
+
 	for(std::size_t i=0; i<mat.size1(); ++i)
 		for(std::size_t j=0; j<mat.size2(); ++j)
-			set_eps_0<t_real>(mat(i,j), eps);
+			set_eps_0<t_elem>(mat(i,j), eps);
 };
 // -----------------------------------------------------------------------------
 
