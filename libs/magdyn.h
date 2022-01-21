@@ -223,7 +223,7 @@ namespace tl2_mag
 		 */
 		void CalcSpinRotation()
 		{
-			const std::size_t num_sites = m_sites.size();
+			const t_size num_sites = m_sites.size();
 			if(num_sites == 0)
 				return;
 
@@ -294,7 +294,7 @@ namespace tl2_mag
 		 */
 		t_mat GetHamiltonian(t_real h, t_real k, t_real l) const
 		{
-			const std::size_t num_sites = m_sites.size();
+			const t_size num_sites = m_sites.size();
 			if(num_sites == 0)
 				return {};
 
@@ -350,9 +350,9 @@ namespace tl2_mag
 			bool use_field = !tl2::equals_0<t_real>(m_field.mag, m_eps)
 			&& m_field.dir.size() >= 3;
 
-			for(std::size_t i=0; i<num_sites; ++i)
+			for(t_size i=0; i<num_sites; ++i)
 			{
-				for(std::size_t j=0; j<num_sites; ++j)
+				for(t_size j=0; j<num_sites; ++j)
 				{
 					t_mat J_sub_Q = submat<t_mat>(J_Q, i*3, j*3, 3, 3);
 
@@ -372,7 +372,7 @@ namespace tl2_mag
 
 					if(i == j)
 					{
-						for(std::size_t k=0; k<num_sites; ++k)
+						for(t_size k=0; k<num_sites; ++k)
 						{
 							// TODO: check unit of S_k
 							t_real S_k = m_sites[k].spin_mag;
@@ -415,12 +415,12 @@ namespace tl2_mag
 		 * get the energies and the spin-correlation at the given momentum
 		 * @note implements the formalism given by (Toth 2015)
 		 */
-		std::tuple<std::vector<t_real>, t_mat> GetEnergies(
+		std::vector<std::tuple<t_real, t_mat>> GetEnergies(
 			t_mat _H, t_real h, t_real k, t_real l,
 			bool only_energies = false) const
 		{
-			const std::size_t N = _H.size1();
-			const std::size_t num_sites = m_sites.size();
+			const t_size N = _H.size1();
+			const t_size num_sites = m_sites.size();
 
 			// constants: imaginary unit and 2pi
 			constexpr const t_cplx imag{0., 1.};
@@ -428,14 +428,14 @@ namespace tl2_mag
 
 			// equation (30) from (Toth 2015)
 			t_mat g = tl2::zero<t_mat>(N, N);
-			for(std::size_t i=0; i<N/2; ++i)
+			for(t_size i=0; i<N/2; ++i)
 				g(i, i) = 1.;
-			for(std::size_t i=N/2; i<N; ++i)
+			for(t_size i=N/2; i<N; ++i)
 				g(i, i) = -1.;
 
 			// equation (31) from (Toth 2015)
 			t_mat C;
-			for(std::size_t retry=0; retry<m_retries_chol; ++retry)
+			for(t_size retry=0; retry<m_retries_chol; ++retry)
 			{
 				auto [chol_ok, _C] = tl2_la::chol<t_mat>(_H);
 
@@ -447,7 +447,7 @@ namespace tl2_mag
 				else
 				{
 					// try forcing the hamilton to be positive definite
-					for(std::size_t i=0; i<N; ++i)
+					for(t_size i=0; i<N; ++i)
 						_H(i, i) += m_eps_chol;
 				}
 
@@ -486,29 +486,27 @@ namespace tl2_mag
 			}
 
 
-			std::vector<t_real> energies;
-			energies.reserve(evals.size());
+			std::vector<std::tuple<t_real, t_mat>> energies_and_correlations{};
+			energies_and_correlations.reserve(evals.size());
 
 			// if we're not interested in the spectral weights, we can ignore duplicates
 			bool remove_duplicates = only_energies;
 			for(const auto& eval : evals)
 			{
 				if(remove_duplicates &&
-					std::find_if(energies.begin(), energies.end(), [&eval, this](t_real val) -> bool
+					std::find_if(energies_and_correlations.begin(), energies_and_correlations.end(),
+						[&eval, this](const auto& E_and_S) -> bool
 					{
-						return tl2::equals<t_real>(val, eval.real(), m_eps);
-					}) != energies.end())
+						t_real E = std::get<0>(E_and_S);
+						return tl2::equals<t_real>(E, eval.real(), m_eps);
+					}) != energies_and_correlations.end())
 				{
 					continue;
 				}
 
-				//if(std::abs(eval.imag()) <= m_eps)
-					energies.push_back(eval.real());
+				energies_and_correlations.push_back(std::make_tuple(eval.real(), t_mat{}));
 			}
 
-
-			// spectral weights
-			t_mat S = tl2::zero<t_mat>(3, 3);
 
 			if(!only_energies)
 			{
@@ -516,16 +514,17 @@ namespace tl2_mag
 				const t_vec Q = tl2::create<t_vec>({h, k, l});
 
 				// get the sorting of the energies
-				std::vector<std::size_t> sorting(energies.size());
+				std::vector<t_size> sorting(energies_and_correlations.size());
 				std::iota(sorting.begin(), sorting.end(), 0);
 
 				std::stable_sort(sorting.begin(), sorting.end(),
-					[&energies](std::size_t idx1, std::size_t idx2) -> bool
+					[&energies_and_correlations](t_size idx1, t_size idx2) -> bool
 					{
-						return energies[idx1] >= energies[idx2];
+						return std::get<0>(energies_and_correlations[idx1]) >=
+							std::get<0>(energies_and_correlations[idx2]);
 					});
 
-				energies = tl2::reorder(energies, sorting);
+				energies_and_correlations = tl2::reorder(energies_and_correlations, sorting);
 				evecs = tl2::reorder(evecs, sorting);
 				evals = tl2::reorder(evals, sorting);
 
@@ -537,12 +536,13 @@ namespace tl2_mag
 				t_mat E = g*L;
 
 				// re-create energies, to be consistent with the weights
-				energies.clear();
-				for(std::size_t i=0; i<L.size1(); ++i)
-					energies.push_back(L(i,i).real());
+				energies_and_correlations.clear();
+				for(t_size i=0; i<L.size1(); ++i)
+					energies_and_correlations.emplace_back(
+						std::make_tuple(L(i,i).real(), tl2::zero<t_mat>(3, 3)));
 
 				t_mat E_sqrt = E;
-				for(std::size_t i=0; i<E.size1(); ++i)
+				for(t_size i=0; i<E.size1(); ++i)
 					E_sqrt(i, i) = std::sqrt(std::abs(E_sqrt(i, i)));
 
 				auto [C_inv, inv_ok] = tl2::inv(C);
@@ -565,7 +565,7 @@ namespace tl2_mag
 				std::cout << "D: " << D << std::endl;*/
 
 
-				// building the spin correlation function of equation (47) from (Toth 2015)
+				// building the spin correlation functions of equation (47) from (Toth 2015)
 				for(int x_idx=0; x_idx<3; ++x_idx)
 				{
 					for(int y_idx=0; y_idx<3; ++y_idx)
@@ -576,9 +576,9 @@ namespace tl2_mag
 						t_mat Y = tl2::create<t_mat>(num_sites, num_sites);
 						t_mat Z = tl2::create<t_mat>(num_sites, num_sites);
 
-						for(std::size_t i=0; i<num_sites; ++i)
+						for(t_size i=0; i<num_sites; ++i)
 						{
-							for(std::size_t j=0; j<num_sites; ++j)
+							for(t_size j=0; j<num_sites; ++j)
 							{
 								const t_vec& pos_i = m_sites[i].pos;
 								const t_vec& pos_j = m_sites[j].pos;
@@ -611,9 +611,11 @@ namespace tl2_mag
 
 						t_mat M_trafo = trafo_herm * M * trafo;
 
-						for(std::size_t i=0; i<M_trafo.size1(); ++i)
-							S(x_idx, y_idx) += M_trafo(i, i);
-						S(x_idx, y_idx) /= t_real(M_trafo.size1());
+						for(t_size i=0; i<M_trafo.size1(); ++i)
+						{
+							t_mat& S = std::get<1>(energies_and_correlations[i]);
+							S(x_idx, y_idx) += M_trafo(i, i) / t_real(M_trafo.size1());
+						}
 
 						/*using namespace tl2_ops;
 						tl2::set_eps_0<t_mat, t_real>(V, m_eps);
@@ -630,7 +632,7 @@ namespace tl2_mag
 				}
 			}
 
-			return std::make_tuple(energies, S);
+			return energies_and_correlations;
 		}
 
 
@@ -638,7 +640,7 @@ namespace tl2_mag
 		 * get the energies and the spin-correlation at the given momentum
 		 * @note implements the formalism given by (Toth 2015)
 		 */
-		std::tuple<std::vector<t_real>, t_mat> GetEnergies(
+		std::vector<std::tuple<t_real, t_mat>> GetEnergies(
 			t_real h, t_real k, t_real l,
 			bool only_energies = false) const
 		{
@@ -653,9 +655,16 @@ namespace tl2_mag
 		 */
 		t_real GetGoldstoneEnergy() const
 		{
-			auto [Es, S] = GetEnergies(0., 0., 0., true);
-			if(auto min_iter = std::min_element(Es.begin(), Es.end()); min_iter != Es.end())
-				return *min_iter;
+			auto energies_and_correlations = GetEnergies(0., 0., 0., true);
+			auto min_iter = std::min_element(
+				energies_and_correlations.begin(), energies_and_correlations.end(),
+				[](const auto& E_and_S_1, const auto& E_and_S_2) -> bool
+			{
+				return std::get<0>(E_and_S_1) < std::get<0>(E_and_S_2);
+			});
+
+			if(min_iter != energies_and_correlations.end())
+				return std::get<0>(*min_iter);
 
 			return 0.;
 		}
@@ -685,15 +694,17 @@ namespace tl2_mag
 				t_real l = std::lerp(l_start, l_end, t_real(i)/t_real(num_qs-1));
 
 
-				auto [Es, S] = GetEnergies(h, k, l, true);
-				for(const auto& E : Es)
+				auto energies_and_correlations = GetEnergies(h, k, l, true);
+				for(const auto& E_and_S : energies_and_correlations)
 				{
+					t_real E = std::get<0>(E_and_S);
+
 					ofstr
-					<< std::setw(m_prec*2) << std::left << h
-					<< std::setw(m_prec*2) << std::left << k
-					<< std::setw(m_prec*2) << std::left << l
-					<< std::setw(m_prec*2) << E
-					<< std::endl;
+						<< std::setw(m_prec*2) << std::left << h
+						<< std::setw(m_prec*2) << std::left << k
+						<< std::setw(m_prec*2) << std::left << l
+						<< std::setw(m_prec*2) << E
+						<< std::endl;
 				}
 			}
 		}
@@ -857,7 +868,7 @@ namespace tl2_mag
 		// orthogonal projector for magnetic neutron scattering
 		t_mat m_proj_neutron = tl2::unit<t_mat>(3);
 
-		std::size_t m_retries_chol = 10;
+		t_size m_retries_chol = 10;
 		t_real m_eps_chol = 0.05;
 
 		t_real m_eps = 1e-6;
