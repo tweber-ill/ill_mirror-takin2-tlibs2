@@ -130,6 +130,11 @@ namespace tl2_mag
 	class MagDyn
 	{
 	public:
+		// [E, S, S_perp]
+		using t_E_and_S = std::tuple<t_real, t_mat, t_mat>;
+
+
+	public:
 		MagDyn() = default;
 		~MagDyn() = default;
 
@@ -180,6 +185,7 @@ namespace tl2_mag
 		const std::vector<AtomSite>& GetAtomSites() const { return m_sites; }
 		const std::vector<ExchangeTerm>& GetExchangeTerms() const { return m_exchange_terms; }
 		const ExternalField& GetExternalField() const { return m_field; }
+		const t_vec& GetBraggPeak() const { return m_bragg; }
 
 		void SetExternalField(const ExternalField& field) { m_field = field; }
 
@@ -248,6 +254,7 @@ namespace tl2_mag
 			if(m_bragg.size() == 3)
 			{
 				// calculate orthogonal projector for magnetic neutron scattering
+				// see (Shirane 2002), p. 37, eq. (2.64)
 				t_vec bragg_rot = use_field ? m_rot_field * m_bragg : m_bragg;
 
 				m_proj_neutron = tl2::ortho_projector<t_mat, t_vec>(
@@ -415,7 +422,7 @@ namespace tl2_mag
 		 * get the energies and the spin-correlation at the given momentum
 		 * @note implements the formalism given by (Toth 2015)
 		 */
-		std::vector<std::tuple<t_real, t_mat>> GetEnergies(
+		std::vector<t_E_and_S> GetEnergies(
 			t_mat _H, t_real h, t_real k, t_real l,
 			bool only_energies = false) const
 		{
@@ -486,7 +493,7 @@ namespace tl2_mag
 			}
 
 
-			std::vector<std::tuple<t_real, t_mat>> energies_and_correlations{};
+			std::vector<t_E_and_S> energies_and_correlations{};
 			energies_and_correlations.reserve(evals.size());
 
 			// if we're not interested in the spectral weights, we can ignore duplicates
@@ -504,7 +511,8 @@ namespace tl2_mag
 					continue;
 				}
 
-				energies_and_correlations.push_back(std::make_tuple(eval.real(), t_mat{}));
+				energies_and_correlations.push_back(
+					std::make_tuple(eval.real(), t_mat{}, t_mat{}));
 			}
 
 
@@ -539,7 +547,10 @@ namespace tl2_mag
 				energies_and_correlations.clear();
 				for(t_size i=0; i<L.size1(); ++i)
 					energies_and_correlations.emplace_back(
-						std::make_tuple(L(i,i).real(), tl2::zero<t_mat>(3, 3)));
+						std::make_tuple(
+							L(i,i).real(),
+							tl2::zero<t_mat>(3, 3),
+							tl2::zero<t_mat>(3, 3)));
 
 				t_mat E_sqrt = E;
 				for(t_size i=0; i<E.size1(); ++i)
@@ -630,6 +641,14 @@ namespace tl2_mag
 						std::cout << "Z=" << Z << std::endl;*/
 					}
 				}
+
+
+				// apply the orthogonal projector for magnetic neutron scattering
+				for(auto& E_and_S : energies_and_correlations)
+				{
+					const t_mat& S = std::get<1> (E_and_S);
+					std::get<2>(E_and_S) = m_proj_neutron * S;
+				}
 			}
 
 			return energies_and_correlations;
@@ -640,7 +659,7 @@ namespace tl2_mag
 		 * get the energies and the spin-correlation at the given momentum
 		 * @note implements the formalism given by (Toth 2015)
 		 */
-		std::vector<std::tuple<t_real, t_mat>> GetEnergies(
+		std::vector<t_E_and_S> GetEnergies(
 			t_real h, t_real k, t_real l,
 			bool only_energies = false) const
 		{
@@ -799,6 +818,17 @@ namespace tl2_mag
 					m_field.align_spins = *optVal;
 			}
 
+			// bragg peak
+			if(auto bragg = node.get_child_optional("bragg"); bragg)
+			{
+				m_bragg = tl2::create<t_vec>(
+				{
+					bragg->get<t_real>("h", 1.),
+					bragg->get<t_real>("k", 0.),
+					bragg->get<t_real>("l", 0.),
+				});
+			}
+
 			CalcSpinRotation();
 			return true;
 		}
@@ -815,6 +845,14 @@ namespace tl2_mag
 			node.put<t_real>("field.direction_l", m_field.dir[2].real());
 			node.put<t_real>("field.magnitude", m_field.mag);
 			node.put<bool>("field.align_spins", m_field.align_spins);
+
+			// bragg peak
+			if(m_bragg.size() == 3)
+			{
+				node.put<t_real>("bragg.h", m_bragg[0].real());
+				node.put<t_real>("bragg.k", m_bragg[1].real());
+				node.put<t_real>("bragg.l", m_bragg[2].real());
+			}
 
 			// atom sites
 			for(const auto& site : GetAtomSites())
@@ -864,8 +902,11 @@ namespace tl2_mag
 		// matrix to rotate field into the [001] direction
 		t_mat m_rot_field = tl2::unit<t_mat>(3);
 
+		// bragg peak needed for calculating projector
 		t_vec m_bragg{};
+
 		// orthogonal projector for magnetic neutron scattering
+		// see (Shirane 2002), p. 37, eq. (2.64)
 		t_mat m_proj_neutron = tl2::unit<t_mat>(3);
 
 		t_size m_retries_chol = 10;
