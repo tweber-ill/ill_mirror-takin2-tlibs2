@@ -239,13 +239,13 @@ namespace tl2_mag
 			m_sites_calc.reserve(num_sites);
 
 			bool use_field = !tl2::equals_0<t_real>(m_field.mag, m_eps)
-			&& m_field.dir.size() >= 3;
+				&& m_field.dir.size() >= 3;
 
 			if(use_field)
 			{
 				// rotate field to [001] direction
 				auto [field_re, field_im] =
-				tl2::split_cplx<t_vec, t_vec_real>(m_field.dir);
+					tl2::split_cplx<t_vec, t_vec_real>(m_field.dir);
 				m_rot_field = tl2::convert<t_mat>(
 					tl2::rotation<t_mat_real, t_vec_real>(
 						field_re, zdir, zdir));
@@ -271,7 +271,7 @@ namespace tl2_mag
 			{
 				// rotate local spin to ferromagnetic [001] direction
 				auto [spin_re, spin_im] =
-				tl2::split_cplx<t_vec, t_vec_real>(site.spin_dir);
+					tl2::split_cplx<t_vec, t_vec_real>(site.spin_dir);
 				t_mat rot = tl2::convert<t_mat>(
 					tl2::rotation<t_mat_real, t_vec_real>(
 						spin_re, zdir, zdir));
@@ -532,7 +532,7 @@ namespace tl2_mag
 							std::get<0>(energies_and_correlations[idx2]);
 					});
 
-				energies_and_correlations = tl2::reorder(energies_and_correlations, sorting);
+				//energies_and_correlations = tl2::reorder(energies_and_correlations, sorting);
 				evecs = tl2::reorder(evecs, sorting);
 				evals = tl2::reorder(evals, sorting);
 
@@ -546,11 +546,13 @@ namespace tl2_mag
 				// re-create energies, to be consistent with the weights
 				energies_and_correlations.clear();
 				for(t_size i=0; i<L.size1(); ++i)
+				{
 					energies_and_correlations.emplace_back(
 						std::make_tuple(
 							L(i,i).real(),
 							tl2::zero<t_mat>(3, 3),
 							tl2::zero<t_mat>(3, 3)));
+				}
 
 				t_mat E_sqrt = E;
 				for(t_size i=0; i<E.size1(); ++i)
@@ -622,7 +624,7 @@ namespace tl2_mag
 
 						t_mat M_trafo = trafo_herm * M * trafo;
 
-						for(t_size i=0; i<M_trafo.size1(); ++i)
+						for(t_size i=0; i<num_sites*2; ++i)
 						{
 							t_mat& S = std::get<1>(energies_and_correlations[i]);
 							S(x_idx, y_idx) += M_trafo(i, i) / t_real(M_trafo.size1());
@@ -646,7 +648,7 @@ namespace tl2_mag
 				// apply the orthogonal projector for magnetic neutron scattering
 				for(auto& E_and_S : energies_and_correlations)
 				{
-					const t_mat& S = std::get<1> (E_and_S);
+					const t_mat& S = std::get<1>(E_and_S);
 					std::get<2>(E_and_S) = m_proj_neutron * S;
 				}
 			}
