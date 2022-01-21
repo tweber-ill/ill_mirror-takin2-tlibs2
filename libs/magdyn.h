@@ -592,8 +592,8 @@ namespace tl2_mag
 
 								t_cplx phase = std::sqrt(S_i*S_j) * std::exp(
 									imag * twopi *
-									tl2::inner<t_vec>(
-										(pos_i - pos_j), Q));
+										tl2::inner<t_vec>(
+											(pos_i - pos_j), Q));
 
 								V(i, j) = phase * u_conj_i[x_idx] * u_conj_j[y_idx];
 								W(i, j) = phase * u_conj_i[x_idx] * u_j[y_idx];
@@ -727,18 +727,18 @@ namespace tl2_mag
 					atom_site.name = site.second.get<std::string>("name", "n/a");
 
 					atom_site.pos = tl2::create<t_vec>(
-						{
-							site.second.get<t_real>("position_x", 0.),
-								site.second.get<t_real>("position_y", 0.),
-								site.second.get<t_real>("position_z", 0.),
-						});
+					{
+						site.second.get<t_real>("position_x", 0.),
+						site.second.get<t_real>("position_y", 0.),
+						site.second.get<t_real>("position_z", 0.),
+					});
 
 					atom_site.spin_dir = tl2::create<t_vec>(
-						{
-							site.second.get<t_real>("spin_x", 0.),
-								site.second.get<t_real>("spin_y", 0.),
-								site.second.get<t_real>("spin_z", 1.),
-						});
+					{
+						site.second.get<t_real>("spin_x", 0.),
+						site.second.get<t_real>("spin_y", 0.),
+						site.second.get<t_real>("spin_z", 1.),
+					});
 
 					atom_site.spin_mag = site.second.get<t_real>("spin_magnitude", 1.);
 					atom_site.g = -2. * tl2::unit<t_mat>(3);
@@ -759,20 +759,20 @@ namespace tl2_mag
 					exchange_term.atom2 = term.second.get<t_size>("atom_2_index", 0);
 
 					exchange_term.dist = tl2::create<t_vec>(
-						{
-							term.second.get<t_real>("distance_x", 0.),
-								term.second.get<t_real>("distance_y", 0.),
-								term.second.get<t_real>("distance_z", 0.),
-						});
+					{
+						term.second.get<t_real>("distance_x", 0.),
+						term.second.get<t_real>("distance_y", 0.),
+						term.second.get<t_real>("distance_z", 0.),
+					});
 
 					exchange_term.J = term.second.get<t_real>("interaction", 0.);
 
 					exchange_term.dmi = tl2::create<t_vec>(
-						{
-							term.second.get<t_real>("dmi_x", 0.),
-								term.second.get<t_real>("dmi_y", 0.),
-								term.second.get<t_real>("dmi_z", 0.),
-						});
+					{
+						term.second.get<t_real>("dmi_x", 0.),
+						term.second.get<t_real>("dmi_y", 0.),
+						term.second.get<t_real>("dmi_z", 0.),
+					});
 
 					m_exchange_terms.emplace_back(std::move(exchange_term));
 				}
@@ -786,11 +786,11 @@ namespace tl2_mag
 				m_field.align_spins = false;
 
 				m_field.dir = tl2::create<t_vec>(
-					{
-						field->get<t_real>("direction_h", 0.),
-							field->get<t_real>("direction_k", 0.),
-							field->get<t_real>("direction_l", 1.),
-					});
+				{
+					field->get<t_real>("direction_h", 0.),
+					field->get<t_real>("direction_k", 0.),
+					field->get<t_real>("direction_l", 1.),
+				});
 
 				if(auto optVal = field->get_optional<t_real>("magnitude"))
 					m_field.mag = *optVal;
