@@ -281,7 +281,7 @@ namespace tl2_mag
 			m_sites_calc.reserve(num_sites);
 
 			bool use_field = !tl2::equals_0<t_real>(m_field.mag, m_eps)
-				&& m_field.dir.size() >= 3;
+				&& m_field.dir.size() == 3;
 
 			if(use_field)
 			{
@@ -371,7 +371,7 @@ namespace tl2_mag
 				t_mat J = tl2::diag<t_mat>(
 					tl2::create<t_vec>({term.J, term.J, term.J}));
 
-				if(term.dmi.size() >= 3)
+				if(term.dmi.size() == 3)
 				{
 					// cross product matrix
 					J += tl2::skewsymmetric<t_mat, t_vec>(-term.dmi);
@@ -397,7 +397,7 @@ namespace tl2_mag
 			t_mat C = tl2::zero<t_mat>(num_sites, num_sites);
 
 			bool use_field = !tl2::equals_0<t_real>(m_field.mag, m_eps)
-				&& m_field.dir.size() >= 3;
+				&& m_field.dir.size() == 3;
 
 			for(t_size i=0; i<num_sites; ++i)
 			{
@@ -415,9 +415,9 @@ namespace tl2_mag
 
 					t_real factor = 0.5 * std::sqrt(S_i*S_j);
 					A(i, j) = factor *
-					tl2::inner_noconj<t_vec>(u_i, J_sub_Q * u_conj_j);
+						tl2::inner_noconj<t_vec>(u_i, J_sub_Q * u_conj_j);
 					B(i, j) = factor *
-					tl2::inner_noconj<t_vec>(u_i, J_sub_Q * u_j);
+						tl2::inner_noconj<t_vec>(u_i, J_sub_Q * u_j);
 
 					if(i == j)
 					{
@@ -468,7 +468,6 @@ namespace tl2_mag
 			t_mat _H, t_real h, t_real k, t_real l,
 			bool only_energies = false) const
 		{
-			const t_size N = _H.size1();
 			const t_size num_sites = m_sites.size();
 
 			// constants: imaginary unit and 2pi
@@ -476,10 +475,10 @@ namespace tl2_mag
 			constexpr const t_real twopi = t_real(2)*tl2::pi<t_real>;
 
 			// equation (30) from (Toth 2015)
-			t_mat g = tl2::zero<t_mat>(N, N);
-			for(t_size i=0; i<N/2; ++i)
+			t_mat g = tl2::zero<t_mat>(num_sites*2, num_sites*2);
+			for(t_size i=0; i<num_sites; ++i)
 				g(i, i) = 1.;
-			for(t_size i=N/2; i<N; ++i)
+			for(t_size i=num_sites; i<2*num_sites; ++i)
 				g(i, i) = -1.;
 
 			// equation (31) from (Toth 2015)
@@ -496,7 +495,7 @@ namespace tl2_mag
 				else
 				{
 					// try forcing the hamilton to be positive definite
-					for(t_size i=0; i<N; ++i)
+					for(t_size i=0; i<2*num_sites; ++i)
 						_H(i, i) += m_eps_chol;
 				}
 
@@ -619,11 +618,11 @@ namespace tl2_mag
 				t_mat trafo = C_inv * evec_mat * E_sqrt;
 				t_mat trafo_herm = tl2::herm(trafo);
 
-				/*t_mat D = trafo_herm * _H * trafo;
-				dbg_print(D);
-				dbg_print(E);
-				std::cout << std::endl;*/
-
+				//t_mat D = trafo_herm * _H * trafo;
+				//dbg_print(D);
+				//dbg_print(E);
+				//dbg_print(L);
+				//std::cout << std::endl;
 
 
 				// building the spin correlation functions of equation (47) from (Toth 2015)
@@ -652,9 +651,7 @@ namespace tl2_mag
 								const t_vec& u_conj_j = m_sites_calc[j].u_conj;
 
 								t_cplx phase = std::sqrt(S_i*S_j) * std::exp(
-									imag * twopi *
-										tl2::inner<t_vec>(
-											(pos_i - pos_j), Q));
+									imag * twopi * tl2::inner<t_vec>(pos_i - pos_j, Q));
 
 								V(i, j) = phase * u_conj_i[x_idx] * u_conj_j[y_idx];
 								W(i, j) = phase * u_conj_i[x_idx] * u_j[y_idx];
@@ -675,7 +672,7 @@ namespace tl2_mag
 						for(t_size i=0; i<num_sites*2; ++i)
 						{
 							t_mat& S = std::get<1>(energies_and_correlations[i]);
-							S(x_idx, y_idx) += M_trafo(i, i) / t_real(M_trafo.size1());
+							S(x_idx, y_idx) += M_trafo(i, i) / t_real(2*num_sites);
 						}
 
 						/*using namespace tl2_ops;
@@ -693,11 +690,21 @@ namespace tl2_mag
 				}
 
 
-				// apply the orthogonal projector for magnetic neutron scattering
-				for(auto& E_and_S : energies_and_correlations)
+				for(t_size i=0; i<num_sites*2; ++i)
 				{
-					const t_mat& S = std::get<1>(E_and_S);
-					std::get<2>(E_and_S) = (m_proj_neutron * tl2::herm(S)) * (S * m_proj_neutron);
+					//t_size site_idx = i % num_sites;
+					auto& E_and_S = energies_and_correlations[i];
+					t_mat& S = std::get<1>(E_and_S);
+
+					// formula 40 from (Toth 2015)
+					// TODO: add incommensurate cases
+					//t_mat R2 = tl2::projector<t_mat, t_vec>(
+					//	tl2::create<t_vec>({0., 0., 1.}), false);
+					//S = S * R2;
+
+					// apply the orthogonal projector for magnetic neutron scattering
+					//std::get<2>(E_and_S) = (m_proj_neutron * tl2::herm(S)) * (S * m_proj_neutron);
+					std::get<2>(E_and_S) = m_proj_neutron * S;
 				}
 			}
 
