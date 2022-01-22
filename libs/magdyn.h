@@ -474,6 +474,10 @@ namespace tl2_mag
 			constexpr const t_cplx imag{0., 1.};
 			constexpr const t_real twopi = t_real(2)*tl2::pi<t_real>;
 
+			// formula 40 from (Toth 2015)
+			t_mat proj_norm = tl2::projector<t_mat, t_vec>(
+				tl2::create<t_vec>({1., 0., 0.}), true);
+
 			// equation (30) from (Toth 2015)
 			t_mat g = tl2::zero<t_mat>(num_sites*2, num_sites*2);
 			for(t_size i=0; i<num_sites; ++i)
@@ -651,7 +655,7 @@ namespace tl2_mag
 								const t_vec& u_conj_j = m_sites_calc[j].u_conj;
 
 								t_cplx phase = std::sqrt(S_i*S_j) * std::exp(
-									imag * twopi * tl2::inner<t_vec>(pos_i - pos_j, Q));
+									-imag * twopi * tl2::inner<t_vec>(pos_i - pos_j, Q));
 
 								V(i, j) = phase * u_conj_i[x_idx] * u_conj_j[y_idx];
 								W(i, j) = phase * u_conj_i[x_idx] * u_j[y_idx];
@@ -698,13 +702,11 @@ namespace tl2_mag
 
 					// formula 40 from (Toth 2015)
 					// TODO: add incommensurate cases
-					//t_mat R2 = tl2::projector<t_mat, t_vec>(
-					//	tl2::create<t_vec>({0., 0., 1.}), false);
-					//S = S * R2;
+					//S = S * proj_norm;
 
 					// apply the orthogonal projector for magnetic neutron scattering
-					//std::get<2>(E_and_S) = (m_proj_neutron * tl2::herm(S)) * (S * m_proj_neutron);
-					std::get<2>(E_and_S) = m_proj_neutron * S;
+					std::get<2>(E_and_S) = (m_proj_neutron * tl2::herm(S)) * (S * m_proj_neutron);
+					//std::get<2>(E_and_S) = m_proj_neutron * S;
 				}
 			}
 
