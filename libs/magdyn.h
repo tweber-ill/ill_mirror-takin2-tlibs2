@@ -30,6 +30,7 @@
 #define USE_LAPACK 1
 #include "tlibs2/libs/maths.h"
 #include "units.h"
+#include "phys.h"
 #include "helper.h"
 
 
@@ -188,6 +189,7 @@ namespace tl2_mag
 			ClearAtomSites();
 			ClearExchangeTerms();
 			ClearExternalField();
+			ClearTemperature();
 		}
 
 
@@ -221,15 +223,59 @@ namespace tl2_mag
 		}
 
 
-		void SetEpsilon(t_real eps) { m_eps = eps; }
-		void SetPrecision(int prec) { m_prec = prec; }
+		void ClearTemperature()
+		{
+			// -1: don't use
+			m_temperature = -1.;
+		}
 
-		const std::vector<AtomSite>& GetAtomSites() const { return m_sites; }
-		const std::vector<ExchangeTerm>& GetExchangeTerms() const { return m_exchange_terms; }
-		const ExternalField& GetExternalField() const { return m_field; }
-		const t_vec& GetBraggPeak() const { return m_bragg; }
 
-		void SetExternalField(const ExternalField& field) { m_field = field; }
+		void SetEpsilon(t_real eps)
+		{
+			m_eps = eps;
+		}
+
+
+		void SetPrecision(int prec)
+		{
+			m_prec = prec;
+		}
+
+
+		const std::vector<AtomSite>& GetAtomSites() const
+		{
+			return m_sites;
+		}
+
+
+		const std::vector<ExchangeTerm>& GetExchangeTerms() const
+		{
+			return m_exchange_terms;
+		}
+
+
+		const ExternalField& GetExternalField() const
+		{
+			return m_field;
+		}
+
+
+		const t_vec& GetBraggPeak() const
+		{
+			return m_bragg;
+		}
+
+
+		t_real GetTemperature() const
+		{
+			return m_temperature;
+		}
+
+
+		void SetExternalField(const ExternalField& field)
+		{
+			m_field = field;
+		}
 
 
 		void AddAtomSite(AtomSite&& site)
@@ -263,6 +309,12 @@ namespace tl2_mag
 			m_bragg = tl2::create<t_vec>({h, k, l});
 
 			// call CalcSpinRotation() afterwards to calculate projector
+		}
+
+
+		void SetTemperature(t_real T)
+		{
+			m_temperature = T;
 		}
 
 
@@ -698,15 +750,23 @@ namespace tl2_mag
 				{
 					//t_size site_idx = i % num_sites;
 					auto& E_and_S = energies_and_correlations[i];
+					t_real E = std::get<0>(E_and_S);
 					t_mat& S = std::get<1>(E_and_S);
+					t_mat& S_perp = std::get<2>(E_and_S);
 
 					// formula 40 from (Toth 2015)
 					// TODO: add incommensurate cases
 					//S = S * proj_norm;
 
+					if(m_temperature >= 0.)
+					{
+						// apply bose factor
+						S *= tl2::bose(E, m_temperature);
+					}
+
 					// apply the orthogonal projector for magnetic neutron scattering
-					std::get<2>(E_and_S) = (m_proj_neutron * tl2::herm(S)) * (S * m_proj_neutron);
-					//std::get<2>(E_and_S) = m_proj_neutron * S;
+					S_perp = (m_proj_neutron * tl2::herm(S)) * (S * m_proj_neutron);
+					//S_perp = m_proj_neutron * S;
 				}
 			}
 
@@ -877,6 +937,9 @@ namespace tl2_mag
 					m_field.align_spins = *optVal;
 			}
 
+			// temperature
+			m_temperature = node.get<t_real>("temperature", -1.);
+
 			// bragg peak
 			if(auto bragg = node.get_child_optional("bragg"); bragg)
 			{
@@ -912,6 +975,9 @@ namespace tl2_mag
 				node.put<t_real>("bragg.k", m_bragg[1].real());
 				node.put<t_real>("bragg.l", m_bragg[2].real());
 			}
+
+			// temperature
+			node.put<t_real>("temperature", m_temperature);
 
 			// atom sites
 			for(const auto& site : GetAtomSites())
@@ -963,6 +1029,9 @@ namespace tl2_mag
 
 		// bragg peak needed for calculating projector
 		t_vec m_bragg{};
+
+		// temperature (-1: disable bose factor)
+		t_real m_temperature{-1};
 
 		// orthogonal projector for magnetic neutron scattering
 		// see (Shirane 2002), p. 37, eq. (2.64)
