@@ -108,6 +108,7 @@ namespace tl2_mag
 	 * @see equation (9) from (Toth 2015).
 	 */
 	template<class t_mat, class t_vec, class t_cplx>
+	requires tl2::is_mat<t_mat> && tl2::is_vec<t_vec>
 	std::tuple<t_vec, t_vec> R_to_uv(const t_mat& R)
 	{
 		// imaginary unit
@@ -118,6 +119,47 @@ namespace tl2_mag
 		t_vec v = tl2::col<t_mat, t_vec>(R, 2);
 
 		return std::make_tuple(u, v);
+	}
+
+
+	template<class t_mat> requires tl2::is_mat<t_mat>
+	void dbg_print(const t_mat& mat)
+	{
+		using t_elem = typename t_mat::value_type;
+
+		t_real eps = 1e-6;
+		int prec = 3;
+		std::cout.precision(prec);
+
+		for(std::size_t row=0; row<mat.size1(); ++row)
+		{
+			for(std::size_t col=0; col<mat.size2(); ++col)
+			{
+				t_elem elem = mat(row, col);
+				tl2::set_eps_0(elem, eps);
+				std::cout << std::setw(prec*3) << elem;
+			}
+
+			std::cout << std::endl;
+		}
+	}
+
+
+	template<class t_vec> requires tl2::is_vec<t_vec>
+	void dbg_print(const t_vec& vec)
+	{
+		using t_elem = typename t_vec::value_type;
+
+		t_real eps = 1e-6;
+		int prec = 3;
+		std::cout.precision(prec);
+
+		for(std::size_t row=0; row<vec.size(); ++row)
+		{
+			t_elem elem = vec[row];
+			tl2::set_eps_0(elem, eps);
+			std::cout << elem << std::endl;
+		}
 	}
 	// ----------------------------------------------------------------------------
 
@@ -355,7 +397,7 @@ namespace tl2_mag
 			t_mat C = tl2::zero<t_mat>(num_sites, num_sites);
 
 			bool use_field = !tl2::equals_0<t_real>(m_field.mag, m_eps)
-			&& m_field.dir.size() >= 3;
+				&& m_field.dir.size() >= 3;
 
 			for(t_size i=0; i<num_sites; ++i)
 			{
@@ -471,6 +513,8 @@ namespace tl2_mag
 
 			// see p. 5 in (Toth 2015)
 			t_mat H = C * g * C_herm;
+			//dbg_print(_H);
+			//dbg_print(H);
 
 			bool is_herm = tl2::is_symm_or_herm<t_mat, t_real>(H, m_eps);
 			if(!is_herm)
@@ -484,7 +528,7 @@ namespace tl2_mag
 			// eigenvectors correspond to the spectral weights
 			auto [evecs_ok, evals, evecs] =
 				tl2_la::eigenvec<t_mat, t_vec, t_cplx, t_real>(
-					H, only_energies, is_herm);
+					H, only_energies, is_herm, true);
 			if(!evecs_ok)
 			{
 				std::cerr << "Warning: Eigensystem calculation failed"
@@ -532,12 +576,17 @@ namespace tl2_mag
 							std::get<0>(energies_and_correlations[idx2]);
 					});
 
+				//for(std::size_t idx=0; idx<sorting.size(); ++idx)
+				//	std::cout << idx << " -> " << sorting[idx] << std::endl;
+
 				//energies_and_correlations = tl2::reorder(energies_and_correlations, sorting);
 				evecs = tl2::reorder(evecs, sorting);
 				evals = tl2::reorder(evals, sorting);
 
 				t_mat evec_mat = tl2::create<t_mat>(evecs);
 				t_mat evec_mat_herm = tl2::herm(evec_mat);
+				//dbg_print(evec_mat);
+				//std::cout << std::endl;
 
 				// equation (32) from (Toth 2015)
 				t_mat L = evec_mat_herm * H * evec_mat;
@@ -570,12 +619,11 @@ namespace tl2_mag
 				t_mat trafo = C_inv * evec_mat * E_sqrt;
 				t_mat trafo_herm = tl2::herm(trafo);
 
-				/*using namespace tl2_ops;
-				tl2::set_eps_0<t_mat, t_real>(trafo, m_eps);
-				std::cout << "trafo: " << trafo << " for Q = (" << h << ", " << k << ", " << l << ")." << std::endl;
-				t_mat D = trafo_herm * _H * trafo;
-				tl2::set_eps_0<t_mat, t_real>(D, m_eps);
-				std::cout << "D: " << D << std::endl;*/
+				/*t_mat D = trafo_herm * _H * trafo;
+				dbg_print(D);
+				dbg_print(E);
+				std::cout << std::endl;*/
+
 
 
 				// building the spin correlation functions of equation (47) from (Toth 2015)
@@ -649,7 +697,7 @@ namespace tl2_mag
 				for(auto& E_and_S : energies_and_correlations)
 				{
 					const t_mat& S = std::get<1>(E_and_S);
-					std::get<2>(E_and_S) = m_proj_neutron * S;
+					std::get<2>(E_and_S) = (m_proj_neutron * tl2::herm(S)) * (S * m_proj_neutron);
 				}
 			}
 

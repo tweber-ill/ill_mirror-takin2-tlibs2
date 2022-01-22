@@ -52,8 +52,8 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(test_eig, t_real, t_types)
 	using t_vec_cplx = tl2::vec<t_cplx, std::vector>;
 	using t_mat_cplx = tl2::mat<t_cplx, std::vector>;
 
-	t_real eps = 1e-4;
-	std::size_t dim = 3;
+	t_real eps = 1e-3;
+	std::size_t dim = 5;
 
 	std::mt19937 rndgen{tl2::epoch<unsigned int>()};
 	std::uniform_real_distribution<t_real> rnddist{-100, 100};
@@ -69,7 +69,8 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(test_eig, t_real, t_types)
 
 		bool sym = 0;
 		auto [ok, evals_re, evals_im, evecs_re, evecs_im] =
-			tl2_la::eigenvec<t_mat, t_vec, t_real>(mat, false, sym, true);
+			tl2_la::eigenvec<t_mat, t_vec, t_real>(
+				mat, false, sym, true);
 		std::cout << "ok = " << std::boolalpha << ok << "\n" << std::endl;
 
 		for(std::size_t i=0; i<evals_re.size(); ++i)
@@ -123,7 +124,15 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(test_eig, t_real, t_types)
 
 		bool sym = 1;
 		auto [ok, evals_re, evals_im, evecs_re, evecs_im] =
-			tl2_la::eigenvec<t_mat, t_vec, t_real>(mat, false, sym, true);
+			tl2_la::eigenvec<t_mat, t_vec, t_real>(
+				mat, false, sym, true);
+		std::cout << "ok = " << std::boolalpha << ok << "\n" << std::endl;
+
+		// compare results with non-symmetric calculation
+		sym = 0;
+		auto [ok_gen, evals_re_gen, evals_im_gen, evecs_re_gen, evecs_im_gen] =
+			tl2_la::eigenvec<t_mat, t_vec, t_real>(
+				mat, false, sym, true);
 		std::cout << "ok = " << std::boolalpha << ok << "\n" << std::endl;
 
 		for(std::size_t i=0; i<evals_re.size(); ++i)
@@ -139,7 +148,21 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(test_eig, t_real, t_types)
 			std::cout << "Im(evec) " << i+1 << ": " << evecs_im[i] << std::endl;
 		std::cout << std::endl;
 
+		for(std::size_t i=0; i<evals_re_gen.size(); ++i)
+			std::cout << "Re(eval_gen) " << i+1 << ": " << evals_re_gen[i] << std::endl;
+		for(std::size_t i=0; i<evals_im.size(); ++i)
+			std::cout << "Im(eval_gen) " << i+1 << ": " << evals_im_gen[i] << std::endl;
+		std::cout << std::endl;
+
+		for(std::size_t i=0; i<evecs_re_gen.size(); ++i)
+			std::cout << "Re(evec_gen) " << i+1 << ": " << evecs_re_gen[i] << std::endl;
+		std::cout << std::endl;
+		for(std::size_t i=0; i<evecs_im.size(); ++i)
+			std::cout << "Im(evec_gen) " << i+1 << ": " << evecs_im_gen[i] << std::endl;
+		std::cout << std::endl;
+
 		BOOST_TEST(ok);
+		BOOST_TEST(ok_gen);
 
 
 		t_mat_cplx mat_cplx = tl2::zero<t_mat_cplx>(dim, dim);
@@ -151,15 +174,28 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(test_eig, t_real, t_types)
 		{
 			t_cplx eval = t_cplx{evals_re[i], evals_im[i]};
 			t_vec_cplx evec = tl2::zero<t_vec_cplx>(dim);
-
 			for(std::size_t j=0; j<dim; ++j)
 				evec[j] = t_cplx{evecs_re[i][j], evecs_im[i][j]};
 
+			t_cplx eval_gen = t_cplx{evals_re_gen[i], evals_im_gen[i]};
+			t_vec_cplx evec_gen = tl2::zero<t_vec_cplx>(dim);
+			for(std::size_t j=0; j<dim; ++j)
+				evec_gen[j] = t_cplx{evecs_re_gen[i][j], evecs_im_gen[i][j]};
+
 			t_vec_cplx tstvec1 = mat_cplx * evec;
 			t_vec_cplx tstvec2 = eval * evec;
+
+			t_vec_cplx tstvec1_gen = mat_cplx * evec_gen;
+			t_vec_cplx tstvec2_gen = eval_gen * evec_gen;
+
 			bool is_equal = tl2::equals<t_vec_cplx, t_cplx>(tstvec1, tstvec2, eps);
+			bool is_equal_gen = tl2::equals<t_vec_cplx, t_cplx>(tstvec1_gen, tstvec2_gen, eps);
+
 			std::cout << tstvec1 << " == " << tstvec2 << ": " << std::boolalpha << is_equal << std::endl;
+			std::cout << tstvec1_gen << " == " << tstvec2_gen << ": " << std::boolalpha << is_equal << std::endl;
+
 			BOOST_TEST(is_equal);
+			BOOST_TEST(is_equal_gen);
 		}
 
 		std::cout << "--------------------------------------------------------------------------------\n" << std::endl;
@@ -178,7 +214,8 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(test_eig, t_real, t_types)
 
 		bool herm = 0;
 		auto [ok, evals, evecs] =
-			tl2_la::eigenvec<t_mat_cplx, t_vec_cplx, t_cplx>(mat, false, herm, true);
+			tl2_la::eigenvec<t_mat_cplx, t_vec_cplx, t_cplx>(
+				mat, false, herm, true);
 		std::cout << "ok = " << std::boolalpha << ok << "\n" << std::endl;
 
 		for(std::size_t i=0; i<evecs.size(); ++i)
@@ -219,10 +256,19 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(test_eig, t_real, t_types)
 			mat(i,i) = rnddist(rndgen);
 		std::cout << mat << std::endl;
 
+		bool norm = 1;
 		bool herm = 1;
 		auto [ok, evals, evecs] =
-			tl2_la::eigenvec<t_mat_cplx, t_vec_cplx, t_cplx>(mat, false, herm, true);
-		std::cout << "ok = " << std::boolalpha << ok << "\n" << std::endl;
+			tl2_la::eigenvec<t_mat_cplx, t_vec_cplx, t_cplx>(
+				mat, false, herm, norm);
+		std::cout << "ok = " << std::boolalpha << ok << std::endl;
+
+		// comparison with non-hermitian calulation
+		herm = 0;
+		auto [ok_gen, evals_gen, evecs_gen] =
+			tl2_la::eigenvec<t_mat_cplx, t_vec_cplx, t_cplx>(
+				mat, false, herm, norm);
+		std::cout << "ok_gen = " << std::boolalpha << ok_gen << "\n" << std::endl;
 
 		for(std::size_t i=0; i<evecs.size(); ++i)
 			std::cout << "eval " << i+1 << ": " << evals[i] << std::endl;
@@ -231,14 +277,53 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(test_eig, t_real, t_types)
 			std::cout << "evec " << i+1 << ": " << evecs[i] << std::endl;
 		std::cout << std::endl;
 
+		for(std::size_t i=0; i<evecs_gen.size(); ++i)
+			std::cout << "eval_gen " << i+1 << ": " << evals_gen[i] << std::endl;
+		std::cout << std::endl;
+		for(std::size_t i=0; i<evecs_gen.size(); ++i)
+			std::cout << "evec_gen " << i+1 << ": " << evecs_gen[i] << std::endl;
+		std::cout << std::endl;
+
 		BOOST_TEST(ok);
+		BOOST_TEST(ok_gen);
+
+		// test diagonalisation
+		//std::reverse(evals.begin(), evals.end());
+		//std::reverse(evecs.begin(), evecs.end());
+		t_mat_cplx eval_mat = tl2::diag<t_mat_cplx>(evals);
+		t_mat_cplx evec_mat = tl2::create<t_mat_cplx>(evecs);
+		t_mat_cplx diag = tl2::herm(evec_mat) * mat * evec_mat;
+		bool diag_equ = tl2::equals<t_mat_cplx, t_cplx>(eval_mat, diag, eps);
+		BOOST_TEST(diag_equ);
+		tl2::set_eps_0<t_mat_cplx>(eval_mat, eps);
+		tl2::set_eps_0<t_mat_cplx>(diag, eps);
+		std::cout << "diag:\n" << eval_mat << "\n" << diag << "\n" << std::endl;
+
+		t_mat_cplx eval_mat_gen = tl2::diag<t_mat_cplx>(evals_gen);
+		t_mat_cplx evec_mat_gen = tl2::create<t_mat_cplx>(evecs_gen);
+		t_mat_cplx diag_gen = tl2::herm(evec_mat_gen) * mat * evec_mat_gen;
+		bool diag_equ_gen = tl2::equals<t_mat_cplx, t_cplx>(eval_mat_gen, diag_gen, eps);
+		BOOST_TEST(diag_equ_gen);
+		tl2::set_eps_0<t_mat_cplx>(eval_mat_gen, eps);
+		tl2::set_eps_0<t_mat_cplx>(diag_gen, eps);
+		std::cout << "diag_gen:\n" << eval_mat_gen << "\n" << diag_gen << "\n" << std::endl;
+
 		for(std::size_t i=0; i<dim; ++i)
 		{
 			t_vec_cplx tstvec1 = mat*evecs[i];
 			t_vec_cplx tstvec2 = evals[i]*evecs[i];
+
+			t_vec_cplx tstvec1_gen = mat*evecs_gen[i];
+			t_vec_cplx tstvec2_gen = evals_gen[i]*evecs_gen[i];
+
 			bool is_equal = tl2::equals<t_vec_cplx, t_cplx>(tstvec1, tstvec2, eps);
+			bool is_equal_gen = tl2::equals<t_vec_cplx, t_cplx>(tstvec1_gen, tstvec2_gen, eps);
+
 			std::cout << tstvec1 << " == " << tstvec2 << ": " << std::boolalpha << is_equal << std::endl;
+			std::cout << tstvec1_gen << " == " << tstvec2_gen << ": " << std::boolalpha << is_equal_gen << std::endl;
+
 			BOOST_TEST(is_equal);
+			BOOST_TEST(is_equal_gen);
 		}
 
 		std::cout << "--------------------------------------------------------------------------------\n" << std::endl;

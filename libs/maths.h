@@ -6995,7 +6995,8 @@ eigenvec(const t_mat_cplx& mat,
 		{
 			// hermitian algo overwrites original matrix!
 			for(std::size_t j=0; j<N; ++j)
-				evecs[i][j] = (is_hermitian && !use_selective_func) ? inmat[i*N + j] : outevecs[i*N + j];
+				evecs[i][j] = (is_hermitian && !use_selective_func)
+					? inmat[i*N + j] : outevecs[i*N + j];
 
 			if(normalise && (err == 0))
 			{
@@ -7219,7 +7220,9 @@ eigenvec(const t_mat& mat, bool only_evals=false, bool is_symmetric=false, bool 
 			{
 				t_real sum{0};
 				for(std::size_t j=0; j<N; ++j)
-					sum += std::norm(std::complex(evecs_re[i][j], evecs_im[i][j]));
+					sum += std::norm(
+						std::complex(evecs_re[i][j], 
+							evecs_im[i][j]));
 				sum = std::sqrt(sum);
 
 				if(!tl2::equals<t_real>(sum, 0))
