@@ -26,6 +26,7 @@
 #include <iomanip>
 
 #include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/xml_parser.hpp>
 
 #define USE_LAPACK 1
 #include "tlibs2/libs/maths.h"
@@ -895,6 +896,61 @@ namespace tl2_mag
 						<< std::endl;
 				}
 			}
+		}
+
+
+		/**
+		 * load a configuration from a file
+		 */
+		bool Load(const std::string& filename)
+		{
+			// properties tree
+			boost::property_tree::ptree node;
+
+			// read xml file
+			std::ifstream ifstr{filename};
+			boost::property_tree::read_xml(ifstr, node);
+
+			// check signature
+			if(auto optInfo = node.get_optional<std::string>("magdyn.meta.info");
+				!optInfo || !(*optInfo==std::string{"magdyn_tool"}))
+			{
+				return false;
+			}
+
+			const auto &magdyn = node.get_child("magdyn");
+			return Load(magdyn);
+		}
+
+
+		/**
+		 * save a configuration to a file
+		 */
+		bool Save(const std::string& filename) const
+		{
+			// properties tree
+			boost::property_tree::ptree node;
+
+			// write signature
+			node.put<std::string>("meta.info", "magdyn_tool");
+			node.put<std::string>("meta.date",
+				tl2::epoch_to_str<t_real>(tl2::epoch<t_real>()));
+
+			boost::property_tree::ptree root_node;
+			root_node.put_child("magdyn", node);
+
+			// write xml file
+			std::ofstream ofstr{filename};
+			if(!ofstr)
+			{
+				return false;
+			}
+
+			ofstr.precision(m_prec);
+			boost::property_tree::write_xml(ofstr, node,
+				boost::property_tree::xml_writer_make_settings(
+					'\t', 1, std::string{"utf-8"}));
+			return true;
 		}
 
 
