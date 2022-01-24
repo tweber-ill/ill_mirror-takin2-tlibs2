@@ -749,7 +749,7 @@ namespace tl2_mag
 
 								// TODO: check phase factors
 								Y(i, j) = phase_pos * u_i[x_idx] * u_conj_j[y_idx];
-								V(i, j) = phase_neg * u_conj_i[x_idx] * u_conj_j[y_idx];
+								V(i, j) = phase_pos * u_conj_i[x_idx] * u_conj_j[y_idx];
 								Z(i, j) = phase_neg * u_i[x_idx] * u_j[y_idx];
 								W(i, j) = phase_neg * u_conj_i[x_idx] * u_j[y_idx];
 							}
