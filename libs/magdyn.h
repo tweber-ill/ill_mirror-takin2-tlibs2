@@ -286,6 +286,11 @@ namespace tl2_mag
 		}
 
 
+		t_real GetBoseCutoffEnergy() const
+		{
+			return m_bose_cutoff;
+		}
+
 		void SetExternalField(const ExternalField& field)
 		{
 			m_field = field;
@@ -329,6 +334,12 @@ namespace tl2_mag
 		void SetTemperature(t_real T)
 		{
 			m_temperature = T;
+		}
+
+
+		void SetBoseCutoffEnergy(t_real E)
+		{
+			m_bose_cutoff = E;
 		}
 
 
@@ -793,7 +804,8 @@ namespace tl2_mag
 					if(m_temperature >= 0.)
 					{
 						// apply bose factor
-						S *= tl2::bose(E, m_temperature);
+						S *= tl2::bose_cutoff(E, m_temperature,
+							m_bose_cutoff);
 					}
 
 					// apply the orthogonal projector for magnetic neutron scattering
@@ -1070,6 +1082,9 @@ namespace tl2_mag
 
 		// temperature (-1: disable bose factor)
 		t_real m_temperature{-1};
+
+		// bose cutoff energy to avoid infinities
+		t_real m_bose_cutoff = 0.025;
 
 		// orthogonal projector for magnetic neutron scattering
 		// see (Shirane 2002), p. 37, eq. (2.64)
