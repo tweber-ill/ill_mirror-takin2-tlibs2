@@ -46,6 +46,7 @@
 
 #include "gl.h"
 #include "../maths.h"
+#include "../cam.h"
 
 
 namespace tl2 {
@@ -59,6 +60,10 @@ class GlPlot;
  */
 class GlPlotRenderer : public QObject
 { Q_OBJECT
+public:
+	using t_cam = tl2::Camera<t_mat_gl, t_vec_gl, t_vec3_gl, t_real_gl>;
+
+
 private:
 #if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
 	t_qt_mutex m_mutexObj;
@@ -87,20 +92,8 @@ protected:
 	GLint m_uniMatrixB = -1;
 	GLint m_uniCoordSys = -1;
 
-	t_mat_gl m_matPerspective = tl2::unit<t_mat_gl>();
-	t_mat_gl m_matPerspective_inv = tl2::unit<t_mat_gl>();
-	t_mat_gl m_matViewport = tl2::unit<t_mat_gl>();
-	t_mat_gl m_matViewport_inv = tl2::unit<t_mat_gl>();
-	t_mat_gl m_matCamBase = tl2::create<t_mat_gl>({1,0,0,0,  0,1,0,0,  0,0,1,-5,  0,0,0,1});
-	t_mat_gl m_matCamRot = tl2::unit<t_mat_gl>();
-	t_mat_gl m_matCam = tl2::unit<t_mat_gl>();
-	t_mat_gl m_matCam_inv = tl2::unit<t_mat_gl>();
 	t_mat_gl m_matA = tl2::unit<t_mat_gl>();
 	t_mat_gl m_matB = tl2::unit<t_mat_gl>();
-	t_vec_gl m_vecCamX = tl2::create<t_vec_gl>({1.,0.,0.,0.});
-	t_vec_gl m_vecCamY = tl2::create<t_vec_gl>({0.,1.,0.,0.});
-	t_real_gl m_phi_saved = 0, m_theta_saved = 0;
-	t_real_gl m_zoom = 1.;
 	t_real_gl m_CoordMax = 2.5;		// extent of coordinate axes
 
 	std::atomic<bool> m_bPlatformSupported = true;
@@ -122,6 +115,7 @@ protected:
 	bool m_bInRotation = false;
 
 	QTimer m_timer;
+	t_cam m_cam{};
 
 
 protected:
@@ -146,13 +140,19 @@ public:
 	static constexpr bool m_isthreaded = false;
 	static constexpr bool m_usetimer = false;
 
-	std::tuple<std::string, std::string, std::string, std::string>
-		GetGlDescr() const { return std::make_tuple(m_strGlVer, m_strGlShaderVer, m_strGlVendor, m_strGlRenderer); }
-
 	QPointF GlToScreenCoords(const t_vec_gl& vec, bool *pVisible=nullptr) const;
 
-	void SetCamBase(const t_mat_gl& mat, const t_vec_gl& vecX, const t_vec_gl& vecY)
-	{ m_matCamBase = mat; m_vecCamX = vecX; m_vecCamY = vecY; UpdateCam(); }
+	const t_cam& GetCamera() const { return m_cam; }
+	t_cam& GetCamera() { return m_cam; }
+
+	std::tuple<std::string, std::string, std::string, std::string>
+		GetGlDescr() const
+	{
+		return std::make_tuple(
+			m_strGlVer, m_strGlShaderVer,
+			m_strGlVendor, m_strGlRenderer);
+	}
+
 	void SetPickerSphereRadius(t_real_gl rad) { m_pickerSphereRadius = rad; }
 
 	GlPlotObj CreateTriangleObject(const std::vector<t_vec3_gl>& verts,

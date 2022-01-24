@@ -238,15 +238,20 @@ public:
 	void Rotate(t_real dphi, t_real dtheta)
 	{
 		m_phi = dphi + m_phi_saved;
-		t_real theta_new = dtheta + m_theta_saved;
+		m_theta = dtheta + m_theta_saved;
 
 		// wrap around phi angle
 		m_phi = tl2::mod_pos<t_real>(
 			m_phi, t_real(2)*tl2::pi<t_real>);
 
+		// wrap around theta angle
+		//m_theta = tl2::mod_pos<t_real>(
+		//	m_theta, t_real(2)*tl2::pi<t_real>);
+		m_theta = std::fmod(m_theta, t_real(2)*tl2::pi<t_real>);
+
 		// restrict theta angle
 		m_theta = tl2::clamp<t_real>(
-			theta_new, -tl2::pi<t_real>*t_real(0.5), 0);
+			m_theta, -t_real(0.5)*tl2::pi<t_real>, 0.);
 
 		m_trafo_needs_update = true;
 	}
@@ -444,8 +449,8 @@ public:
 
 			return tl2::create<t_vec>(
 			{
-				-1. * GetScreenDimensions()[0],
-				-1. * GetScreenDimensions()[1]
+				t_real(-1.) * GetScreenDimensions()[0],
+				t_real(-1.) * GetScreenDimensions()[1]
 			});
 		}
 

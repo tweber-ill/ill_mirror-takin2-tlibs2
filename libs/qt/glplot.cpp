@@ -95,19 +95,8 @@ void GlPlotRenderer::stoppedThread() { }
 
 QPointF GlPlotRenderer::GlToScreenCoords(const t_vec_gl& vec4, bool *pVisible) const
 {
-	auto [ vecPersp, vec ] =
-		tl2::hom_to_screen_coords<t_mat_gl, t_vec_gl>
-			(vec4, m_matCam, m_matPerspective, m_matViewport, true);
-
-	// position not visible -> return a point outside the viewport
-	if(vecPersp[2] > 1.)
-	{
-		if(pVisible) *pVisible = false;
-		return QPointF(-1*m_iScreenDims[0], -1*m_iScreenDims[1]);
-	}
-
-	if(pVisible) *pVisible = true;
-	return QPointF(vec[0], vec[1]);
+	t_vec_gl pt = m_cam.ToScreenCoords(vec4, pVisible);
+	return QPointF(pt[0], pt[1]);
 }
 
 
@@ -602,8 +591,7 @@ void main()
 
 void GlPlotRenderer::SetScreenDims(int w, int h)
 {
-	m_iScreenDims[0] = w;
-	m_iScreenDims[1] = h;
+	m_cam.SetScreenDimensions(w, h);
 	m_bWantsResize = true;
 }
 
@@ -612,8 +600,8 @@ void GlPlotRenderer::resizeGL()
 {
 	if(!m_bPlatformSupported || !m_bInitialised) return;
 
-	const int w = m_iScreenDims[0];
-	const int h = m_iScreenDims[1];
+	const auto [w, h] = m_cam.GetScreenDimensions();
+	const auto [z_near, z_far] = m_cam.GetDepthRange();
 
 	if(auto *pContext = ((QOpenGLWidget*)m_pPlot)->context(); !pContext)
 		return;
@@ -621,15 +609,11 @@ void GlPlotRenderer::resizeGL()
 	if(!pGl)
 		return;
 
-	m_matViewport = tl2::hom_viewport<t_mat_gl, t_real_gl>(w, h, 0., 1.);
-	std::tie(m_matViewport_inv, std::ignore) = tl2::inv<t_mat_gl>(m_matViewport);
-
-	m_matPerspective = tl2::hom_perspective<t_mat_gl, t_real_gl>(0.01, 100., tl2::pi<t_real_gl>*0.5, t_real_gl(h)/t_real_gl(w));
-	//m_matPerspective = tl2::hom_ortho<t_mat_gl>(0.01, 100., -t_real_gl(w)*0.0025, t_real_gl(w)*0.0025, -t_real_gl(h)*0.0025, t_real_gl(h)*0.0025);
-	std::tie(m_matPerspective_inv, std::ignore) = tl2::inv<t_mat_gl>(m_matPerspective);
+	m_cam.UpdateViewport();
+	m_cam.UpdatePerspective();
 
 	pGl->glViewport(0, 0, w, h);
-	pGl->glDepthRange(0, 1);
+	pGl->glDepthRange(z_near, z_far);
 
 	// bind shaders
 	m_pShaders->bind();
@@ -637,9 +621,9 @@ void GlPlotRenderer::resizeGL()
 	LOGGLERR(pGl);
 
 	// set matrices
-	m_pShaders->setUniformValue(m_uniMatrixCam, m_matCam);
-	m_pShaders->setUniformValue(m_uniMatrixCamInv, m_matCam_inv);
-	m_pShaders->setUniformValue(m_uniMatrixProj, m_matPerspective);
+	m_pShaders->setUniformValue(m_uniMatrixCam, m_cam.GetTransformation());
+	m_pShaders->setUniformValue(m_uniMatrixCamInv, m_cam.GetInverseTransformation());
+	m_pShaders->setUniformValue(m_uniMatrixProj, m_cam.GetPerspective());
 	LOGGLERR(pGl);
 
 	m_bWantsResize = false;
@@ -700,14 +684,7 @@ void GlPlotRenderer::UpdateBTrafo()
 
 void GlPlotRenderer::UpdateCam()
 {
-	m_matCam = m_matCamBase;
-	m_matCam(2,3) /= m_zoom;
-	m_matCam *= m_matCamRot;
-	std::tie(m_matCam_inv, std::ignore) = tl2::inv<t_mat_gl>(m_matCam);
-
-	/*auto M = m_matCam_inv; M(0,3) = M(1,3) = M(2,3) = 0;
-	t_vec3_gl vecCamPos = M * tl2::create<t_vec3_gl>({-m_matCam(0,3), -m_matCam(1,3), -m_matCam(2,3)});
-	std::cout << vecCamPos[0] << " " << vecCamPos[1] << " " << vecCamPos[2] << std::endl;*/
+	m_cam.UpdateTransformation();
 
 	m_bPickerNeedsUpdate = true;
 	RequestPlotUpdate();
@@ -773,12 +750,7 @@ void GlPlotRenderer::UpdatePicker()
 	if(!m_bInitialised || !m_bPlatformSupported || !m_bPickerEnabled) return;
 
 	// picker ray
-	auto [org, dir] = tl2::hom_line_from_screen_coords<t_mat_gl, t_vec_gl>(
-		m_posMouse.x(), m_posMouse.y(), 0., 1., m_matCam_inv,
-		m_matPerspective_inv, m_matViewport_inv, &m_matViewport, true);
-	t_vec3_gl org3 = tl2::create<t_vec3_gl>({org[0], org[1], org[2]});
-	t_vec3_gl dir3 = tl2::create<t_vec3_gl>({dir[0], dir[1], dir[2]});
-
+	auto [org3, dir3] = m_cam.GetPickerRay(m_posMouse.x(), m_posMouse.y());
 
 	// intersection with unit sphere around origin
 	bool hasSphereInters = false;
@@ -798,8 +770,8 @@ void GlPlotRenderer::UpdatePicker()
 		}
 		else
 		{	// test if next intersection is closer...
-			t_vec_gl oldPosTrafo = m_matCam * vecClosestSphereInters;
-			t_vec_gl newPosTrafo = m_matCam * vecInters4;
+			t_vec_gl oldPosTrafo = m_cam.GetTransformation() * vecClosestSphereInters;
+			t_vec_gl newPosTrafo = m_cam.GetTransformation() * vecInters4;
 
 			// ... it is closer.
 			if(tl2::norm(newPosTrafo) < tl2::norm(oldPosTrafo))
@@ -884,8 +856,8 @@ void GlPlotRenderer::UpdatePicker()
 				}
 				else
 				{	// test if next intersection is closer...
-					t_vec_gl oldPosTrafo = m_matCam * vecClosestInters;
-					t_vec_gl newPosTrafo = m_matCam * vecInters4;
+					t_vec_gl oldPosTrafo = m_cam.GetTransformation() * vecClosestInters;
+					t_vec_gl newPosTrafo = m_cam.GetTransformation() * vecInters4;
 
 					if(tl2::norm(newPosTrafo) < tl2::norm(oldPosTrafo))
 					{	// ...it is closer
@@ -915,13 +887,11 @@ void GlPlotRenderer::mouseMoveEvent(const QPointF& pos)
 
 	if(m_bInRotation)
 	{
-		auto diff = (m_posMouse - m_posMouseRotationStart);
-		t_real_gl phi = diff.x() + m_phi_saved;
-		t_real_gl theta = diff.y() + m_theta_saved;
+		auto diff = m_posMouse - m_posMouseRotationStart;
 
-		m_matCamRot = tl2::rotation<t_mat_gl, t_vec_gl>(m_vecCamX, theta/180.*tl2::pi<t_real_gl>, 0);
-		m_matCamRot *= tl2::rotation<t_mat_gl, t_vec_gl>(m_vecCamY, phi/180.*tl2::pi<t_real_gl>, 0);
-
+		m_cam.Rotate(
+			diff.x() / 180. * tl2::pi<t_real_gl>,
+			diff.y() / 180. * tl2::pi<t_real_gl>);
 		UpdateCam();
 	}
 	else
@@ -935,14 +905,14 @@ void GlPlotRenderer::mouseMoveEvent(const QPointF& pos)
 
 void GlPlotRenderer::zoom(t_real_gl val)
 {
-	m_zoom *= std::pow(2., val/64.);
+	m_cam.Zoom(val/64.);
 	UpdateCam();
 }
 
 
 void GlPlotRenderer::ResetZoom()
 {
-	m_zoom = 1;
+	m_cam.SetZoom(1.);
 	UpdateCam();
 }
 
@@ -961,10 +931,7 @@ void GlPlotRenderer::EndRotation()
 {
 	if(m_bInRotation)
 	{
-		auto diff = (m_posMouse - m_posMouseRotationStart);
-		m_phi_saved += diff.x();
-		m_theta_saved += diff.y();
-
+		m_cam.SaveRotation();
 		m_bInRotation = false;
 	}
 }
@@ -997,7 +964,6 @@ void GlPlotRenderer::DoPaintGL(qgl_funcs *pGl)
 	pGl->glEnable(GL_CULL_FACE);
 
 	pGl->glDisable(GL_BLEND);
-	//pGl->glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	pGl->glEnable(GL_MULTISAMPLE);
 	pGl->glEnable(GL_LINE_SMOOTH);
@@ -1021,8 +987,8 @@ void GlPlotRenderer::DoPaintGL(qgl_funcs *pGl)
 	if(m_bBTrafoNeedsUpdate) UpdateBTrafo();
 
 	// set cam matrix
-	m_pShaders->setUniformValue(m_uniMatrixCam, m_matCam);
-	m_pShaders->setUniformValue(m_uniMatrixCamInv, m_matCam_inv);
+	m_pShaders->setUniformValue(m_uniMatrixCam, m_cam.GetTransformation());
+	m_pShaders->setUniformValue(m_uniMatrixCamInv, m_cam.GetInverseTransformation());
 
 
 	auto colOverride = tl2::create<t_vec_gl>({1,1,1,1});
