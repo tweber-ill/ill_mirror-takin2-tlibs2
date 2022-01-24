@@ -51,6 +51,10 @@ namespace tl2_mag
 	// ----------------------------------------------------------------------------
 
 
+
+	// ----------------------------------------------------------------------------
+	// input- and output structs
+	// ----------------------------------------------------------------------------
 	/**
 	 * magnetic atom sites
 	 */
@@ -97,6 +101,21 @@ namespace tl2_mag
 		t_real mag{};       // field magnitude
 		bool align_spins{}; // align spins along external field
 	};
+
+
+	/**
+	 * eigenenergies and spin-spin correlation matrix
+	 */
+	struct EnergyAndWeight
+	{
+		t_real E{};
+		t_mat S{};
+		t_mat S_perp{};
+		t_real weight{};
+		t_real weight_spinflip[2] = {0., 0.};
+		t_real weight_nonspinflip{};
+	};
+	// ----------------------------------------------------------------------------
 
 
 
@@ -172,11 +191,6 @@ namespace tl2_mag
 	 */
 	class MagDyn
 	{
-	public:
-		// [E, S, S_perp]
-		using t_E_and_S = std::tuple<t_real, t_mat, t_mat>;
-
-
 	public:
 		MagDyn() = default;
 		~MagDyn() = default;
@@ -516,7 +530,7 @@ namespace tl2_mag
 		 * get the energies and the spin-correlation at the given momentum
 		 * @note implements the formalism given by (Toth 2015)
 		 */
-		std::vector<t_E_and_S> GetEnergies(
+		std::vector<EnergyAndWeight> GetEnergies(
 			t_mat _H, t_real h, t_real k, t_real l,
 			bool only_energies = false) const
 		{
@@ -592,7 +606,7 @@ namespace tl2_mag
 			}
 
 
-			std::vector<t_E_and_S> energies_and_correlations{};
+			std::vector<EnergyAndWeight> energies_and_correlations{};
 			energies_and_correlations.reserve(evals.size());
 
 			// if we're not interested in the spectral weights, we can ignore duplicates
@@ -603,15 +617,19 @@ namespace tl2_mag
 					std::find_if(energies_and_correlations.begin(), energies_and_correlations.end(),
 						[&eval, this](const auto& E_and_S) -> bool
 					{
-						t_real E = std::get<0>(E_and_S);
+						t_real E = E_and_S.E;
 						return tl2::equals<t_real>(E, eval.real(), m_eps);
 					}) != energies_and_correlations.end())
 				{
 					continue;
 				}
 
-				energies_and_correlations.push_back(
-					std::make_tuple(eval.real(), t_mat{}, t_mat{}));
+				EnergyAndWeight EandS
+				{
+					.E = eval.real(),
+				};
+
+				energies_and_correlations.emplace_back(std::move(EandS));
 			}
 
 
@@ -627,8 +645,8 @@ namespace tl2_mag
 				std::stable_sort(sorting.begin(), sorting.end(),
 					[&energies_and_correlations](t_size idx1, t_size idx2) -> bool
 					{
-						return std::get<0>(energies_and_correlations[idx1]) >=
-							std::get<0>(energies_and_correlations[idx2]);
+						return energies_and_correlations[idx1].E >=
+							energies_and_correlations[idx2].E;
 					});
 
 				//for(std::size_t idx=0; idx<sorting.size(); ++idx)
@@ -651,16 +669,23 @@ namespace tl2_mag
 				energies_and_correlations.clear();
 				for(t_size i=0; i<L.size1(); ++i)
 				{
+					EnergyAndWeight EandS
+					{
+						.E = L(i,i).real(),
+						.S = tl2::zero<t_mat>(3, 3),
+						.S_perp = tl2::zero<t_mat>(3, 3),
+					};
+
 					energies_and_correlations.emplace_back(
-						std::make_tuple(
-							L(i,i).real(),
-							tl2::zero<t_mat>(3, 3),
-							tl2::zero<t_mat>(3, 3)));
+						std::move(EandS));
 				}
 
 				t_mat E_sqrt = E;
 				for(t_size i=0; i<E.size1(); ++i)
-					E_sqrt(i, i) = std::sqrt(std::abs(E_sqrt(i, i)));
+				{
+					t_real energy = E_sqrt(i, i).real();
+					E_sqrt(i, i) = std::sqrt(std::abs(energy));
+				}
 
 				auto [C_inv, inv_ok] = tl2::inv(C);
 				if(!inv_ok)
@@ -706,13 +731,16 @@ namespace tl2_mag
 								const t_vec& u_conj_i = m_sites_calc[i].u_conj;
 								const t_vec& u_conj_j = m_sites_calc[j].u_conj;
 
-								t_cplx phase = std::sqrt(S_i*S_j) * std::exp(
-									-imag * twopi * tl2::inner<t_vec>(pos_i - pos_j, Q));
+								t_cplx phase_pos = std::sqrt(S_i*S_j) * std::exp(
+									+imag * twopi * tl2::inner<t_vec>(pos_j - pos_i, Q));
+								t_cplx phase_neg = std::sqrt(S_i*S_j) * std::exp(
+									-imag * twopi * tl2::inner<t_vec>(pos_j - pos_i, Q));
 
-								V(i, j) = phase * u_conj_i[x_idx] * u_conj_j[y_idx];
-								W(i, j) = phase * u_conj_i[x_idx] * u_j[y_idx];
-								Y(i, j) = phase * u_i[x_idx] * u_conj_j[y_idx];
-								Z(i, j) = phase * u_i[x_idx] * u_j[y_idx];
+								// TODO: check phase factors
+								Y(i, j) = phase_pos * u_i[x_idx] * u_conj_j[y_idx];
+								V(i, j) = phase_neg * u_conj_i[x_idx] * u_conj_j[y_idx];
+								Z(i, j) = phase_neg * u_i[x_idx] * u_j[y_idx];
+								W(i, j) = phase_neg * u_conj_i[x_idx] * u_j[y_idx];
 							}
 						}
 
@@ -727,7 +755,7 @@ namespace tl2_mag
 
 						for(t_size i=0; i<num_sites*2; ++i)
 						{
-							t_mat& S = std::get<1>(energies_and_correlations[i]);
+							t_mat& S = energies_and_correlations[i].S;
 							S(x_idx, y_idx) += M_trafo(i, i) / t_real(2*num_sites);
 						}
 
@@ -750,9 +778,13 @@ namespace tl2_mag
 				{
 					//t_size site_idx = i % num_sites;
 					auto& E_and_S = energies_and_correlations[i];
-					t_real E = std::get<0>(E_and_S);
-					t_mat& S = std::get<1>(E_and_S);
-					t_mat& S_perp = std::get<2>(E_and_S);
+					const t_real& E = E_and_S.E;
+					t_mat& S = E_and_S.S;
+					t_mat& S_perp = E_and_S.S_perp;
+					t_real& w = E_and_S.weight;
+					t_real& w_SF1 = E_and_S.weight_spinflip[0];
+					t_real& w_SF2 = E_and_S.weight_spinflip[1];
+					t_real& w_NSF = E_and_S.weight_nonspinflip;
 
 					// formula 40 from (Toth 2015)
 					// TODO: add incommensurate cases
@@ -767,6 +799,12 @@ namespace tl2_mag
 					// apply the orthogonal projector for magnetic neutron scattering
 					S_perp = (m_proj_neutron * tl2::herm(S)) * (S * m_proj_neutron);
 					//S_perp = m_proj_neutron * S;
+
+					// weights
+					w = tl2::trace<t_mat>(S_perp).real();
+					w_SF1 = S_perp(0, 0).real();
+					w_SF2 = S_perp(1, 1).real();
+					w_NSF = S_perp(2, 2).real();
 				}
 			}
 
@@ -778,7 +816,7 @@ namespace tl2_mag
 		 * get the energies and the spin-correlation at the given momentum
 		 * @note implements the formalism given by (Toth 2015)
 		 */
-		std::vector<t_E_and_S> GetEnergies(
+		std::vector<EnergyAndWeight> GetEnergies(
 			t_real h, t_real k, t_real l,
 			bool only_energies = false) const
 		{
@@ -798,11 +836,11 @@ namespace tl2_mag
 				energies_and_correlations.begin(), energies_and_correlations.end(),
 				[](const auto& E_and_S_1, const auto& E_and_S_2) -> bool
 			{
-				return std::get<0>(E_and_S_1) < std::get<0>(E_and_S_2);
+				return E_and_S_1.E < E_and_S_2.E;
 			});
 
 			if(min_iter != energies_and_correlations.end())
-				return std::get<0>(*min_iter);
+				return min_iter->E;
 
 			return 0.;
 		}
@@ -835,7 +873,7 @@ namespace tl2_mag
 				auto energies_and_correlations = GetEnergies(h, k, l, true);
 				for(const auto& E_and_S : energies_and_correlations)
 				{
-					t_real E = std::get<0>(E_and_S);
+					t_real E = E_and_S.E;
 
 					ofstr
 						<< std::setw(m_prec*2) << std::left << h
