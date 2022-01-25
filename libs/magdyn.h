@@ -369,8 +369,7 @@ public:
 			auto [field_re, field_im] =
 				tl2::split_cplx<t_vec, t_vec_real>(m_field.dir);
 			m_rot_field = tl2::convert<t_mat>(
-				tl2::rotation<t_mat_real, t_vec_real>(
-					field_re, zdir, zdir));
+				tl2::rotation<t_mat_real, t_vec_real>(field_re, zdir));
 		}
 
 		if(m_bragg.size() == 3)
@@ -395,8 +394,7 @@ public:
 			auto [spin_re, spin_im] =
 				tl2::split_cplx<t_vec, t_vec_real>(site.spin_dir);
 			t_mat rot = tl2::convert<t_mat>(
-				tl2::rotation<t_mat_real, t_vec_real>(
-					spin_re, zdir, zdir));
+				tl2::rotation<t_mat_real, t_vec_real>(spin_re, zdir));
 
 			// spin rotation of equation (9) from (Toth 2015)
 			t_vec u, v;

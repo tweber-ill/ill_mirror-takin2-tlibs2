@@ -447,6 +447,9 @@ t_scalar stoval(const t_str& str)
 }
 
 
+/**
+ * get a random number in the given range
+ */
 template<class t_num>
 t_num get_rand(t_num min=1, t_num max=-1)
 {
@@ -474,7 +477,7 @@ t_num get_rand(t_num min=1, t_num max=-1)
  * gaussian
  * @see https://en.wikipedia.org/wiki/Gaussian_function
  */
-template<class T=double>
+template<class T = double>
 T gauss_model(T x, T x0, T sigma, T amp, T offs)
 {
 	T norm = T(1)/(std::sqrt(T(2)*pi<T>) * sigma);
@@ -482,14 +485,14 @@ T gauss_model(T x, T x0, T sigma, T amp, T offs)
 }
 
 
-template<class T=double>
+template<class T = double>
 T gauss_model_amp(T x, T x0, T sigma, T amp, T offs)
 {
 	return amp * std::exp(-0.5 * ((x-x0)/sigma)*((x-x0)/sigma)) + offs;
 }
 
 
-template<class T=double>
+template<class T = double>
 T gauss_model_amp_slope(T x, T x0, T sigma, T amp, T offs, T slope)
 {
 	return amp * std::exp(-0.5 * ((x-x0)/sigma)*((x-x0)/sigma)) + (x-x0)*slope + offs;
@@ -500,28 +503,28 @@ T gauss_model_amp_slope(T x, T x0, T sigma, T amp, T offs, T slope)
  * lorentzian
  * @see https://en.wikipedia.org/wiki/Cauchy_distribution
  */
-template<class T=double>
+template<class T = double>
 T lorentz_model_amp(T x, T x0, T hwhm, T amp, T offs)
 {
 	return amp*hwhm*hwhm / ((x-x0)*(x-x0) + hwhm*hwhm) + offs;
 }
 
 
-template<class T=double>
+template<class T = double>
 T lorentz_model_amp_slope(T x, T x0, T hwhm, T amp, T offs, T slope)
 {
 	return amp*hwhm*hwhm / ((x-x0)*(x-x0) + hwhm*hwhm) + (x-x0)*slope + offs;
 }
 
 
-template<class T=double>
+template<class T = double>
 T parabola_model(T x, T x0, T amp, T offs)
 {
 	return amp*(x-x0)*(x-x0) + offs;
 }
 
 
-template<class T=double>
+template<class T = double>
 T parabola_model_slope(T x, T x0, T amp, T offs, T slope)
 {
 	return amp*(x-x0)*(x-x0) + (x-x0)*slope + offs;
@@ -1864,12 +1867,14 @@ template<class t_mat>
 t_mat zero(std::size_t N1, std::size_t N2)
 requires is_basic_mat<t_mat>
 {
+	using size_t = decltype(t_mat{}.size1());
+
 	t_mat mat;
 	if constexpr(is_dyn_mat<t_mat>)
 		mat = t_mat(N1, N2);
 
-	for(std::size_t i=0; i<mat.size1(); ++i)
-		for(std::size_t j=0; j<mat.size2(); ++j)
+	for(size_t i=0; i<mat.size1(); ++i)
+		for(size_t j=0; j<mat.size2(); ++j)
 			mat(i,j) = 0;
 
 	return mat;
@@ -1904,6 +1909,71 @@ requires is_basic_vec<t_vec>
 		vec[i] = 0;
 
 	return vec;
+}
+
+
+/**
+ * random scalar
+ */
+template<typename t_scalar>
+t_scalar rand()
+requires is_scalar<t_scalar> && (!is_complex<t_scalar>)
+{
+	return get_rand<t_scalar>();
+};
+
+
+/**
+ * random complex number
+ */
+template<typename t_cplx, class t_scalar = typename t_cplx::value_type>
+t_cplx rand()
+requires is_complex<t_cplx> && is_scalar<t_scalar>
+{
+	return t_cplx(rand<t_scalar>(), rand<t_scalar>());
+};
+
+
+/**
+ * random vector
+ */
+template<class t_vec>
+t_vec rand(std::size_t N)
+requires is_basic_vec<t_vec>
+{
+	using size_t = decltype(t_vec{}.size());
+	using t_scalar = typename t_vec::value_type;
+
+	t_vec vec{};
+	if constexpr(is_dyn_vec<t_vec>)
+		vec = t_vec(N);
+
+	for(size_t i=0; i<vec.size(); ++i)
+		vec[i] = rand<t_scalar>();
+
+	return vec;
+}
+
+
+/**
+ * random matrix
+ */
+template<class t_mat>
+t_mat rand(std::size_t N1, std::size_t N2)
+requires is_basic_mat<t_mat>
+{
+	using size_t = decltype(t_mat{}.size1());
+	using t_scalar = typename t_mat::value_type;
+
+	t_mat mat{};
+	if constexpr(is_dyn_mat<t_mat>)
+		mat = t_mat(N1, N2);
+
+	for(size_t i=0; i<mat.size1(); ++i)
+		for(size_t j=0; j<mat.size2(); ++j)
+			mat(i,j) = rand<t_scalar>();
+
+	return mat;
 }
 
 
@@ -4190,6 +4260,7 @@ requires is_basic_vec<t_vec> && is_mat<t_mat>
 
 /**
  * SO(2) rotation matrix
+ * @see https://en.wikipedia.org/wiki/Rotation_matrix
  */
 template<class t_mat>
 t_mat rotation_2d(const typename t_mat::value_type angle)
@@ -4211,7 +4282,8 @@ requires tl2::is_mat<t_mat>
  * @see https://en.wikipedia.org/wiki/Rodrigues%27_rotation_formula
  */
 template<class t_mat, class t_vec>
-t_mat rotation(const t_vec& axis, const typename t_vec::value_type angle, bool bIsNormalised=1)
+t_mat rotation(const t_vec& axis, const typename t_vec::value_type angle,
+	bool bIsNormalised = 1)
 requires is_vec<t_vec> && is_mat<t_mat>
 {
 	using t_real = typename t_vec::value_type;
@@ -4253,11 +4325,45 @@ requires is_vec<t_vec> && is_mat<t_mat>
 
 
 /**
+ * get a vector perpendicular to vec
+ */
+template<class t_vec, class t_scalar = typename t_vec::value_type>
+requires is_vec<t_vec>
+t_vec perp(const t_vec& vec, t_scalar eps = std::numeric_limits<t_scalar>::eps())
+{
+	if(vec.size() == 2)
+	{
+		t_vec vecret = create<t_vec>({vec[1], vec[0]});
+		if(std::abs(vecret[0]) > std::abs(vecret[1]))
+			vecret[0] = -vecret[0];
+	}
+
+	else if(vec.size() == 3 || vec.size() == 4)
+	{
+		while(1)
+		{
+			t_vec rand = tl2::rand<t_vec>(3);
+			t_vec perp = cross<t_vec>({ vec, rand });
+			t_scalar dot = inner<t_vec>(perp, perp);
+
+			if(dot > eps)
+			{
+				perp /= std::sqrt(dot);
+				return perp;
+			}
+		}
+	}
+
+	return t_vec{};
+}
+
+
+/**
  * matrix to rotate vector vec1 into vec2
  */
 template<class t_mat, class t_vec>
 t_mat rotation(const t_vec& vec1, const t_vec& vec2,
-	const t_vec& normal_vec = create<t_vec>({0, 0, 1}))
+	const t_vec *perp_vec = nullptr)
 requires is_vec<t_vec> && is_mat<t_mat>
 {
 	using t_real = typename t_vec::value_type;
@@ -4268,7 +4374,7 @@ requires is_vec<t_vec> && is_mat<t_mat>
 	t_real lenaxis = norm<t_vec>(axis);
 
 	// rotation angle
-	const t_real angle = std::atan2(
+	t_real angle = std::atan2(
 		lenaxis, inner<t_vec>(vec1, vec2));
 
 	// collinear vectors?
@@ -4278,13 +4384,22 @@ requires is_vec<t_vec> && is_mat<t_mat>
 	// antiparallel vectors?
 	if(equals<t_real>(std::abs(angle), pi<t_real>, eps))
 	{
-		axis = normal_vec;
-		lenaxis = norm<t_vec>(axis);
+		if(perp_vec)
+		{
+			axis = *perp_vec;
+			lenaxis = norm<t_vec>(axis);
+		}
+		else
+		{
+			axis = perp<t_vec>(vec1, eps);
+			lenaxis = t_real(1);
+		}
+
+		angle = pi<t_real>;
 	}
 
 	axis /= lenaxis;
-	t_mat mat = rotation<t_mat, t_vec>(axis, angle, true);
-	return mat;
+	return rotation<t_mat, t_vec>(axis, angle, true);
 }
 
 
@@ -4683,7 +4798,7 @@ requires is_vec<t_vec>
 {
 	t_vec norm_old = create<t_vec>({ 0, 0, -1 });
 	t_vec rot_vec = create<t_vec>({ 1, 0, 0 });
-	t_mat rot = rotation<t_mat, t_vec>(norm_old, norm, rot_vec);
+	t_mat rot = rotation<t_mat, t_vec>(norm_old, norm, &rot_vec);
 
 	t_cont<t_vec> vertices =
 	{
@@ -5846,10 +5961,10 @@ requires is_mat<t_mat>
  */
 template<class t_mat, class t_vec>
 t_mat hom_rotation(const t_vec& vec1, const t_vec& vec2,
-	const t_vec& vec_normal = create<t_vec>({0, 0, 1}))
+	const t_vec *perp_vec = nullptr)
 requires is_vec<t_vec> && is_mat<t_mat>
 {
-	t_mat rot = rotation<t_mat, t_vec>(vec1, vec2, vec_normal);
+	t_mat rot = rotation<t_mat, t_vec>(vec1, vec2, perp_vec);
 
 	return create<t_mat>({
 		rot(0,0), rot(0,1), rot(0,2), 0.,
@@ -5864,7 +5979,8 @@ requires is_vec<t_vec> && is_mat<t_mat>
  * rotation matrix in homogeneous coordinates
  */
 template<class t_mat, class t_vec>
-t_mat hom_rotation(const t_vec& axis, typename t_vec::value_type angle, bool bIsNormalised=1)
+t_mat hom_rotation(const t_vec& axis, typename t_vec::value_type angle,
+	bool bIsNormalised = true)
 requires is_vec<t_vec> && is_mat<t_mat>
 {
 	t_mat rot = rotation<t_mat, t_vec>(axis, angle, bIsNormalised);
@@ -5890,7 +6006,7 @@ t_mat get_arrow_matrix(
 	t_real postscale = 1, const t_vec& vecPostTrans = create<t_vec>({0,0,0.5}),
 	const t_vec& vecFrom = create<t_vec>({0,0,1}),
 	t_real prescale = 1, const t_vec& vecPreTrans = create<t_vec>({0,0,0}),
-	const t_vec& vecNormal = create<t_vec>({0,0,1}))
+	const t_vec* perp_vec = nullptr)
 requires is_vec<t_vec> && is_mat<t_mat>
 {
 	t_mat mat = unit<t_mat>(4);
@@ -5898,7 +6014,7 @@ requires is_vec<t_vec> && is_mat<t_mat>
 	mat *= hom_translation<t_mat>(vecPreTrans[0], vecPreTrans[1], vecPreTrans[2]);
 	mat *= hom_scaling<t_mat>(prescale, prescale, prescale);
 
-	mat *= hom_rotation<t_mat, t_vec>(vecFrom, vecTo, vecNormal);
+	mat *= hom_rotation<t_mat, t_vec>(vecFrom, vecTo, perp_vec);
 
 	mat *= hom_scaling<t_mat>(postscale, postscale, postscale);
 	mat *= hom_translation<t_mat>(vecPostTrans[0], vecPostTrans[1], vecPostTrans[2]);
@@ -7814,7 +7930,8 @@ requires is_vec<t_vec>
  * @returns normal
  */
 template<class t_vec, template<class...> class t_cont = std::vector>
-t_vec sort_poly_verts(t_cont<t_vec>& vecPoly, const t_vec& vecAbsCentre, bool make_norm_perp_to_poly=false)
+t_vec sort_poly_verts(t_cont<t_vec>& vecPoly, const t_vec& vecAbsCentre,
+	bool make_norm_perp_to_poly = false)
 requires is_vec<t_vec>
 {
 	using namespace tl2_ops;
@@ -8222,7 +8339,7 @@ requires is_quat<t_quat> && is_vec<t_vec>
 	// antiparallel vectors -> rotate about any perpendicular axis
 	else if(equals<t_vec>(vec0, -vec1))
 	{
-		t_vec vecPerp = create<t_vec>({ vec0[2], T{0}, -vec0[0] });
+		t_vec vecPerp = perp<t_vec>(vec0);
 		return rotation_quat<t_quat, t_vec, T>(vecPerp, pi<T>);
 	}
 
