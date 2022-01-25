@@ -348,40 +348,14 @@ void GlPlotRenderer::initialiseGL()
 	// --------------------------------------------------------------------
 	std::string strFragShader = R"RAW(#version ${GLSL_VERSION}
 
+// ----------------------------------------------------------------------------
+// inputs and outputs
+// ----------------------------------------------------------------------------
+in vec4 fragpos;
+in vec4 fragnorm;
 in vec4 fragcol;
+
 out vec4 outcol;
-
-
-void main()
-{
-	outcol = fragcol;
-})RAW";
-	// --------------------------------------------------------------------
-
-
-	// --------------------------------------------------------------------
-	std::string strVertexShader = R"RAW(#version ${GLSL_VERSION}
-
-in vec4 vertex;
-in vec4 normal;
-in vec4 vertexcol;
-out vec4 fragcol;
-
-
-const float pi = ${PI};
-
-
-// ----------------------------------------------------------------------------
-// transformations
-// ----------------------------------------------------------------------------
-uniform mat4 proj = mat4(1.);
-uniform mat4 cam = mat4(1.);
-uniform mat4 cam_inv = mat4(1.);
-uniform mat4 obj = mat4(1.);
-uniform mat4 trafoA = mat4(1.);
-uniform mat4 trafoB = mat4(1.);		// B = 2 pi / A
-
-uniform int coordsys = 0;			// 0: crystal system, 1: lab system
 // ----------------------------------------------------------------------------
 
 
@@ -399,8 +373,19 @@ float g_ambient = 0.2;
 // ----------------------------------------------------------------------------
 
 
+// ----------------------------------------------------------------------------
+// transformations
+// ----------------------------------------------------------------------------
+uniform mat4 cam = mat4(1.);
+uniform mat4 cam_inv = mat4(1.);
+uniform mat4 obj = mat4(1.);
+// ----------------------------------------------------------------------------
+
+
 /**
- * reflect a vector on a surface with normal n => subtract the projection vector twice: 1 - 2*|n><n|
+ * reflect a vector on a surface with normal n
+ *  => subtract the projection vector twice: 1 - 2*|n><n|
+ * @see (Arens 2015), p. 710
  */
 mat3 reflect(vec3 n)
 {
@@ -480,6 +465,50 @@ float lighting(vec4 objVert, vec4 objNorm)
 
 void main()
 {
+	float I = lighting(fragpos, fragnorm);
+	outcol = fragcol;
+	outcol.rgb *= I;
+	outcol *= constcol;
+})RAW";
+	// --------------------------------------------------------------------
+
+
+	// --------------------------------------------------------------------
+	std::string strVertexShader = R"RAW(#version ${GLSL_VERSION}
+
+
+// ----------------------------------------------------------------------------
+// inputs and outputs
+// ----------------------------------------------------------------------------
+in vec4 vertex;
+in vec4 normal;
+in vec4 vertexcol;
+
+out vec4 fragcol;
+out vec4 fragpos;
+out vec4 fragnorm;
+// ----------------------------------------------------------------------------
+
+
+const float pi = ${PI};
+
+
+// ----------------------------------------------------------------------------
+// transformations
+// ----------------------------------------------------------------------------
+uniform mat4 proj = mat4(1.);
+uniform mat4 cam = mat4(1.);
+uniform mat4 cam_inv = mat4(1.);
+uniform mat4 obj = mat4(1.);
+uniform mat4 trafoA = mat4(1.);
+uniform mat4 trafoB = mat4(1.);		// B = 2 pi / A
+
+uniform int coordsys = 0;			// 0: crystal system, 1: lab system
+// ----------------------------------------------------------------------------
+
+
+void main()
+{
 	mat4 coordTrafo = mat4(1.);
 	mat4 coordTrafo_inv = mat4(1.);
 
@@ -495,9 +524,9 @@ void main()
 	vec4 objNorm = normalize(coordTrafo * obj * coordTrafo_inv * normal);
 	gl_Position = proj * cam * objPos;
 
-	float I = lighting(objPos, objNorm);
-	fragcol.rgb = vertexcol.rgb * I;
-	fragcol *= constcol;
+	fragpos = objPos;
+	fragnorm = objNorm;
+	fragcol = vertexcol;
 })RAW";
 // --------------------------------------------------------------------
 
