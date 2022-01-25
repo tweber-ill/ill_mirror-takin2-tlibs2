@@ -9,6 +9,8 @@
  *   - (Toth 2015) S. Toth and B. Lake, J. Phys.: Condens. Matter 27 166002 (2015):
  *     https://doi.org/10.1088/0953-8984/27/16/166002
  *   - (Heinsdorf 2021) N. Heinsdorf, example ferromagnetic calculation, personal communications, 2021/2022.
+ *
+ * This file implements the formalism given by (Toth 2015).
  */
 
 #ifndef __TLIBS2_MAGDYN_H__
