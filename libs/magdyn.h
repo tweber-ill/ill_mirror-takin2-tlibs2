@@ -759,6 +759,10 @@ public:
 			//dbg_print(L);
 			//std::cout << std::endl;
 
+			/*std::cout << "Y = np.zeros(3*3*4*4, dtype=complex).reshape((4,4,3,3))" << std::endl;
+			std::cout << "V = np.zeros(3*3*4*4, dtype=complex).reshape((4,4,3,3))" << std::endl;
+			std::cout << "Z = np.zeros(3*3*4*4, dtype=complex).reshape((4,4,3,3))" << std::endl;
+			std::cout << "W = np.zeros(3*3*4*4, dtype=complex).reshape((4,4,3,3))" << std::endl;*/
 
 			// building the spin correlation functions of equation (47) from (Toth 2015)
 			for(int x_idx=0; x_idx<3; ++x_idx)
@@ -795,6 +799,27 @@ public:
 							V(i, j) = phase_pos * u_conj_i[x_idx] * u_conj_j[y_idx];
 							Z(i, j) = phase_neg * u_i[x_idx] * u_j[y_idx];
 							W(i, j) = phase_neg * u_conj_i[x_idx] * u_j[y_idx];
+
+							/*std::cout
+								<< "Y[" << i << ", " << j << ", "
+								<< x_idx << ", " << y_idx << "] = "
+								<< Y(i, j).real() << " + " << Y(i, j).imag() << "j"
+								<< std::endl;
+							std::cout
+								<< "V[" << i << ", " << j << ", "
+								<< x_idx << ", " << y_idx << "] = "
+								<< V(i, j).real() << " + " << V(i, j).imag() << "j"
+								<< std::endl;
+							std::cout
+								<< "Z[" << i << ", " << j << ", "
+								<< x_idx << ", " << y_idx << "] = "
+								<< Z(i, j).real() << " + " << Z(i, j).imag() << "j"
+								<< std::endl;
+							std::cout
+								<< "W[" << i << ", " << j << ", "
+								<< x_idx << ", " << y_idx << "] = "
+								<< W(i, j).real() << " + " << W(i, j).imag() << "j"
+								<< std::endl;*/
 						}
 					}
 
