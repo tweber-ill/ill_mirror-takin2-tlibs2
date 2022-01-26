@@ -972,7 +972,8 @@ void GlPlotRenderer::tick()
 }
 
 
-void GlPlotRenderer::tick(const std::chrono::milliseconds& ms)
+void GlPlotRenderer::tick(
+	[[maybe_unused]] const std::chrono::milliseconds& ms)
 {
 	// TODO
 	UpdateCam();

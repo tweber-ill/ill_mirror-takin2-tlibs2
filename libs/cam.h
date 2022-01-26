@@ -671,8 +671,10 @@ private:
 	t_real m_farPlane = 1000.;
 
 	// camera rotation
-	t_real m_phi = 0, m_theta = 0;
-	t_real m_phi_saved = 0, m_theta_saved = 0;
+	t_real m_phi = pi<t_real>*t_real(0.25);
+	t_real m_theta = -pi<t_real>*(0.25);
+	t_real m_phi_saved = pi<t_real>*t_real(0.25);
+	t_real m_theta_saved = -pi<t_real>*(0.25);
 
 	// camera zoom (giving the fraction of m_dist towards the translation centre)
 	t_real m_zoom = 1.;

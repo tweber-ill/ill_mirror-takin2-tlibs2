@@ -66,7 +66,7 @@ public:
 
 private:
 #if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
-	t_qt_mutex m_mutexObj;
+	t_qt_mutex m_mutexObj{};
 #else
 	t_qt_mutex m_mutexObj{QMutex::Recursive};
 #endif
@@ -74,9 +74,10 @@ private:
 
 protected:
 	GlPlot *m_pPlot = nullptr;
-	std::string m_strGlVer, m_strGlShaderVer, m_strGlVendor, m_strGlRenderer;
+	std::string m_strGlVer{}, m_strGlShaderVer{},
+		m_strGlVendor{}, m_strGlRenderer{};
 
-	std::shared_ptr<QOpenGLShaderProgram> m_pShaders;
+	std::shared_ptr<QOpenGLShaderProgram> m_pShaders{};
 
 	GLint m_attrVertex = -1;
 	GLint m_attrVertexNorm = -1;
@@ -107,14 +108,14 @@ protected:
 	std::atomic<int> m_iScreenDims[2] = { 800, 600 };
 	t_real_gl m_pickerSphereRadius = 1;
 
-	std::vector<t_vec3_gl> m_lights;
-	std::vector<GlPlotObj> m_objs;
+	std::vector<t_vec3_gl> m_lights{};
+	std::vector<GlPlotObj> m_objs{};
 
-	QPointF m_posMouse;
-	QPointF m_posMouseRotationStart, m_posMouseRotationEnd;
+	QPointF m_posMouse{};
+	QPointF m_posMouseRotationStart{}, m_posMouseRotationEnd{};
 	bool m_bInRotation = false;
 
-	QTimer m_timer;
+	QTimer m_timer{};
 	t_cam m_cam{};
 
 
@@ -136,6 +137,9 @@ protected:
 public:
 	GlPlotRenderer(GlPlot *pPlot = nullptr);
 	virtual ~GlPlotRenderer();
+
+	GlPlotRenderer(const GlPlotRenderer&) = delete;
+	const GlPlotRenderer& operator=(const GlPlotRenderer&) = delete;
 
 	static constexpr bool m_isthreaded = false;
 	static constexpr bool m_usetimer = false;
@@ -241,8 +245,12 @@ public:
 	GlPlot(QWidget *pParent = nullptr);
 	virtual ~GlPlot();
 
+	GlPlot(const GlPlot&) = delete;
+	const GlPlot& operator=(const GlPlot&) = delete;
+
 	GlPlotRenderer* GetRenderer() { return m_renderer.get(); }
 	static constexpr bool m_isthreaded = GlPlotRenderer::m_isthreaded;
+
 
 protected:
 	virtual void paintEvent(QPaintEvent*) override;
@@ -255,17 +263,19 @@ protected:
 	virtual void mouseReleaseEvent(QMouseEvent *Evt) override;
 	virtual void wheelEvent(QWheelEvent *pEvt) override;
 
+
 private:
 #if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
-	mutable t_qt_mutex m_mutex;
+	mutable t_qt_mutex m_mutex{};
 #else
 	mutable t_qt_mutex m_mutex{QMutex::Recursive};
 #endif
 
-	std::unique_ptr<GlPlotRenderer> m_renderer;
-	std::unique_ptr<QThread> m_thread_impl;
+	std::unique_ptr<GlPlotRenderer> m_renderer{};
+	std::unique_ptr<QThread> m_thread_impl{};
 	bool m_mouseMovedBetweenDownAndUp = 0;
 	bool m_mouseDown[3] = {0,0,0};
+
 
 public:
 	t_qt_mutex* GetMutex() { return &m_mutex; }
@@ -273,11 +283,13 @@ public:
 	void MoveContextToThread();
 	bool IsContextInThread() const;
 
+
 protected slots:
 	void beforeComposing();
 	void afterComposing();
 	void beforeResizing();
 	void afterResizing();
+
 
 signals:
 	void AfterGLInitialisation();
