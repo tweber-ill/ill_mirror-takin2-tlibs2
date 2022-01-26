@@ -90,6 +90,7 @@ struct AtomSiteCalc
 struct ExchangeTerm
 {
 	std::string name{}; // identifier
+	t_size index{};     // index
 
 	t_size atom1{};     // atom 1 index
 	t_size atom2{};     // atom 2 index
@@ -299,6 +300,7 @@ public:
 		return m_bose_cutoff;
 	}
 
+
 	void SetExternalField(const ExternalField& field)
 	{
 		m_field = field;
@@ -307,13 +309,17 @@ public:
 
 	void AddAtomSite(AtomSite&& site)
 	{
-		m_sites.emplace_back(std::forward<AtomSite&&>(site));
+		site.index = GetAtomSites().size();
+		m_sites.emplace_back(
+			std::forward<AtomSite&&>(site));
 	}
 
 
 	void AddExchangeTerm(ExchangeTerm&& term)
 	{
-		m_exchange_terms.emplace_back(std::forward<ExchangeTerm&&>(term));
+		term.index = GetExchangeTerms().size();
+		m_exchange_terms.emplace_back(
+			std::forward<ExchangeTerm&&>(term));
 	}
 
 
@@ -416,8 +422,8 @@ public:
 
 		for(t_size site_idx=0; site_idx<m_sites.size(); ++site_idx)
 		{
-			AtomSite& site = m_sites[site_idx];
-			site.index = site_idx;
+			const AtomSite& site = m_sites[site_idx];
+			//site.index = site_idx;
 
 			// rotate local spin to ferromagnetic [001] direction
 			auto [spin_re, spin_im] =
@@ -1005,6 +1011,7 @@ public:
 				AtomSite atom_site;
 
 				atom_site.name = site.second.get<std::string>("name", "n/a");
+				atom_site.index = m_sites.size();
 
 				atom_site.pos = tl2::create<t_vec>(
 				{
@@ -1035,6 +1042,7 @@ public:
 				ExchangeTerm exchange_term;
 
 				exchange_term.name = term.second.get<std::string>("name", "n/a");
+				exchange_term.index = m_exchange_terms.size();
 				exchange_term.atom1 = term.second.get<t_size>("atom_1_index", 0);
 				exchange_term.atom2 = term.second.get<t_size>("atom_2_index", 0);
 
