@@ -64,7 +64,10 @@ using t_mat = tl2::mat<t_cplx, std::vector>;
 struct AtomSite
 {
 	std::string name{}; // identifier
+	t_size index{};     // index
+
 	t_vec pos{};        // atom position
+
 	t_vec spin_dir{};   // spin direction
 	t_real spin_mag{};  // spin magnitude
 	t_mat g{};          // g factor
@@ -87,9 +90,11 @@ struct AtomSiteCalc
 struct ExchangeTerm
 {
 	std::string name{}; // identifier
+
 	t_size atom1{};     // atom 1 index
 	t_size atom2{};     // atom 2 index
 	t_vec dist{};       // distance between unit cells
+
 	t_cplx J{};         // Heisenberg interaction
 	t_vec dmi{};        // Dzyaloshinskij-Moriya interaction
 };
@@ -154,9 +159,9 @@ void dbg_print(const t_mat& mat)
 	int prec = 3;
 	std::cout.precision(prec);
 
-	for(std::size_t row=0; row<mat.size1(); ++row)
+	for(t_size row=0; row<mat.size1(); ++row)
 	{
-		for(std::size_t col=0; col<mat.size2(); ++col)
+		for(t_size col=0; col<mat.size2(); ++col)
 		{
 			t_elem elem = mat(row, col);
 			tl2::set_eps_0(elem, eps);
@@ -177,7 +182,7 @@ void dbg_print(const t_vec& vec)
 	int prec = 3;
 	std::cout.precision(prec);
 
-	for(std::size_t row=0; row<vec.size(); ++row)
+	for(t_size row=0; row<vec.size(); ++row)
 	{
 		t_elem elem = vec[row];
 		tl2::set_eps_0(elem, eps);
@@ -347,6 +352,27 @@ public:
 
 
 	/**
+	 * get the needed supercell ranges from the exchange terms
+	 */
+	std::tuple<t_vec_real, t_vec_real> GetSupercellMinMax() const
+	{
+		t_vec_real min = tl2::zero<t_vec_real>(3);
+		t_vec_real max = tl2::zero<t_vec_real>(3);
+
+		for(const ExchangeTerm& term : m_exchange_terms)
+		{
+			for(t_size i=0; i<3; ++i)
+			{
+				min[i] = std::min(min[i], term.dist[i].real());
+				max[i] = std::max(max[i], term.dist[i].real());
+			}
+		}
+
+		return std::make_tuple(min, max);
+	}
+
+
+	/**
 	 * calculate the spin rotation trafo
 	 */
 	void CalcSpinRotation()
@@ -388,8 +414,11 @@ public:
 		}
 
 
-		for(const AtomSite& site : m_sites)
+		for(t_size site_idx=0; site_idx<m_sites.size(); ++site_idx)
 		{
+			AtomSite& site = m_sites[site_idx];
+			site.index = site_idx;
+
 			// rotate local spin to ferromagnetic [001] direction
 			auto [spin_re, spin_im] =
 				tl2::split_cplx<t_vec, t_vec_real>(site.spin_dir);
@@ -668,7 +697,7 @@ public:
 						energies_and_correlations[idx2].E;
 				});
 
-			//for(std::size_t idx=0; idx<sorting.size(); ++idx)
+			//for(t_size idx=0; idx<sorting.size(); ++idx)
 			//	std::cout << idx << " -> " << sorting[idx] << std::endl;
 
 			//energies_and_correlations = tl2::reorder(energies_and_correlations, sorting);
