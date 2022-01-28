@@ -6199,10 +6199,23 @@ requires is_mat<t_mat> && is_complex<typename t_mat::value_type>
 }
 
 
-
 /**
  * real crystallographic A matrix
  * @see https://en.wikipedia.org/wiki/Fractional_coordinates
+ *
+ * derivation from dot products:
+ *   (1) <a|b> = ab cos(_cc), (2) <a|c> = ac cos(_bb), (3) <b|c> = bc cos(_aa),
+ *   (4) <a|a> = a^2,         (5) <b|b> = b^2,         (6) <c|c> = c^2
+ *
+ *   (1) => b_0 = b cos(_cc)
+ *   (5) => b_1 = b sin(_cc)
+
+ *   (2) => c_0 = c cos(_bb)
+ *   (3) => b_0*c_0 + b_1*c_1 = bc cos(_aa)
+ *       => bc cos(_cc)*cos(_bb) + b sin(_cc) c_1 = bc cos(_aa)
+ *       => c_1 = (c cos(_aa) - c cos(_cc)*cos(_bb)) / sin(_cc)
+ *   (6) => c_2^2 = c^2 - c_0^2 - c_1^2
+ *       => c_2^2 = c^2 (sin^2(_bb) - (cos(_aa) - cos(_cc)*cos(_bb))^2 / sin^2(_cc))
  */
 template<class t_mat, class t_real = typename t_mat::value_type>
 t_mat A_matrix(t_real a, t_real b, t_real c, t_real _aa, t_real _bb, t_real _cc)
