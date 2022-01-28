@@ -206,6 +206,7 @@ public:
 	void SetCoordSys(int iSys);
 
 	bool IsInitialised() const { return m_bInitialised; }
+	const QPointF& GetMousePosition() const { return m_posMouse; };
 
 
 public slots:

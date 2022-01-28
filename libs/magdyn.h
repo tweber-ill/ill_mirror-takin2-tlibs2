@@ -195,7 +195,7 @@ void dbg_print(const t_vec& vec)
 
 
 /**
- * calculates magnon dynamics,	
+ * calculates magnon dynamics,
  * implementing the formalism given in (Toth 2015)
  */
 class MagDyn
@@ -423,7 +423,6 @@ public:
 		for(t_size site_idx=0; site_idx<m_sites.size(); ++site_idx)
 		{
 			const AtomSite& site = m_sites[site_idx];
-			//site.index = site_idx;
 
 			// rotate local spin to ferromagnetic [001] direction
 			auto [spin_re, spin_im] =
@@ -444,6 +443,25 @@ public:
 			site_calc.u = std::move(u);
 			site_calc.v = std::move(v);
 			m_sites_calc.emplace_back(std::move(site_calc));
+		}
+	}
+
+
+	/**
+	 * update the site and term indices
+	 */
+	void CalcIndices()
+	{
+		for(t_size site_idx=0; site_idx<m_sites.size(); ++site_idx)
+		{
+			AtomSite& site = m_sites[site_idx];
+			site.index = site_idx;
+		}
+
+		for(t_size term_idx=0; term_idx<m_exchange_terms.size(); ++term_idx)
+		{
+			ExchangeTerm& term = m_exchange_terms[term_idx];
+			term.index = term_idx;
 		}
 	}
 
