@@ -45,7 +45,7 @@ public:
 	 */
 	explicit NumericTableWidgetItem(const T& val, std::streamsize prec = 6)
 		: QTableWidgetItem(tl2::var_to_str(val, prec).c_str()),
-		  m_val{val}, m_prec{prec}
+		  m_prec{prec}
 	{}
 
 
@@ -53,9 +53,7 @@ public:
 	 * construct a numeric table widget item from a string value
 	 */
 	explicit NumericTableWidgetItem(const QString& val, std::streamsize prec = 6)
-		: QTableWidgetItem(val),
-		  m_val{tl2::str_to_var_parse<T>(val.toStdString())},
-		  m_prec{prec}
+		: QTableWidgetItem(val), m_prec{prec}
 	{}
 
 
@@ -64,7 +62,7 @@ public:
 	 */
 	virtual bool operator<(const QTableWidgetItem& item) const override
 	{
-		T val1 = tl2::str_to_var_parse<T>(text().toStdString());
+		T val1 = GetValue();
 		T val2 = tl2::str_to_var_parse<T>(item.text().toStdString());
 
 		return val1 < val2;
@@ -76,7 +74,8 @@ public:
 	 */
 	virtual QTableWidgetItem* clone() const override
 	{
-		auto item = new (std::nothrow) NumericTableWidgetItem<T>(m_val, m_prec);
+		auto item = new (std::nothrow)
+			NumericTableWidgetItem<T>(GetValue(), m_prec);
 		if(item)
 			*static_cast<QTableWidgetItem*>(item) = *this;
 
@@ -89,14 +88,21 @@ public:
 	 */
 	T GetValue() const
 	{
-		return m_val;
+		return tl2::str_to_var_parse<T>(text().toStdString());
+	}
+
+
+	/**
+	 * set the numerical value
+	 */
+	void SetValue(T val)
+	{
+		QString str = tl2::var_to_str(val, m_prec).c_str();
+		setText(str);
 	}
 
 
 private:
-	// value
-	T m_val{};
-
 	// precision
 	std::streamsize m_prec{6};
 };
