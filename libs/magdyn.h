@@ -799,6 +799,7 @@ public:
 						{
 							const t_vec& pos_i = m_sites[i].pos;
 							const t_vec& pos_j = m_sites[j].pos;
+
 							t_real S_i = m_sites[i].spin_mag;
 							t_real S_j = m_sites[j].spin_mag;
 
@@ -807,16 +808,17 @@ public:
 							const t_vec& u_conj_i = m_sites_calc[i].u_conj;
 							const t_vec& u_conj_j = m_sites_calc[j].u_conj;
 
-							t_cplx phase_pos = std::sqrt(S_i*S_j) * std::exp(
-								+imag * twopi * tl2::inner<t_vec>(pos_j - pos_i, Q));
-							t_cplx phase_neg = std::sqrt(S_i*S_j) * std::exp(
-								-imag * twopi * tl2::inner<t_vec>(pos_j - pos_i, Q));
+							// TODO: check units of S
+							t_real factor = 4. * std::sqrt(S_i*S_j);
+
+							t_cplx phase_pos = std::exp(+imag * twopi * tl2::inner<t_vec>(pos_j - pos_i, Q));
+							t_cplx phase_neg = std::exp(-imag * twopi * tl2::inner<t_vec>(pos_j - pos_i, Q));
 
 							// TODO: check phase factors
-							Y(i, j) = phase_pos * u_i[x_idx] * u_conj_j[y_idx];
-							V(i, j) = phase_pos * u_conj_i[x_idx] * u_conj_j[y_idx];
-							Z(i, j) = phase_neg * u_i[x_idx] * u_j[y_idx];
-							W(i, j) = phase_neg * u_conj_i[x_idx] * u_j[y_idx];
+							Y(i, j) = factor * phase_pos * u_i[x_idx] * u_conj_j[y_idx];
+							V(i, j) = factor * phase_pos * u_conj_i[x_idx] * u_conj_j[y_idx];
+							Z(i, j) = factor * phase_neg * u_i[x_idx] * u_j[y_idx];
+							W(i, j) = factor * phase_neg * u_conj_i[x_idx] * u_j[y_idx];
 
 							/*std::cout
 								<< "Y[" << i << ", " << j << ", "
