@@ -126,6 +126,16 @@ void GlPlotRenderer::SetObjectMatrix(std::size_t idx, const t_mat_gl& mat)
 }
 
 
+const t_mat_gl& GlPlotRenderer::GetObjectMatrix(std::size_t idx) const
+{
+	static t_mat_gl invalid_matrix{};
+
+	if(idx >= m_objs.size())
+		return invalid_matrix;
+	return m_objs[idx].m_mat;
+}
+
+
 void GlPlotRenderer::SetObjectCol(std::size_t idx, t_real_gl r, t_real_gl g, t_real_gl b, t_real_gl a)
 {
 	if(idx >= m_objs.size()) return;
@@ -167,6 +177,13 @@ void GlPlotRenderer::SetObjectVisible(std::size_t idx, bool visible)
 {
 	if(idx >= m_objs.size()) return;
 	m_objs[idx].m_visible = visible;
+}
+
+
+bool GlPlotRenderer::GetObjectVisible(std::size_t idx) const
+{
+	if(idx >= m_objs.size()) return 0;
+	return m_objs[idx].m_visible;
 }
 
 
@@ -601,7 +618,7 @@ void main()
 
 
 	// 3d objects
-	AddCoordinateCross(-m_CoordMax, m_CoordMax);
+	m_coordCross = AddCoordinateCross(-m_CoordMax, m_CoordMax);
 
 
 	m_bInitialised = true;
@@ -1099,56 +1116,65 @@ void GlPlotRenderer::DoPaintNonGL(QPainter &painter)
 	painter.setPen(penLabel);
 
 
-	// coordinate labels
-	painter.drawText(GlToScreenCoords(tl2::create<t_vec_gl>({0.,0.,0.,1.})), "0");
-	for(t_real_gl f=-std::floor(m_CoordMax); f<=std::floor(m_CoordMax); f+=0.5)
+	// draw coordinate system
+	auto objCoordCross = GetCoordCross();
+	if(objCoordCross && GetObjectVisible(*objCoordCross))
 	{
-		if(tl2::equals<t_real_gl>(f, 0))
-			continue;
+		// coordinate labels
+		painter.drawText(GlToScreenCoords(tl2::create<t_vec_gl>({0.,0.,0.,1.})), "0");
+		for(t_real_gl f=-std::floor(m_CoordMax); f<=std::floor(m_CoordMax); f+=0.5)
+		{
+			if(tl2::equals<t_real_gl>(f, 0))
+				continue;
 
-		std::ostringstream ostrF;
-		ostrF << f;
-		painter.drawText(GlToScreenCoords(tl2::create<t_vec_gl>({f,0.,0.,1.})), ostrF.str().c_str());
-		painter.drawText(GlToScreenCoords(tl2::create<t_vec_gl>({0.,f,0.,1.})), ostrF.str().c_str());
-		painter.drawText(GlToScreenCoords(tl2::create<t_vec_gl>({0.,0.,f,1.})), ostrF.str().c_str());
+			std::ostringstream ostrF;
+			ostrF << f;
+			painter.drawText(GlToScreenCoords(tl2::create<t_vec_gl>({f,0.,0.,1.})), ostrF.str().c_str());
+			painter.drawText(GlToScreenCoords(tl2::create<t_vec_gl>({0.,f,0.,1.})), ostrF.str().c_str());
+			painter.drawText(GlToScreenCoords(tl2::create<t_vec_gl>({0.,0.,f,1.})), ostrF.str().c_str());
+		}
+
+		painter.drawText(GlToScreenCoords(tl2::create<t_vec_gl>({m_CoordMax*t_real_gl(1.2), 0., 0., 1.})), "x");
+		painter.drawText(GlToScreenCoords(tl2::create<t_vec_gl>({0., m_CoordMax*t_real_gl(1.2), 0., 1.})), "y");
+		painter.drawText(GlToScreenCoords(tl2::create<t_vec_gl>({0., 0., m_CoordMax*t_real_gl(1.2), 1.})), "z");
 	}
-
-	painter.drawText(GlToScreenCoords(tl2::create<t_vec_gl>({m_CoordMax*t_real_gl(1.2), 0., 0., 1.})), "x");
-	painter.drawText(GlToScreenCoords(tl2::create<t_vec_gl>({0., m_CoordMax*t_real_gl(1.2), 0., 1.})), "y");
-	painter.drawText(GlToScreenCoords(tl2::create<t_vec_gl>({0., 0., m_CoordMax*t_real_gl(1.2), 1.})), "z");
 
 
 	// render object labels
-	for(const auto& obj : m_objs)
+	if(m_showLabels)
 	{
-		if(!obj.m_visible || !obj.m_valid) continue;
-
-		if(obj.m_label != "")
+		for(const auto& obj : m_objs)
 		{
-			const t_mat_gl *coordTrafo = &matUnit;
-			if(m_iCoordSys == 1 && !obj.m_invariant) coordTrafo = &m_matA;
+			if(!obj.m_visible || !obj.m_valid) continue;
 
-			t_vec3_gl posLabel3d = (*coordTrafo) * obj.m_mat * obj.m_labelPos;
-			auto posLabel2d = GlToScreenCoords(tl2::create<t_vec_gl>({posLabel3d[0], posLabel3d[1], posLabel3d[2], 1.}));
+			if(obj.m_label != "")
+			{
+				const t_mat_gl *coordTrafo = &matUnit;
+				if(m_iCoordSys == 1 && !obj.m_invariant) coordTrafo = &m_matA;
 
-			QFont fontLabel = fontOrig;
-			QPen penLabel = penOrig;
+				t_vec3_gl posLabel3d = (*coordTrafo) * obj.m_mat * obj.m_labelPos;
+				auto posLabel2d = GlToScreenCoords(tl2::create<t_vec_gl>({posLabel3d[0], posLabel3d[1], posLabel3d[2], 1.}));
 
-			fontLabel.setStyleStrategy(QFont::StyleStrategy(/*QFont::OpenGLCompatible |*/ QFont::PreferAntialias | QFont::PreferQuality));
-			fontLabel.setWeight(QFont::Medium);
-			//penLabel.setColor(QColor(int((1.-obj.m_colour[0])*255.), int((1.-obj.m_colour[1])*255.), int((1.-obj.m_colour[2])*255.), int(obj.m_colour[3]*255.)));
-			penLabel.setColor(QColor(0,0,0,255));
-			painter.setFont(fontLabel);
-			painter.setPen(penLabel);
-			painter.drawText(posLabel2d, obj.m_label.c_str());
+				QFont fontLabel = fontOrig;
+				QPen penLabel = penOrig;
 
-			fontLabel.setWeight(QFont::Normal);
-			penLabel.setColor(QColor(int(obj.m_colour[0]*255.), int(obj.m_colour[1]*255.), int(obj.m_colour[2]*255.), int(obj.m_colour[3]*255.)));
-			painter.setFont(fontLabel);
-			painter.setPen(penLabel);
-			painter.drawText(posLabel2d, obj.m_label.c_str());
+				fontLabel.setStyleStrategy(QFont::StyleStrategy(/*QFont::OpenGLCompatible |*/ QFont::PreferAntialias | QFont::PreferQuality));
+				fontLabel.setWeight(QFont::Medium);
+				//penLabel.setColor(QColor(int((1.-obj.m_colour[0])*255.), int((1.-obj.m_colour[1])*255.), int((1.-obj.m_colour[2])*255.), int(obj.m_colour[3]*255.)));
+				penLabel.setColor(QColor(0,0,0,255));
+				painter.setFont(fontLabel);
+				painter.setPen(penLabel);
+				painter.drawText(posLabel2d, obj.m_label.c_str());
+
+				fontLabel.setWeight(QFont::Normal);
+				penLabel.setColor(QColor(int(obj.m_colour[0]*255.), int(obj.m_colour[1]*255.), int(obj.m_colour[2]*255.), int(obj.m_colour[3]*255.)));
+				painter.setFont(fontLabel);
+				painter.setPen(penLabel);
+				painter.drawText(posLabel2d, obj.m_label.c_str());
+			}
 		}
 	}
+
 
 	// restore original styles
 	painter.setFont(fontOrig);

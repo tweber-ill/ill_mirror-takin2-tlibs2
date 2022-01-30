@@ -107,9 +107,11 @@ protected:
 	std::atomic<int> m_iCoordSys = 0;
 	std::atomic<int> m_iScreenDims[2] = { 800, 600 };
 	t_real_gl m_pickerSphereRadius = 1;
+	bool m_showLabels = true;
 
 	std::vector<t_vec3_gl> m_lights{};
 	std::vector<GlPlotObj> m_objs{};
+	std::optional<std::size_t> m_coordCross{};
 
 	QPointF m_posMouse{};
 	QPointF m_posMouseRotationStart{}, m_posMouseRotationEnd{};
@@ -193,8 +195,10 @@ public:
 	void SetObjectVisible(std::size_t idx, bool visible);
 	void SetObjectHighlight(std::size_t idx, bool highlight);
 
+	const t_mat_gl& GetObjectMatrix(std::size_t idx) const;
 	const std::string& GetObjectLabel(std::size_t idx) const;
 	const std::string& GetObjectDataString(std::size_t idx) const;
+	bool GetObjectVisible(std::size_t idx) const;
 	bool GetObjectHighlight(std::size_t idx) const;
 
 	void SetScreenDims(int w, int h);
@@ -207,6 +211,9 @@ public:
 
 	bool IsInitialised() const { return m_bInitialised; }
 	const QPointF& GetMousePosition() const { return m_posMouse; };
+
+	void SetLabelsVisible(bool show) { m_showLabels = show; }
+	std::optional<std::size_t> GetCoordCross() const { return m_coordCross; }
 
 
 public slots:
@@ -231,8 +238,10 @@ public slots:
 protected slots:
 	void tick();
 
+
 signals:
-	void PickerIntersection(const t_vec3_gl* pos, std::size_t objIdx, const t_vec3_gl* posSphere);
+	void PickerIntersection(const t_vec3_gl* pos,
+		std::size_t objIdx, const t_vec3_gl* posSphere);
 };
 
 
