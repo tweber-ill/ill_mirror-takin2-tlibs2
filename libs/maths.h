@@ -1279,6 +1279,19 @@ requires tl2::is_basic_mat<t_mat> && tl2::is_dyn_mat<t_mat>
 	return mat1;
 }
 
+
+/**
+ * matrix -= matrix
+ */
+template<class t_mat>
+t_mat& operator-=(t_mat& mat1, const t_mat& mat2)
+requires tl2::is_basic_mat<t_mat> && tl2::is_dyn_mat<t_mat>
+{
+	mat1 = mat1 - mat2;
+	return mat1;
+}
+
+
 /**
  * matrix /= scalar
  */

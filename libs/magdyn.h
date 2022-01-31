@@ -119,6 +119,7 @@ struct EnergyAndWeight
 {
 	t_real E{};
 	t_mat S{};
+	t_mat S_p{}, S_m;
 	t_mat S_perp{};
 	t_real weight{};
 	t_real weight_spinflip[2] = {0., 0.};
@@ -492,6 +493,7 @@ public:
 
 		// momentum
 		const t_vec_real Q = tl2::create<t_vec_real>({h, k, l});
+		const bool is_incommensurate = !tl2::equals_0<t_vec_real>(m_ordering, m_eps);
 
 		// constants: imaginary unit and 2pi
 		constexpr const t_cplx imag{0., 1.};
@@ -520,16 +522,19 @@ public:
 				J += tl2::skewsymmetric<t_mat, t_vec>(-term.dmi);
 			}
 
-			// rotation wrt magnetic unit cell (for incommensurate ordering)
+			// incommensurate case: rotation wrt magnetic unit cell
 			// equations (21), (6) and (2) from (Toth 2015)
-			t_real rot_UC_angle = tl2::inner<t_vec_real>(m_ordering, term.dist);
-			if(!tl2::equals_0<t_real>(rot_UC_angle, m_eps))
+			if(is_incommensurate)
 			{
-				t_mat rot_UC = tl2::convert<t_mat>(
-					 tl2::rotation<t_mat_real, t_vec_real>(
-						m_rotaxis, rot_UC_angle));
+				t_real rot_UC_angle = tl2::inner<t_vec_real>(m_ordering, term.dist);
+				if(!tl2::equals_0<t_real>(rot_UC_angle, m_eps))
+				{
+					t_mat rot_UC = tl2::convert<t_mat>(
+						 tl2::rotation<t_mat_real, t_vec_real>(
+							m_rotaxis, rot_UC_angle));
 
-				J = J * rot_UC;
+					J = J * rot_UC;
+				}
 			}
 
 			// equation (14) from (Toth 2015)
@@ -564,50 +569,48 @@ public:
 			&& m_field.dir.size() == 3;
 
 		for(t_size i=0; i<num_sites; ++i)
+		for(t_size j=0; j<num_sites; ++j)
 		{
-			for(t_size j=0; j<num_sites; ++j)
+			t_mat J_sub_Q = submat<t_mat>(J_Q, i*3, j*3, 3, 3);
+
+			// TODO: check units of S_i and S_j
+			t_real S_i = m_sites[i].spin_mag;
+			t_real S_j = m_sites[j].spin_mag;
+			const t_vec& u_i = m_sites_calc[i].u;
+			const t_vec& u_j = m_sites_calc[j].u;
+			const t_vec& u_conj_j = m_sites_calc[j].u_conj;
+			const t_vec& v_i = m_sites_calc[i].v;
+
+			t_real factor = 0.5 * std::sqrt(S_i*S_j);
+			A(i, j) = factor *
+				tl2::inner_noconj<t_vec>(u_i, J_sub_Q * u_conj_j);
+			B(i, j) = factor *
+				tl2::inner_noconj<t_vec>(u_i, J_sub_Q * u_j);
+
+			if(i == j)
 			{
-				t_mat J_sub_Q = submat<t_mat>(J_Q, i*3, j*3, 3, 3);
-
-				// TODO: check units of S_i and S_j
-				t_real S_i = m_sites[i].spin_mag;
-				t_real S_j = m_sites[j].spin_mag;
-				const t_vec& u_i = m_sites_calc[i].u;
-				const t_vec& u_j = m_sites_calc[j].u;
-				const t_vec& u_conj_j = m_sites_calc[j].u_conj;
-				const t_vec& v_i = m_sites_calc[i].v;
-
-				t_real factor = 0.5 * std::sqrt(S_i*S_j);
-				A(i, j) = factor *
-					tl2::inner_noconj<t_vec>(u_i, J_sub_Q * u_conj_j);
-				B(i, j) = factor *
-					tl2::inner_noconj<t_vec>(u_i, J_sub_Q * u_j);
-
-				if(i == j)
+				for(t_size k=0; k<num_sites; ++k)
 				{
-					for(t_size k=0; k<num_sites; ++k)
-					{
-						// TODO: check unit of S_k
-						t_real S_k = m_sites[k].spin_mag;
-						const t_vec& v_k = m_sites_calc[k].v;
+					// TODO: check unit of S_k
+					t_real S_k = m_sites[k].spin_mag;
+					const t_vec& v_k = m_sites_calc[k].v;
 
-						t_mat J_sub_Q0 = submat<t_mat>(J_Q0, i*3, k*3, 3, 3);
-						C(i, j) += S_k * tl2::inner_noconj<t_vec>(v_i, J_sub_Q0 * v_k);
-					}
+					t_mat J_sub_Q0 = submat<t_mat>(J_Q0, i*3, k*3, 3, 3);
+					C(i, j) += S_k * tl2::inner_noconj<t_vec>(v_i, J_sub_Q0 * v_k);
 				}
+			}
 
-				// include external field, equation (28) from (Toth 2015)
-				if(use_field && i == j)
-				{
-					t_vec B = tl2::convert<t_vec>(
-						m_field.dir / tl2::norm<t_vec_real>(m_field.dir));
-					B = B * m_field.mag;
+			// include external field, equation (28) from (Toth 2015)
+			if(use_field && i == j)
+			{
+				t_vec B = tl2::convert<t_vec>(
+					m_field.dir / tl2::norm<t_vec_real>(m_field.dir));
+				B = B * m_field.mag;
 
-					t_vec gv = m_sites[i].g * v_i;
-					t_cplx Bgv = tl2::inner_noconj<t_vec>(B, gv);
+				t_vec gv = m_sites[i].g * v_i;
+				t_cplx Bgv = tl2::inner_noconj<t_vec>(B, gv);
 
-					A(i, j) -= 0.5*muB * Bgv;
-				}
+				A(i, j) -= 0.5*muB * Bgv;
 			}
 		}
 
@@ -638,11 +641,6 @@ public:
 		// constants: imaginary unit and 2pi
 		constexpr const t_cplx imag{0., 1.};
 		constexpr const t_real twopi = t_real(2)*tl2::pi<t_real>;
-
-		// formula 40 from (Toth 2015)
-		t_mat proj_norm = tl2::convert<t_mat>(
-			tl2::projector<t_mat_real, t_vec_real>(
-				m_rotaxis, true));
 
 		// equation (30) from (Toth 2015)
 		t_mat g = tl2::zero<t_mat>(num_sites*2, num_sites*2);
@@ -736,9 +734,6 @@ public:
 		// weight factors
 		if(!only_energies)
 		{
-			// momentum
-			const t_vec_real Q = tl2::create<t_vec_real>({h, k, l});
-
 			// get the sorting of the energies
 			std::vector<t_size> sorting(energies_and_correlations.size());
 			std::iota(sorting.begin(), sorting.end(), 0);
@@ -774,6 +769,8 @@ public:
 				{
 					.E = L(i,i).real(),
 					.S = tl2::zero<t_mat>(3, 3),
+					.S_p = tl2::zero<t_mat>(3, 3),
+					.S_m = tl2::zero<t_mat>(3, 3),
 					.S_perp = tl2::zero<t_mat>(3, 3),
 				};
 
@@ -806,6 +803,10 @@ public:
 			//dbg_print(L);
 			//std::cout << std::endl;
 
+			// momentum
+			const t_vec_real Q = tl2::create<t_vec_real>({h, k, l});
+			const bool is_incommensurate = !tl2::equals_0<t_vec_real>(m_ordering, m_eps);
+
 			/*std::cout << "Y = np.zeros(3*3*4*4, dtype=complex).reshape((4,4,3,3))" << std::endl;
 			std::cout << "V = np.zeros(3*3*4*4, dtype=complex).reshape((4,4,3,3))" << std::endl;
 			std::cout << "Z = np.zeros(3*3*4*4, dtype=complex).reshape((4,4,3,3))" << std::endl;
@@ -820,6 +821,22 @@ public:
 				t_mat W = tl2::create<t_mat>(num_sites, num_sites);
 				t_mat Y = tl2::create<t_mat>(num_sites, num_sites);
 				t_mat Z = tl2::create<t_mat>(num_sites, num_sites);
+
+				// incommensurate case
+				t_mat V_p, W_p, Y_p, Z_p;
+				t_mat V_m, W_m, Y_m, Z_m;
+				if(is_incommensurate)
+				{
+					V_p = tl2::create<t_mat>(num_sites, num_sites);
+					W_p = tl2::create<t_mat>(num_sites, num_sites);
+					Y_p = tl2::create<t_mat>(num_sites, num_sites);
+					Z_p = tl2::create<t_mat>(num_sites, num_sites);
+
+					V_m = tl2::create<t_mat>(num_sites, num_sites);
+					W_m = tl2::create<t_mat>(num_sites, num_sites);
+					Y_m = tl2::create<t_mat>(num_sites, num_sites);
+					Z_m = tl2::create<t_mat>(num_sites, num_sites);
+				}
 
 				for(t_size i=0; i<num_sites; ++i)
 				for(t_size j=0; j<num_sites; ++j)
@@ -849,6 +866,34 @@ public:
 					Z(i, j) = factor * phase_neg * u_i[x_idx] * u_j[y_idx];
 					W(i, j) = factor * phase_neg * u_conj_i[x_idx] * u_j[y_idx];
 
+					// incommensurate case
+					if(is_incommensurate)
+					{
+						t_cplx phase_pos_p = std::exp(+imag * twopi *
+							tl2::inner<t_vec_real>(pos_j - pos_i,
+								Q + m_ordering));
+						t_cplx phase_neg_p = std::exp(-imag * twopi *
+							tl2::inner<t_vec_real>(pos_j - pos_i,
+								Q + m_ordering));
+
+						t_cplx phase_pos_m = std::exp(+imag * twopi *
+							tl2::inner<t_vec_real>(pos_j - pos_i,
+								Q - m_ordering));
+						t_cplx phase_neg_m = std::exp(-imag * twopi *
+							tl2::inner<t_vec_real>(pos_j - pos_i,
+								Q - m_ordering));
+
+						Y_p(i, j) = factor * phase_pos_p * u_i[x_idx] * u_conj_j[y_idx];
+						V_p(i, j) = factor * phase_pos_p * u_conj_i[x_idx] * u_conj_j[y_idx];
+						Z_p(i, j) = factor * phase_neg_p * u_i[x_idx] * u_j[y_idx];
+						W_p(i, j) = factor * phase_neg_p * u_conj_i[x_idx] * u_j[y_idx];
+
+						Y_m(i, j) = factor * phase_pos_m * u_i[x_idx] * u_conj_j[y_idx];
+						V_m(i, j) = factor * phase_pos_m * u_conj_i[x_idx] * u_conj_j[y_idx];
+						Z_m(i, j) = factor * phase_neg_m * u_i[x_idx] * u_j[y_idx];
+						W_m(i, j) = factor * phase_neg_m * u_conj_i[x_idx] * u_j[y_idx];
+					}
+
 					/*std::cout
 						<< "Y[" << i << ", " << j << ", "
 						<< x_idx << ", " << y_idx << "] = "
@@ -869,7 +914,7 @@ public:
 						<< x_idx << ", " << y_idx << "] = "
 						<< W(i, j).real() << " + " << W(i, j).imag() << "j"
 						<< std::endl;*/
-				}
+				} // end of iteration over sites
 
 				// equation (47) from (Toth 2015)
 				t_mat M = tl2::create<t_mat>(num_sites*2, num_sites*2);
@@ -880,10 +925,40 @@ public:
 
 				t_mat M_trafo = trafo_herm * M * trafo;
 
+				// incommensurate case
+				t_mat M_p, M_m;
+				t_mat M_trafo_p, M_trafo_m;
+				if(is_incommensurate)
+				{
+					M_p = tl2::create<t_mat>(num_sites*2, num_sites*2);
+					set_submat(M_p, Y_p, 0, 0);
+					set_submat(M_p, V_p, num_sites, 0);
+					set_submat(M_p, Z_p, 0, num_sites);
+					set_submat(M_p, W_p, num_sites, num_sites);
+
+					M_m = tl2::create<t_mat>(num_sites*2, num_sites*2);
+					set_submat(M_m, Y_m, 0, 0);
+					set_submat(M_m, V_m, num_sites, 0);
+					set_submat(M_m, Z_m, 0, num_sites);
+					set_submat(M_m, W_m, num_sites, num_sites);
+
+					M_trafo_p = trafo_herm * M_p * trafo;
+					M_trafo_m = trafo_herm * M_m * trafo;
+				}
+
 				for(t_size i=0; i<num_sites*2; ++i)
 				{
 					t_mat& S = energies_and_correlations[i].S;
 					S(x_idx, y_idx) += M_trafo(i, i) / t_real(2*num_sites);
+
+					if(is_incommensurate)
+					{
+						t_mat& S_p = energies_and_correlations[i].S_m;
+						t_mat& S_m = energies_and_correlations[i].S_p;
+
+						S_p(x_idx, y_idx) += M_trafo_p(i, i) / t_real(2*num_sites);
+						S_m(x_idx, y_idx) += M_trafo_m(i, i) / t_real(2*num_sites);
+					}
 				}
 
 				/*using namespace tl2_ops;
@@ -897,6 +972,24 @@ public:
 				std::cout << "W=" << W << std::endl;
 				std::cout << "Y=" << Y << std::endl;
 				std::cout << "Z=" << Z << std::endl;*/
+			} // end of coordinate iteration
+
+
+			t_mat proj_norm, rot_incomm, rot_incomm_conj;
+			if(is_incommensurate)
+			{
+				// equations (39) and (40) from (Toth 2015)
+
+				proj_norm = tl2::convert<t_mat>(
+					tl2::projector<t_mat_real, t_vec_real>(
+						m_rotaxis, true));
+
+				rot_incomm = tl2::unit<t_mat>(3);
+				rot_incomm -= imag * tl2::skewsymmetric<t_mat, t_vec>(m_rotaxis);
+				rot_incomm -= proj_norm;
+				rot_incomm *= 0.5;
+
+				rot_incomm_conj = tl2::conj(rot_incomm);
 			}
 
 
@@ -906,15 +999,21 @@ public:
 				auto& E_and_S = energies_and_correlations[i];
 				const t_real& E = E_and_S.E;
 				t_mat& S = E_and_S.S;
+				t_mat& S_p = E_and_S.S_p;
+				t_mat& S_m = E_and_S.S_m;
 				t_mat& S_perp = E_and_S.S_perp;
 				t_real& w = E_and_S.weight;
 				t_real& w_SF1 = E_and_S.weight_spinflip[0];
 				t_real& w_SF2 = E_and_S.weight_spinflip[1];
 				t_real& w_NSF = E_and_S.weight_nonspinflip;
 
-				// formula 40 from (Toth 2015)
-				// TODO: add incommensurate cases
-				//S = S * proj_norm;
+				if(is_incommensurate)
+				{
+					// TODO: formula 40 from (Toth 2015)
+					S = S*proj_norm +
+						S_p*rot_incomm +
+						S_m*rot_incomm_conj;
+				}
 
 				if(m_temperature >= 0.)
 				{
