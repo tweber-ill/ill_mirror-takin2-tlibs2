@@ -1,7 +1,7 @@
 /**
  * camera for 3d plotter
  * @author Tobias Weber <tweber@ill.fr>
- * @date feb-2021
+ * @date feb-2022
  * @note Code forked from my privately developed "misc" and "magtools" project (https://github.com/t-weber/misc and https://github.com/t-weber/magtools).
  * @note Class moved over to tlibs on 10-jan-2022 from my "TAS-Paths" project (https://code.ill.fr/scientific-software/takin/paths).
  * @license GPLv3, see 'LICENSE' file
@@ -15,7 +15,7 @@
  *
  * ----------------------------------------------------------------------------
  * tlibs
- * Copyright (C) 2017-2021  Tobias WEBER (Institut Laue-Langevin (ILL),
+ * Copyright (C) 2017-2022  Tobias WEBER (Institut Laue-Langevin (ILL),
  *                          Grenoble, France).
  * Copyright (C) 2015-2017  Tobias WEBER (Technische Universitaet Muenchen
  *                          (TUM), Garching, Germany).

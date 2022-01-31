@@ -66,7 +66,7 @@ struct AtomSite
 	std::string name{}; // identifier
 	t_size index{};     // index
 
-	t_vec pos{};        // atom position
+	t_vec_real pos{};   // atom position
 
 	t_vec spin_dir{};   // spin direction
 	t_real spin_mag{};  // spin magnitude
@@ -94,7 +94,7 @@ struct ExchangeTerm
 
 	t_size atom1{};     // atom 1 index
 	t_size atom2{};     // atom 2 index
-	t_vec dist{};       // distance between unit cells
+	t_vec_real dist{};  // distance between unit cells
 
 	t_cplx J{};         // Heisenberg interaction
 	t_vec dmi{};        // Dzyaloshinskij-Moriya interaction
@@ -106,7 +106,7 @@ struct ExchangeTerm
  */
 struct ExternalField
 {
-	t_vec dir{};        // field direction
+	t_vec_real dir{};   // field direction
 	t_real mag{};       // field magnitude
 	bool align_spins{}; // align spins along external field
 };
@@ -307,6 +307,18 @@ public:
 	}
 
 
+	void SetOrderingWavevector(const t_vec_real& ordering)
+	{
+		m_ordering = ordering;
+	}
+
+
+	void SetRotationAxis(const t_vec_real& axis)
+	{
+		m_rotaxis = axis;
+	}
+
+
 	void AddAtomSite(AtomSite&& site)
 	{
 		site.index = GetAtomSites().size();
@@ -323,7 +335,8 @@ public:
 	}
 
 
-	void AddExchangeTerm(t_size atom1, t_size atom2, const t_vec& dist, const t_cplx& J)
+	void AddExchangeTerm(t_size atom1, t_size atom2,
+		const t_vec_real& dist, const t_cplx& J)
 	{
 		ExchangeTerm term
 		{
@@ -369,8 +382,8 @@ public:
 		{
 			for(t_size i=0; i<3; ++i)
 			{
-				min[i] = std::min(min[i], term.dist[i].real());
-				max[i] = std::max(max[i], term.dist[i].real());
+				min[i] = std::min(min[i], term.dist[i]);
+				max[i] = std::max(max[i], term.dist[i]);
 			}
 		}
 
@@ -398,10 +411,9 @@ public:
 		if(use_field)
 		{
 			// rotate field to [001] direction
-			auto [field_re, field_im] =
-				tl2::split_cplx<t_vec, t_vec_real>(m_field.dir);
 			m_rot_field = tl2::convert<t_mat>(
-				tl2::rotation<t_mat_real, t_vec_real>(field_re, zdir));
+				tl2::rotation<t_mat_real, t_vec_real>(
+					m_field.dir, zdir));
 		}
 
 		if(m_bragg.size() == 3)
@@ -479,7 +491,7 @@ public:
 			return {};
 
 		// momentum
-		const t_vec Q = tl2::create<t_vec>({h, k, l});
+		const t_vec_real Q = tl2::create<t_vec_real>({h, k, l});
 
 		// constants: imaginary unit and 2pi
 		constexpr const t_cplx imag{0., 1.};
@@ -508,17 +520,32 @@ public:
 				J += tl2::skewsymmetric<t_mat, t_vec>(-term.dmi);
 			}
 
-			t_mat J_T = tl2::trans(J);
+			// rotation wrt magnetic unit cell (for incommensurate ordering)
+			// equations (21), (6) and (2) from (Toth 2015)
+			t_real rot_UC_angle = tl2::inner<t_vec_real>(m_ordering, term.dist);
+			if(!tl2::equals_0<t_real>(rot_UC_angle, m_eps))
+			{
+				t_mat rot_UC = tl2::convert<t_mat>(
+					 tl2::rotation<t_mat_real, t_vec_real>(
+						m_rotaxis, rot_UC_angle));
 
+				J = J * rot_UC;
+			}
+
+			// equation (14) from (Toth 2015)
 			t_cplx phase_Q = std::exp(-imag * twopi *
-				tl2::inner<t_vec>(term.dist, Q));
+				tl2::inner<t_vec_real>(term.dist, Q));
 			t_cplx phase_mQ = std::exp(-imag * twopi *
-				tl2::inner<t_vec>(term.dist, -Q));
+				tl2::inner<t_vec_real>(-term.dist, Q));
 
+			t_mat J_T = tl2::trans(J);
 			t_real factor = 1.; //0.5;
-			add_submat<t_mat>(J_Q, factor*J*phase_Q,
+
+			// include these two terms to fulfill
+			// equation (11) from (Toth 2015)
+			add_submat<t_mat>(J_Q, factor * J * phase_Q,
 				term.atom1*3, term.atom2*3);
-			add_submat<t_mat>(J_Q, factor*J_T*phase_mQ,
+			add_submat<t_mat>(J_Q, factor * J_T * phase_mQ,
 				term.atom2*3, term.atom1*3);
 
 			add_submat<t_mat>(J_Q0, factor*J,
@@ -572,7 +599,8 @@ public:
 				// include external field, equation (28) from (Toth 2015)
 				if(use_field && i == j)
 				{
-					t_vec B = m_field.dir / tl2::norm<t_vec>(m_field.dir);
+					t_vec B = tl2::convert<t_vec>(
+						m_field.dir / tl2::norm<t_vec_real>(m_field.dir));
 					B = B * m_field.mag;
 
 					t_vec gv = m_sites[i].g * v_i;
@@ -612,8 +640,9 @@ public:
 		constexpr const t_real twopi = t_real(2)*tl2::pi<t_real>;
 
 		// formula 40 from (Toth 2015)
-		t_mat proj_norm = tl2::projector<t_mat, t_vec>(
-			tl2::create<t_vec>({1., 0., 0.}), true);
+		t_mat proj_norm = tl2::convert<t_mat>(
+			tl2::projector<t_mat_real, t_vec_real>(
+				m_rotaxis, true));
 
 		// equation (30) from (Toth 2015)
 		t_mat g = tl2::zero<t_mat>(num_sites*2, num_sites*2);
@@ -708,7 +737,7 @@ public:
 		if(!only_energies)
 		{
 			// momentum
-			const t_vec Q = tl2::create<t_vec>({h, k, l});
+			const t_vec_real Q = tl2::create<t_vec_real>({h, k, l});
 
 			// get the sorting of the energies
 			std::vector<t_size> sorting(energies_and_correlations.size());
@@ -784,92 +813,90 @@ public:
 
 			// building the spin correlation functions of equation (47) from (Toth 2015)
 			for(int x_idx=0; x_idx<3; ++x_idx)
+			for(int y_idx=0; y_idx<3; ++y_idx)
 			{
-				for(int y_idx=0; y_idx<3; ++y_idx)
+				// equations (44) from (Toth 2015)
+				t_mat V = tl2::create<t_mat>(num_sites, num_sites);
+				t_mat W = tl2::create<t_mat>(num_sites, num_sites);
+				t_mat Y = tl2::create<t_mat>(num_sites, num_sites);
+				t_mat Z = tl2::create<t_mat>(num_sites, num_sites);
+
+				for(t_size i=0; i<num_sites; ++i)
+				for(t_size j=0; j<num_sites; ++j)
 				{
-					// equations (44) from (Toth 2015)
-					t_mat V = tl2::create<t_mat>(num_sites, num_sites);
-					t_mat W = tl2::create<t_mat>(num_sites, num_sites);
-					t_mat Y = tl2::create<t_mat>(num_sites, num_sites);
-					t_mat Z = tl2::create<t_mat>(num_sites, num_sites);
+					const t_vec_real& pos_i = m_sites[i].pos;
+					const t_vec_real& pos_j = m_sites[j].pos;
 
-					for(t_size i=0; i<num_sites; ++i)
-					{
-						for(t_size j=0; j<num_sites; ++j)
-						{
-							const t_vec& pos_i = m_sites[i].pos;
-							const t_vec& pos_j = m_sites[j].pos;
+					t_real S_i = m_sites[i].spin_mag;
+					t_real S_j = m_sites[j].spin_mag;
 
-							t_real S_i = m_sites[i].spin_mag;
-							t_real S_j = m_sites[j].spin_mag;
+					const t_vec& u_i = m_sites_calc[i].u;
+					const t_vec& u_j = m_sites_calc[j].u;
+					const t_vec& u_conj_i = m_sites_calc[i].u_conj;
+					const t_vec& u_conj_j = m_sites_calc[j].u_conj;
 
-							const t_vec& u_i = m_sites_calc[i].u;
-							const t_vec& u_j = m_sites_calc[j].u;
-							const t_vec& u_conj_i = m_sites_calc[i].u_conj;
-							const t_vec& u_conj_j = m_sites_calc[j].u_conj;
+					// TODO: check units of S
+					t_real factor = 4. * std::sqrt(S_i*S_j);
 
-							// TODO: check units of S
-							t_real factor = 4. * std::sqrt(S_i*S_j);
+					t_cplx phase_pos = std::exp(+imag * twopi *
+						tl2::inner<t_vec_real>(pos_j - pos_i, Q));
+					t_cplx phase_neg = std::exp(-imag * twopi *
+						tl2::inner<t_vec_real>(pos_j - pos_i, Q));
 
-							t_cplx phase_pos = std::exp(+imag * twopi * tl2::inner<t_vec>(pos_j - pos_i, Q));
-							t_cplx phase_neg = std::exp(-imag * twopi * tl2::inner<t_vec>(pos_j - pos_i, Q));
+					// TODO: check phase factors
+					Y(i, j) = factor * phase_pos * u_i[x_idx] * u_conj_j[y_idx];
+					V(i, j) = factor * phase_pos * u_conj_i[x_idx] * u_conj_j[y_idx];
+					Z(i, j) = factor * phase_neg * u_i[x_idx] * u_j[y_idx];
+					W(i, j) = factor * phase_neg * u_conj_i[x_idx] * u_j[y_idx];
 
-							// TODO: check phase factors
-							Y(i, j) = factor * phase_pos * u_i[x_idx] * u_conj_j[y_idx];
-							V(i, j) = factor * phase_pos * u_conj_i[x_idx] * u_conj_j[y_idx];
-							Z(i, j) = factor * phase_neg * u_i[x_idx] * u_j[y_idx];
-							W(i, j) = factor * phase_neg * u_conj_i[x_idx] * u_j[y_idx];
-
-							/*std::cout
-								<< "Y[" << i << ", " << j << ", "
-								<< x_idx << ", " << y_idx << "] = "
-								<< Y(i, j).real() << " + " << Y(i, j).imag() << "j"
-								<< std::endl;
-							std::cout
-								<< "V[" << i << ", " << j << ", "
-								<< x_idx << ", " << y_idx << "] = "
-								<< V(i, j).real() << " + " << V(i, j).imag() << "j"
-								<< std::endl;
-							std::cout
-								<< "Z[" << i << ", " << j << ", "
-								<< x_idx << ", " << y_idx << "] = "
-								<< Z(i, j).real() << " + " << Z(i, j).imag() << "j"
-								<< std::endl;
-							std::cout
-								<< "W[" << i << ", " << j << ", "
-								<< x_idx << ", " << y_idx << "] = "
-								<< W(i, j).real() << " + " << W(i, j).imag() << "j"
-								<< std::endl;*/
-						}
-					}
-
-					// equation (47) from (Toth 2015)
-					t_mat M = tl2::create<t_mat>(num_sites*2, num_sites*2);
-					set_submat(M, Y, 0, 0);
-					set_submat(M, V, num_sites, 0);
-					set_submat(M, Z, 0, num_sites);
-					set_submat(M, W, num_sites, num_sites);
-
-					t_mat M_trafo = trafo_herm * M * trafo;
-
-					for(t_size i=0; i<num_sites*2; ++i)
-					{
-						t_mat& S = energies_and_correlations[i].S;
-						S(x_idx, y_idx) += M_trafo(i, i) / t_real(2*num_sites);
-					}
-
-					/*using namespace tl2_ops;
-					tl2::set_eps_0<t_mat, t_real>(V, m_eps);
-					tl2::set_eps_0<t_mat, t_real>(W, m_eps);
-					tl2::set_eps_0<t_mat, t_real>(Y, m_eps);
-					tl2::set_eps_0<t_mat, t_real>(Z, m_eps);
-					std::cout << "x_idx=" << x_idx << ", y_idx=" << y_idx;
-					std::cout << ", Q = (" << h << ", " << k << ", " << l << ")." << std::endl;
-					std::cout << "V=" << V << std::endl;
-					std::cout << "W=" << W << std::endl;
-					std::cout << "Y=" << Y << std::endl;
-					std::cout << "Z=" << Z << std::endl;*/
+					/*std::cout
+						<< "Y[" << i << ", " << j << ", "
+						<< x_idx << ", " << y_idx << "] = "
+						<< Y(i, j).real() << " + " << Y(i, j).imag() << "j"
+						<< std::endl;
+					std::cout
+						<< "V[" << i << ", " << j << ", "
+						<< x_idx << ", " << y_idx << "] = "
+						<< V(i, j).real() << " + " << V(i, j).imag() << "j"
+						<< std::endl;
+					std::cout
+						<< "Z[" << i << ", " << j << ", "
+						<< x_idx << ", " << y_idx << "] = "
+						<< Z(i, j).real() << " + " << Z(i, j).imag() << "j"
+						<< std::endl;
+					std::cout
+						<< "W[" << i << ", " << j << ", "
+						<< x_idx << ", " << y_idx << "] = "
+						<< W(i, j).real() << " + " << W(i, j).imag() << "j"
+						<< std::endl;*/
 				}
+
+				// equation (47) from (Toth 2015)
+				t_mat M = tl2::create<t_mat>(num_sites*2, num_sites*2);
+				set_submat(M, Y, 0, 0);
+				set_submat(M, V, num_sites, 0);
+				set_submat(M, Z, 0, num_sites);
+				set_submat(M, W, num_sites, num_sites);
+
+				t_mat M_trafo = trafo_herm * M * trafo;
+
+				for(t_size i=0; i<num_sites*2; ++i)
+				{
+					t_mat& S = energies_and_correlations[i].S;
+					S(x_idx, y_idx) += M_trafo(i, i) / t_real(2*num_sites);
+				}
+
+				/*using namespace tl2_ops;
+				tl2::set_eps_0<t_mat, t_real>(V, m_eps);
+				tl2::set_eps_0<t_mat, t_real>(W, m_eps);
+				tl2::set_eps_0<t_mat, t_real>(Y, m_eps);
+				tl2::set_eps_0<t_mat, t_real>(Z, m_eps);
+				std::cout << "x_idx=" << x_idx << ", y_idx=" << y_idx;
+				std::cout << ", Q = (" << h << ", " << k << ", " << l << ")." << std::endl;
+				std::cout << "V=" << V << std::endl;
+				std::cout << "W=" << W << std::endl;
+				std::cout << "Y=" << Y << std::endl;
+				std::cout << "Z=" << Z << std::endl;*/
 			}
 
 
@@ -1071,7 +1098,7 @@ public:
 				atom_site.name = site.second.get<std::string>("name", "n/a");
 				atom_site.index = m_sites.size();
 
-				atom_site.pos = tl2::create<t_vec>(
+				atom_site.pos = tl2::create<t_vec_real>(
 				{
 					site.second.get<t_real>("position_x", 0.),
 					site.second.get<t_real>("position_y", 0.),
@@ -1104,7 +1131,7 @@ public:
 				exchange_term.atom1 = term.second.get<t_size>("atom_1_index", 0);
 				exchange_term.atom2 = term.second.get<t_size>("atom_2_index", 0);
 
-				exchange_term.dist = tl2::create<t_vec>(
+				exchange_term.dist = tl2::create<t_vec_real>(
 				{
 					term.second.get<t_real>("distance_x", 0.),
 					term.second.get<t_real>("distance_y", 0.),
@@ -1127,11 +1154,10 @@ public:
 		// external field
 		if(auto field = node.get_child_optional("field"); field)
 		{
-			m_field.dir = tl2::zero<t_vec>(3);
 			m_field.mag = 0.;
 			m_field.align_spins = false;
 
-			m_field.dir = tl2::create<t_vec>(
+			m_field.dir = tl2::create<t_vec_real>(
 			{
 				field->get<t_real>("direction_h", 0.),
 				field->get<t_real>("direction_k", 0.),
@@ -1170,9 +1196,9 @@ public:
 	bool Save(boost::property_tree::ptree& node) const
 	{
 		// external field
-		node.put<t_real>("field.direction_h", m_field.dir[0].real());
-		node.put<t_real>("field.direction_k", m_field.dir[1].real());
-		node.put<t_real>("field.direction_l", m_field.dir[2].real());
+		node.put<t_real>("field.direction_h", m_field.dir[0]);
+		node.put<t_real>("field.direction_k", m_field.dir[1]);
+		node.put<t_real>("field.direction_l", m_field.dir[2]);
 		node.put<t_real>("field.magnitude", m_field.mag);
 		node.put<bool>("field.align_spins", m_field.align_spins);
 
@@ -1192,9 +1218,9 @@ public:
 		{
 			boost::property_tree::ptree itemNode;
 			itemNode.put<std::string>("name", site.name);
-			itemNode.put<t_real>("position_x", site.pos[0].real());
-			itemNode.put<t_real>("position_y", site.pos[1].real());
-			itemNode.put<t_real>("position_z", site.pos[2].real());
+			itemNode.put<t_real>("position_x", site.pos[0]);
+			itemNode.put<t_real>("position_y", site.pos[1]);
+			itemNode.put<t_real>("position_z", site.pos[2]);
 			itemNode.put<t_real>("spin_x", site.spin_dir[0].real());
 			itemNode.put<t_real>("spin_y", site.spin_dir[1].real());
 			itemNode.put<t_real>("spin_z", site.spin_dir[2].real());
@@ -1210,9 +1236,9 @@ public:
 			itemNode.put<std::string>("name", term.name);
 			itemNode.put<t_size>("atom_1_index", term.atom1);
 			itemNode.put<t_size>("atom_2_index", term.atom2);
-			itemNode.put<t_real>("distance_x", term.dist[0].real());
-			itemNode.put<t_real>("distance_y", term.dist[1].real());
-			itemNode.put<t_real>("distance_z", term.dist[2].real());
+			itemNode.put<t_real>("distance_x", term.dist[0]);
+			itemNode.put<t_real>("distance_y", term.dist[1]);
+			itemNode.put<t_real>("distance_z", term.dist[2]);
 			itemNode.put<t_real>("interaction", term.J.real());
 			itemNode.put<t_real>("dmi_x", term.dmi[0].real());
 			itemNode.put<t_real>("dmi_y", term.dmi[1].real());
@@ -1234,6 +1260,10 @@ private:
 	ExternalField m_field{};
 	// matrix to rotate field into the [001] direction
 	t_mat m_rot_field = tl2::unit<t_mat>(3);
+
+	// ordering wave vector for incommensurate structures
+	t_vec_real m_ordering = tl2::zero<t_vec_real>(3);
+	t_vec_real m_rotaxis = tl2::create<t_vec_real>({1., 0., 0.});
 
 	// bragg peak needed for calculating projector
 	t_vec m_bragg{};
