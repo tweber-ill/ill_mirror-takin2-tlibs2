@@ -901,10 +901,11 @@ public:
 				//S_perp = m_proj_neutron * S;
 
 				// weights
-				w = tl2::trace<t_mat>(S_perp).real();
-				w_SF1 = S_perp(0, 0).real();
-				w_SF2 = S_perp(1, 1).real();
-				w_NSF = S_perp(2, 2).real();
+				w_SF1 = std::abs(S_perp(0, 0).real());
+				w_SF2 = std::abs(S_perp(1, 1).real());
+				w_NSF = std::abs(S_perp(2, 2).real());
+				//w = tl2::trace<t_mat>(S_perp).real();
+				w = w_SF1 + w_SF2 + w_NSF;
 			}
 		}
 
@@ -960,7 +961,11 @@ public:
 		ofstr << std::setw(m_prec*2) << std::left << "# h"
 			<< std::setw(m_prec*2) << std::left << "k"
 			<< std::setw(m_prec*2) << std::left << "l"
-			<< std::setw(m_prec*2) << std::left << "energies"
+			<< std::setw(m_prec*2) << std::left << "E"
+			<< std::setw(m_prec*2) << std::left << "w"
+			<< std::setw(m_prec*2) << std::left << "w_sf1"
+			<< std::setw(m_prec*2) << std::left << "w_sf2"
+			<< std::setw(m_prec*2) << std::left << "w_nsf"
 			<< "\n";
 
 		for(t_size i=0; i<num_qs; ++i)
@@ -970,16 +975,24 @@ public:
 			t_real l = std::lerp(l_start, l_end, t_real(i)/t_real(num_qs-1));
 
 
-			auto energies_and_correlations = GetEnergies(h, k, l, true);
+			auto energies_and_correlations = GetEnergies(h, k, l, false);
 			for(const auto& E_and_S : energies_and_correlations)
 			{
 				t_real E = E_and_S.E;
+				t_real w = E_and_S.weight;
+				t_real w_sf1 = E_and_S.weight_spinflip[0];
+				t_real w_sf2 = E_and_S.weight_spinflip[1];
+				t_real w_nsf = E_and_S.weight_nonspinflip;
 
 				ofstr
 					<< std::setw(m_prec*2) << std::left << h
 					<< std::setw(m_prec*2) << std::left << k
 					<< std::setw(m_prec*2) << std::left << l
 					<< std::setw(m_prec*2) << E
+					<< std::setw(m_prec*2) << w
+					<< std::setw(m_prec*2) << w_sf1
+					<< std::setw(m_prec*2) << w_sf2
+					<< std::setw(m_prec*2) << w_nsf
 					<< std::endl;
 			}
 		}
