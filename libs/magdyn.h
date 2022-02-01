@@ -382,6 +382,12 @@ public:
 	{
 		m_bose_cutoff = E;
 	}
+
+
+	void SetUniteDegenerateEnergies(bool b)
+	{
+		m_unite_degenerate_energies = b;
+	}
 	// --------------------------------------------------------------------
 
 
@@ -720,21 +726,9 @@ public:
 		std::vector<EnergyAndWeight> energies_and_correlations{};
 		energies_and_correlations.reserve(evals.size());
 
-		// if we're not interested in the spectral weights, we can ignore duplicates
-		bool remove_duplicates = only_energies;
+		// register energies
 		for(const auto& eval : evals)
 		{
-			if(remove_duplicates &&
-				std::find_if(energies_and_correlations.begin(), energies_and_correlations.end(),
-					[&eval, this](const auto& E_and_S) -> bool
-				{
-					t_real E = E_and_S.E;
-					return tl2::equals<t_real>(E, eval.real(), m_eps);
-				}) != energies_and_correlations.end())
-			{
-				continue;
-			}
-
 			EnergyAndWeight EandS
 			{
 				.E = eval.real(),
@@ -1045,6 +1039,50 @@ public:
 				//w = tl2::trace<t_mat>(S_perp).real();
 				w = w_SF1 + w_SF2 + w_NSF;
 			}
+		}
+
+
+		// unite degenerate energies and their corresponding eigenstates
+		if(m_unite_degenerate_energies)
+		{
+			std::vector<EnergyAndWeight> new_energies_and_correlations{};
+			new_energies_and_correlations.reserve(energies_and_correlations.size());
+
+			for(const auto& curState : energies_and_correlations)
+			{
+				t_real curE = curState.E;
+
+				auto iter = std::find_if(
+					new_energies_and_correlations.begin(),
+					new_energies_and_correlations.end(),
+					[curE, this](const auto& E_and_S) -> bool
+				{
+					t_real E = E_and_S.E;
+					return tl2::equals<t_real>(E, curE, m_eps);
+				});
+
+				// energy not yet seen
+				if(iter == new_energies_and_correlations.end())
+				{
+					new_energies_and_correlations.push_back(curState);
+				}
+
+				// energy already seen
+				else
+				{
+					// add correlation matrices and weights
+					iter->S += curState.S;
+					iter->S_p += curState.S_p;
+					iter->S_m += curState.S_m;;
+					iter->S_perp += curState.S_perp;
+					iter->weight += curState.weight;
+					iter->weight_spinflip[0] += curState.weight_spinflip[0];
+					iter->weight_spinflip[1] += curState.weight_spinflip[1];
+					iter->weight_nonspinflip += curState.weight_nonspinflip;
+				}
+			}
+
+			energies_and_correlations = std::move(new_energies_and_correlations);
 		}
 
 		return energies_and_correlations;
@@ -1376,6 +1414,8 @@ private:
 	t_vec_real m_ordering = tl2::zero<t_vec_real>(3);
 	t_vec_real m_rotaxis = tl2::create<t_vec_real>({1., 0., 0.});
 	bool m_is_incommensurate{false};
+
+	bool m_unite_degenerate_energies{true};
 
 	// bragg peak needed for calculating projector
 	t_vec m_bragg{};
