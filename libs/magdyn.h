@@ -205,6 +205,10 @@ public:
 	MagDyn() = default;
 	~MagDyn() = default;
 
+
+	// --------------------------------------------------------------------
+	// cleanup functions
+	// --------------------------------------------------------------------
 	/**
 	 * clear all
 	 */
@@ -252,20 +256,12 @@ public:
 		// -1: don't use
 		m_temperature = -1.;
 	}
+	// --------------------------------------------------------------------
 
 
-	void SetEpsilon(t_real eps)
-	{
-		m_eps = eps;
-	}
-
-
-	void SetPrecision(int prec)
-	{
-		m_prec = prec;
-	}
-
-
+	// --------------------------------------------------------------------
+	// getter
+	// --------------------------------------------------------------------
 	const std::vector<AtomSite>& GetAtomSites() const
 	{
 		return m_sites;
@@ -300,6 +296,22 @@ public:
 	{
 		return m_bose_cutoff;
 	}
+	// --------------------------------------------------------------------
+
+
+	// --------------------------------------------------------------------
+	// setter
+	// --------------------------------------------------------------------
+	void SetEpsilon(t_real eps)
+	{
+		m_eps = eps;
+	}
+
+
+	void SetPrecision(int prec)
+	{
+		m_prec = prec;
+	}
 
 
 	void SetExternalField(const ExternalField& field)
@@ -311,6 +323,7 @@ public:
 	void SetOrderingWavevector(const t_vec_real& ordering)
 	{
 		m_ordering = ordering;
+		m_is_incommensurate = !tl2::equals_0<t_vec_real>(m_ordering, m_eps);
 	}
 
 
@@ -369,6 +382,7 @@ public:
 	{
 		m_bose_cutoff = E;
 	}
+	// --------------------------------------------------------------------
 
 
 	/**
@@ -493,7 +507,6 @@ public:
 
 		// momentum
 		const t_vec_real Q = tl2::create<t_vec_real>({h, k, l});
-		const bool is_incommensurate = !tl2::equals_0<t_vec_real>(m_ordering, m_eps);
 
 		// constants: imaginary unit and 2pi
 		constexpr const t_cplx imag{0., 1.};
@@ -524,7 +537,7 @@ public:
 
 			// incommensurate case: rotation wrt magnetic unit cell
 			// equations (21), (6) and (2) from (Toth 2015)
-			if(is_incommensurate)
+			if(m_is_incommensurate)
 			{
 				t_real rot_UC_angle = tl2::inner<t_vec_real>(m_ordering, term.dist);
 				if(!tl2::equals_0<t_real>(rot_UC_angle, m_eps))
@@ -805,7 +818,6 @@ public:
 
 			// momentum
 			const t_vec_real Q = tl2::create<t_vec_real>({h, k, l});
-			const bool is_incommensurate = !tl2::equals_0<t_vec_real>(m_ordering, m_eps);
 
 			/*std::cout << "Y = np.zeros(3*3*4*4, dtype=complex).reshape((4,4,3,3))" << std::endl;
 			std::cout << "V = np.zeros(3*3*4*4, dtype=complex).reshape((4,4,3,3))" << std::endl;
@@ -825,7 +837,7 @@ public:
 				// incommensurate case
 				t_mat V_p, W_p, Y_p, Z_p;
 				t_mat V_m, W_m, Y_m, Z_m;
-				if(is_incommensurate)
+				if(m_is_incommensurate)
 				{
 					V_p = tl2::create<t_mat>(num_sites, num_sites);
 					W_p = tl2::create<t_mat>(num_sites, num_sites);
@@ -867,7 +879,7 @@ public:
 					W(i, j) = factor * phase_neg * u_conj_i[x_idx] * u_j[y_idx];
 
 					// incommensurate case
-					if(is_incommensurate)
+					if(m_is_incommensurate)
 					{
 						t_cplx phase_pos_p = std::exp(+imag * twopi *
 							tl2::inner<t_vec_real>(pos_j - pos_i,
@@ -928,7 +940,7 @@ public:
 				// incommensurate case
 				t_mat M_p, M_m;
 				t_mat M_trafo_p, M_trafo_m;
-				if(is_incommensurate)
+				if(m_is_incommensurate)
 				{
 					M_p = tl2::create<t_mat>(num_sites*2, num_sites*2);
 					set_submat(M_p, Y_p, 0, 0);
@@ -951,7 +963,7 @@ public:
 					t_mat& S = energies_and_correlations[i].S;
 					S(x_idx, y_idx) += M_trafo(i, i) / t_real(2*num_sites);
 
-					if(is_incommensurate)
+					if(m_is_incommensurate)
 					{
 						t_mat& S_p = energies_and_correlations[i].S_m;
 						t_mat& S_m = energies_and_correlations[i].S_p;
@@ -976,7 +988,7 @@ public:
 
 
 			t_mat proj_norm, rot_incomm, rot_incomm_conj;
-			if(is_incommensurate)
+			if(m_is_incommensurate)
 			{
 				// equations (39) and (40) from (Toth 2015)
 
@@ -1007,7 +1019,7 @@ public:
 				t_real& w_SF2 = E_and_S.weight_spinflip[1];
 				t_real& w_NSF = E_and_S.weight_nonspinflip;
 
-				if(is_incommensurate)
+				if(m_is_incommensurate)
 				{
 					// TODO: formula 40 from (Toth 2015)
 					S = S*proj_norm +
@@ -1363,6 +1375,7 @@ private:
 	// ordering wave vector for incommensurate structures
 	t_vec_real m_ordering = tl2::zero<t_vec_real>(3);
 	t_vec_real m_rotaxis = tl2::create<t_vec_real>({1., 0., 0.});
+	bool m_is_incommensurate{false};
 
 	// bragg peak needed for calculating projector
 	t_vec m_bragg{};
