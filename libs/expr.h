@@ -65,6 +65,8 @@
 	#include "units.h"
 #endif
 
+#include "helper.h"
+
 
 namespace tl2 {
 
@@ -77,7 +79,7 @@ t_num expr_modfunc(t_num t1, t_num t2)
 	else if constexpr(std::is_integral_v<t_num>)
 		return t1%t2;
 	else
-		throw std::runtime_error{"Invalid type for mod function."};
+		static_assert(tl2::bool_value<0, t_num>, "Invalid type for mod function.");
 }
 
 
@@ -784,7 +786,7 @@ protected:
 		}
 		else
 		{
-			throw std::invalid_argument("Invalid number type.");
+			static_assert(tl2::bool_value<0, t_num>, "Invalid number type.");
 		}
 
 		{	// ident

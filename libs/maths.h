@@ -78,6 +78,7 @@
 #include "str.h"
 #include "bits.h"
 #include "traits.h"
+#include "helper.h"
 
 #if __has_include(<lapacke.h>) && USE_LAPACK
 	extern "C"
@@ -165,8 +166,6 @@ requires is_mat<t_mat>;
 	template<typename T=double> constexpr T golden{1.618033988749895};
 	template<typename T=double> constexpr T pi{M_PI};
 #endif
-
-template<bool value, class=void> constexpr bool bool_value = value;
 
 template<typename INT=int> bool is_even(INT i) { return (i%2 == 0); }
 template<typename INT=int> bool is_odd(INT i) { return !is_even<INT>(i); }

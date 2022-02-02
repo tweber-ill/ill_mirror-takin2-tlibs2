@@ -38,6 +38,9 @@
 namespace tl2 {
 
 
+template<bool value, class=void> constexpr bool bool_value = value;
+
+
 /**
  * set the "C" locale
  */
@@ -65,7 +68,6 @@ t_vec reorder(const t_vec& vec, const t_perm& perm)
 
 	return vec_new;
 }
-
 
 }
 #endif
