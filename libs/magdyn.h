@@ -152,6 +152,9 @@ std::tuple<t_vec, t_vec> R_to_uv(const t_mat& R)
 }
 
 
+/**
+ * print a matrix
+ */
 template<class t_mat> requires tl2::is_mat<t_mat>
 void dbg_print(const t_mat& mat)
 {
@@ -175,6 +178,9 @@ void dbg_print(const t_mat& mat)
 }
 
 
+/**
+ * print a vector
+ */
 template<class t_vec> requires tl2::is_vec<t_vec>
 void dbg_print(const t_vec& vec)
 {
@@ -434,7 +440,7 @@ public:
 			// rotate field to [001] direction
 			m_rot_field = tl2::convert<t_mat>(
 				tl2::rotation<t_mat_real, t_vec_real>(
-					m_field.dir, zdir));
+					-m_field.dir, zdir));
 		}
 
 		if(m_bragg.size() == 3)
