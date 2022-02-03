@@ -28,32 +28,31 @@
  * ----------------------------------------------------------------------------
  */
 
-#ifndef __TL2_HELPERS_H__
-#define __TL2_HELPERS_H__
+#ifndef __TL2_QT_HELPERS_H__
+#define __TL2_QT_HELPERS_H__
 
-#include <vector>
+#include <QtCore/QLocale>
+#include <locale>
 
 
 namespace tl2 {
 
 
-template<bool value, class=void> constexpr bool bool_value = value;
-
-
 /**
- * reorder a vector according to a permutation
+ * set the "C" locale
  */
-template<class t_vec, class t_perm = std::vector<std::size_t>>
-t_vec reorder(const t_vec& vec, const t_perm& perm)
+static inline void set_locales()
 {
-	t_vec vec_new;
-	vec_new.reserve(vec.size());
+	std::ios_base::sync_with_stdio(false);
 
-	for(std::size_t i=0; i<vec.size(); ++i)
-		vec_new.push_back(vec[perm[i]]);
+	::setlocale(LC_ALL, "C");
+	std::locale::global(std::locale("C"));
 
-	return vec_new;
+#ifdef __TLIBS2_USE_QT__
+	QLocale::setDefault(QLocale::C);
+#endif
 }
+
 
 }
 #endif
