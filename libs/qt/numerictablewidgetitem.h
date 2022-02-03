@@ -36,6 +36,9 @@
 #include "../str.h"
 
 
+namespace tl2 {
+
+
 template<class T = double>
 class NumericTableWidgetItem : public QTableWidgetItem
 {
@@ -108,4 +111,5 @@ private:
 };
 
 
+}
 #endif

@@ -33,6 +33,24 @@
 namespace tl2 {
 
 
+RecentFiles::~RecentFiles()
+{
+	Clear();
+}
+
+
+void RecentFiles::Clear()
+{
+	if(!m_menuOpenRecent)
+		return;
+
+	for(QAction *action : m_menuOpenRecent->actions())
+		delete action;
+
+	m_menuOpenRecent->clear();
+}
+
+
 /**
  * adds a file to the recent files menu
  */
@@ -65,7 +83,7 @@ void RecentFiles::SetRecentFiles(const QStringList &files)
  */
 void RecentFiles::RebuildRecentFiles()
 {
-	m_menuOpenRecent->clear();
+	Clear();
 
 	std::size_t num_recent_files = 0;
 	for(auto iter = m_recentFiles.rbegin(); iter != m_recentFiles.rend();)

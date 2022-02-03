@@ -41,11 +41,12 @@ class RecentFiles
 {
 public:
 	RecentFiles() = default;
-	~RecentFiles() = default;
+	~RecentFiles();
 
 	RecentFiles(const RecentFiles& other) = default;
 	RecentFiles& operator=(const RecentFiles& other) = default;
 
+	void Clear();
 
 	// adds a file to the recent files menu
 	void AddRecentFile(const QString &file);
