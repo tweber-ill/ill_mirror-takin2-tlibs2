@@ -7,8 +7,9 @@
  *
  * References:
  *   - (Toth 2015) S. Toth and B. Lake, J. Phys.: Condens. Matter 27 166002 (2015):
- *     https://doi.org/10.1088/0953-8984/27/16/166002
- *   - (Heinsdorf 2021) N. Heinsdorf, example ferromagnetic calculation, personal communications, 2021/2022.
+ *                 https://doi.org/10.1088/0953-8984/27/16/166002
+ *   - (Heinsdorf 2021) N. Heinsdorf, manual example calculation for a simple
+ *                      ferromagnetic case, personal communications, 2021/2022.
  *
  * This file implements the formalism given by (Toth 2015).
  */
@@ -662,6 +663,8 @@ public:
 		bool only_energies = false) const
 	{
 		const t_size num_sites = m_sites.size();
+		if(num_sites == 0 || _H.size1() == 0)
+			return {};
 
 		// constants: imaginary unit and 2pi
 		constexpr const t_cplx imag{0., 1.};
