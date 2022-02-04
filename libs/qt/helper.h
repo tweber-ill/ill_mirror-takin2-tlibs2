@@ -47,10 +47,7 @@ static inline void set_locales()
 
 	::setlocale(LC_ALL, "C");
 	std::locale::global(std::locale("C"));
-
-#ifdef __TLIBS2_USE_QT__
 	QLocale::setDefault(QLocale::C);
-#endif
 }
 
 

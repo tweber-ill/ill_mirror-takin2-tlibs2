@@ -574,14 +574,14 @@ public:
 
 			// include these two terms to fulfill
 			// equation (11) from (Toth 2015)
-			add_submat<t_mat>(J_Q, factor * J * phase_Q,
+			tl2::add_submat<t_mat>(J_Q, factor * J * phase_Q,
 				term.atom1*3, term.atom2*3);
-			add_submat<t_mat>(J_Q, factor * J_T * phase_mQ,
+			tl2::add_submat<t_mat>(J_Q, factor * J_T * phase_mQ,
 				term.atom2*3, term.atom1*3);
 
-			add_submat<t_mat>(J_Q0, factor*J,
+			tl2::add_submat<t_mat>(J_Q0, factor*J,
 				term.atom1*3, term.atom2*3);
-			add_submat<t_mat>(J_Q0, factor*J_T,
+			tl2::add_submat<t_mat>(J_Q0, factor*J_T,
 				term.atom2*3, term.atom1*3);
 		}
 
@@ -597,7 +597,7 @@ public:
 		for(t_size i=0; i<num_sites; ++i)
 		for(t_size j=0; j<num_sites; ++j)
 		{
-			t_mat J_sub_Q = submat<t_mat>(J_Q, i*3, j*3, 3, 3);
+			t_mat J_sub_Q = tl2::submat<t_mat>(J_Q, i*3, j*3, 3, 3);
 
 			// TODO: check units of S_i and S_j
 			t_real S_i = m_sites[i].spin_mag;
@@ -621,7 +621,7 @@ public:
 					t_real S_k = m_sites[k].spin_mag;
 					const t_vec& v_k = m_sites_calc[k].v;
 
-					t_mat J_sub_Q0 = submat<t_mat>(J_Q0, i*3, k*3, 3, 3);
+					t_mat J_sub_Q0 = tl2::submat<t_mat>(J_Q0, i*3, k*3, 3, 3);
 					C(i, j) += S_k * tl2::inner_noconj<t_vec>(v_i, J_sub_Q0 * v_k);
 				}
 			}
@@ -645,10 +645,10 @@ public:
 		//return A_conj - C;
 
 		t_mat H = tl2::zero<t_mat>(num_sites*2, num_sites*2);
-		set_submat(H, A - C, 0, 0);
-		set_submat(H, B, 0, num_sites);
-		set_submat(H, tl2::herm(B), num_sites, 0);
-		set_submat(H, tl2::conj(A) - C, num_sites, num_sites);
+		tl2::set_submat(H, A - C, 0, 0);
+		tl2::set_submat(H, B, 0, num_sites);
+		tl2::set_submat(H, tl2::herm(B), num_sites, 0);
+		tl2::set_submat(H, tl2::conj(A) - C, num_sites, num_sites);
 
 		return H;
 	}
@@ -767,6 +767,12 @@ public:
 			//energies_and_correlations = tl2::reorder(energies_and_correlations, sorting);
 			evecs = tl2::reorder(evecs, sorting);
 			evals = tl2::reorder(evals, sorting);
+
+			/*for(t_vec& evec : evecs)
+			{
+				dbg_print<t_vec>(evec);
+				std::cout << std::endl;
+			}*/
 
 			t_mat evec_mat = tl2::create<t_mat>(evecs);
 			t_mat evec_mat_herm = tl2::herm(evec_mat);
@@ -933,10 +939,10 @@ public:
 
 				// equation (47) from (Toth 2015)
 				t_mat M = tl2::create<t_mat>(num_sites*2, num_sites*2);
-				set_submat(M, Y, 0, 0);
-				set_submat(M, V, num_sites, 0);
-				set_submat(M, Z, 0, num_sites);
-				set_submat(M, W, num_sites, num_sites);
+				tl2::set_submat(M, Y, 0, 0);
+				tl2::set_submat(M, V, num_sites, 0);
+				tl2::set_submat(M, Z, 0, num_sites);
+				tl2::set_submat(M, W, num_sites, num_sites);
 
 				t_mat M_trafo = trafo_herm * M * trafo;
 
@@ -946,16 +952,16 @@ public:
 				if(m_is_incommensurate)
 				{
 					M_p = tl2::create<t_mat>(num_sites*2, num_sites*2);
-					set_submat(M_p, Y_p, 0, 0);
-					set_submat(M_p, V_p, num_sites, 0);
-					set_submat(M_p, Z_p, 0, num_sites);
-					set_submat(M_p, W_p, num_sites, num_sites);
+					tl2::set_submat(M_p, Y_p, 0, 0);
+					tl2::set_submat(M_p, V_p, num_sites, 0);
+					tl2::set_submat(M_p, Z_p, 0, num_sites);
+					tl2::set_submat(M_p, W_p, num_sites, num_sites);
 
 					M_m = tl2::create<t_mat>(num_sites*2, num_sites*2);
-					set_submat(M_m, Y_m, 0, 0);
-					set_submat(M_m, V_m, num_sites, 0);
-					set_submat(M_m, Z_m, 0, num_sites);
-					set_submat(M_m, W_m, num_sites, num_sites);
+					tl2::set_submat(M_m, Y_m, 0, 0);
+					tl2::set_submat(M_m, V_m, num_sites, 0);
+					tl2::set_submat(M_m, Z_m, 0, num_sites);
+					tl2::set_submat(M_m, W_m, num_sites, num_sites);
 
 					M_trafo_p = trafo_herm * M_p * trafo;
 					M_trafo_m = trafo_herm * M_m * trafo;
