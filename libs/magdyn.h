@@ -531,6 +531,7 @@ public:
 		// build the interaction matrices J(Q) and J(-Q) of
 		// equations (12) and (14) from (Toth 2015)
 		t_mat J_Q = tl2::zero<t_mat>(num_sites*3, num_sites*3);
+		t_mat J_mQ = tl2::zero<t_mat>(num_sites*3, num_sites*3);
 		t_mat J_Q0 = tl2::zero<t_mat>(num_sites*3, num_sites*3);
 		for(const ExchangeTerm& term : m_exchange_terms)
 		{
@@ -579,6 +580,11 @@ public:
 			tl2::add_submat<t_mat>(J_Q, factor * J_T * phase_mQ,
 				term.atom2*3, term.atom1*3);
 
+			tl2::add_submat<t_mat>(J_mQ, factor * J * phase_mQ,
+				term.atom1*3, term.atom2*3);
+			tl2::add_submat<t_mat>(J_mQ, factor * J_T * phase_Q,
+				term.atom2*3, term.atom1*3);
+
 			tl2::add_submat<t_mat>(J_Q0, factor*J,
 				term.atom1*3, term.atom2*3);
 			tl2::add_submat<t_mat>(J_Q0, factor*J_T,
@@ -588,6 +594,7 @@ public:
 
 		// create the hamiltonian of equation (25) and (26) from (Toth 2015)
 		t_mat A = tl2::create<t_mat>(num_sites, num_sites);
+		t_mat A_mQ = tl2::create<t_mat>(num_sites, num_sites);
 		t_mat B = tl2::create<t_mat>(num_sites, num_sites);
 		t_mat C = tl2::zero<t_mat>(num_sites, num_sites);
 
@@ -598,6 +605,7 @@ public:
 		for(t_size j=0; j<num_sites; ++j)
 		{
 			t_mat J_sub_Q = tl2::submat<t_mat>(J_Q, i*3, j*3, 3, 3);
+			t_mat J_sub_mQ = tl2::submat<t_mat>(J_mQ, i*3, j*3, 3, 3);
 
 			// TODO: check units of S_i and S_j
 			t_real S_i = m_sites[i].spin_mag;
@@ -610,6 +618,8 @@ public:
 			t_real factor = 0.5 * std::sqrt(S_i*S_j);
 			A(i, j) = factor *
 				tl2::inner_noconj<t_vec>(u_i, J_sub_Q * u_conj_j);
+			A_mQ(i, j) = factor *
+				tl2::inner_noconj<t_vec>(u_i, J_sub_mQ * u_conj_j);
 			B(i, j) = factor *
 				tl2::inner_noconj<t_vec>(u_i, J_sub_Q * u_j);
 
@@ -637,6 +647,7 @@ public:
 				t_cplx Bgv = tl2::inner_noconj<t_vec>(B, gv);
 
 				A(i, j) -= 0.5*muB * Bgv;
+				A_mQ(i, j) -= 0.5*muB * Bgv;
 			}
 		}
 
@@ -648,7 +659,7 @@ public:
 		tl2::set_submat(H, A - C, 0, 0);
 		tl2::set_submat(H, B, 0, num_sites);
 		tl2::set_submat(H, tl2::herm(B), num_sites, 0);
-		tl2::set_submat(H, tl2::conj(A) - C, num_sites, num_sites);
+		tl2::set_submat(H, tl2::conj(A_mQ) - C, num_sites, num_sites);
 
 		return H;
 	}
@@ -876,43 +887,35 @@ public:
 					// TODO: check units of S
 					t_real factor = 4. * std::sqrt(S_i*S_j);
 
-					t_cplx phase_pos = std::exp(+imag * twopi *
-						tl2::inner<t_vec_real>(pos_j - pos_i, Q));
-					t_cplx phase_neg = std::exp(-imag * twopi *
+					t_cplx phase = std::exp(+imag * twopi *
 						tl2::inner<t_vec_real>(pos_j - pos_i, Q));
 
 					// TODO: check phase factors
-					Y(i, j) = factor * phase_pos * u_i[x_idx] * u_conj_j[y_idx];
-					V(i, j) = factor * phase_pos * u_conj_i[x_idx] * u_conj_j[y_idx];
-					Z(i, j) = factor * phase_neg * u_i[x_idx] * u_j[y_idx];
-					W(i, j) = factor * phase_neg * u_conj_i[x_idx] * u_j[y_idx];
+					Y(i, j) = factor * phase * u_i[x_idx] * u_conj_j[y_idx];
+					V(i, j) = factor * phase * u_conj_i[x_idx] * u_conj_j[y_idx];
+					Z(i, j) = factor * phase * u_i[x_idx] * u_j[y_idx];
+					W(i, j) = factor * phase * u_conj_i[x_idx] * u_j[y_idx];
 
 					// incommensurate case
 					if(m_is_incommensurate)
 					{
-						t_cplx phase_pos_p = std::exp(+imag * twopi *
-							tl2::inner<t_vec_real>(pos_j - pos_i,
-								Q + m_ordering));
-						t_cplx phase_neg_p = std::exp(-imag * twopi *
+						t_cplx phase_p = std::exp(+imag * twopi *
 							tl2::inner<t_vec_real>(pos_j - pos_i,
 								Q + m_ordering));
 
-						t_cplx phase_pos_m = std::exp(+imag * twopi *
-							tl2::inner<t_vec_real>(pos_j - pos_i,
-								Q - m_ordering));
-						t_cplx phase_neg_m = std::exp(-imag * twopi *
+						t_cplx phase_m = std::exp(+imag * twopi *
 							tl2::inner<t_vec_real>(pos_j - pos_i,
 								Q - m_ordering));
 
-						Y_p(i, j) = factor * phase_pos_p * u_i[x_idx] * u_conj_j[y_idx];
-						V_p(i, j) = factor * phase_pos_p * u_conj_i[x_idx] * u_conj_j[y_idx];
-						Z_p(i, j) = factor * phase_neg_p * u_i[x_idx] * u_j[y_idx];
-						W_p(i, j) = factor * phase_neg_p * u_conj_i[x_idx] * u_j[y_idx];
+						Y_p(i, j) = factor * phase_p * u_i[x_idx] * u_conj_j[y_idx];
+						V_p(i, j) = factor * phase_p * u_conj_i[x_idx] * u_conj_j[y_idx];
+						Z_p(i, j) = factor * phase_p * u_i[x_idx] * u_j[y_idx];
+						W_p(i, j) = factor * phase_p * u_conj_i[x_idx] * u_j[y_idx];
 
-						Y_m(i, j) = factor * phase_pos_m * u_i[x_idx] * u_conj_j[y_idx];
-						V_m(i, j) = factor * phase_pos_m * u_conj_i[x_idx] * u_conj_j[y_idx];
-						Z_m(i, j) = factor * phase_neg_m * u_i[x_idx] * u_j[y_idx];
-						W_m(i, j) = factor * phase_neg_m * u_conj_i[x_idx] * u_j[y_idx];
+						Y_m(i, j) = factor * phase_m * u_i[x_idx] * u_conj_j[y_idx];
+						V_m(i, j) = factor * phase_m * u_conj_i[x_idx] * u_conj_j[y_idx];
+						Z_m(i, j) = factor * phase_m * u_i[x_idx] * u_j[y_idx];
+						W_m(i, j) = factor * phase_m * u_conj_i[x_idx] * u_j[y_idx];
 					}
 
 					/*std::cout
