@@ -224,7 +224,12 @@ public:
 		ClearAtomSites();
 		ClearExchangeTerms();
 		ClearExternalField();
-		ClearTemperature();
+
+		// clear temperature, -1: don't use
+		m_temperature = -1.;
+
+		// clear ordering wave vector
+		m_ordering = tl2::zero<t_vec_real>(3);
 	}
 
 
@@ -255,13 +260,6 @@ public:
 		m_field.dir.clear();
 		m_field.mag = 0.;
 		m_field.align_spins = false;
-	}
-
-
-	void ClearTemperature()
-	{
-		// -1: don't use
-		m_temperature = -1.;
 	}
 	// --------------------------------------------------------------------
 
