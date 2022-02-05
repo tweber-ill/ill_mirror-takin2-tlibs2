@@ -334,6 +334,12 @@ public:
 	}
 
 
+	const t_vec_real& GetOrderingWavevector() const
+	{
+		return m_ordering;
+	}
+
+
 	void SetRotationAxis(const t_vec_real& axis)
 	{
 		m_rotaxis = axis;
@@ -1352,6 +1358,19 @@ public:
 			});
 		}
 
+		// ordering vector
+		if(auto ordering = node.get_child_optional("ordering"); ordering)
+		{
+			t_vec_real ordering_vec = tl2::create<t_vec_real>(
+			{
+				ordering->get<t_real>("h", 0.),
+				ordering->get<t_real>("k", 0.),
+				ordering->get<t_real>("l", 0.),
+			});
+
+			SetOrderingWavevector(ordering_vec);
+		}
+
 		CalcSpinRotation();
 		return true;
 	}
@@ -1375,6 +1394,14 @@ public:
 			node.put<t_real>("bragg.h", m_bragg[0].real());
 			node.put<t_real>("bragg.k", m_bragg[1].real());
 			node.put<t_real>("bragg.l", m_bragg[2].real());
+		}
+
+		// ordering vector
+		if(m_ordering.size() == 3)
+		{
+			node.put<t_real>("ordering.h", m_ordering[0]);
+			node.put<t_real>("ordering.k", m_ordering[1]);
+			node.put<t_real>("ordering.l", m_ordering[2]);
 		}
 
 		// temperature
