@@ -2,12 +2,14 @@
  * tlibs2
  * physics library
  * @author Tobias Weber <tobias.weber@tum.de>, <tweber@ill.fr>
- * @date 2012-2021
+ * @date 2012-2022
+ * @license GPLv3, see 'LICENSE' file
+ *
  * @note Forked on 7-Nov-2018 from my privately and TUM-PhD-developed "tlibs" project (https://github.com/t-weber/tlibs).
  * @note Additional functions were forked on 8-Nov-2018 from my privately developed "magtools" project (https://github.com/t-weber/magtools).
  * @note Further functions and updates forked on 1-Feb-2021 and 19-Apr-2021 from my privately developed "geo" and "misc" projects (https://github.com/t-weber/geo and https://github.com/t-weber/misc).
+ *
  * @note for the references, see the 'LITERATURE' file
- * @license GPLv3, see 'LICENSE' file
  *
  * ----------------------------------------------------------------------------
  * tlibs

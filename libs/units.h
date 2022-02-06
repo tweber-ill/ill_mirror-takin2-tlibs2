@@ -56,6 +56,7 @@ namespace tl2 {
 
 template<typename T=double> constexpr T __pi = boost::math::constants::pi<T>();
 
+
 // general quantities
 template<class Sys, class T=double> using t_length = units::quantity<units::unit<units::length_dimension, Sys>, T>;
 template<class Sys, class T=double> using t_momentum = units::quantity<units::unit<units::momentum_dimension, Sys>, T>;
@@ -159,7 +160,6 @@ template<class Y=double> constexpr t_energy_per_field<units::si::system, Y> mu_N
 template<class Y=double> constexpr t_energy_per_field<units::si::system, Y> mu_e = Y(co::mu_e/units::si::joules*units::si::tesla)*units::si::joules/units::si::tesla;
 
 
-
 // helper functions
 template<class t_quant>
 t_quant my_units_sqrt(const decltype(t_quant() * t_quant())& val)
@@ -174,11 +174,13 @@ t_quant my_units_sqrt(const decltype(t_quant() * t_quant())& val)
 	return std::sqrt(valsq) * one_quant;
 }
 
+
 template<class t_quant>
 decltype(t_quant()*t_quant()) my_units_pow2(const t_quant& val)
 {
 	return val*val;
 }
+
 
 template<class t_elem, template<class...> class t_vec>
 t_elem my_units_norm2(const t_vec<t_elem>& vec)

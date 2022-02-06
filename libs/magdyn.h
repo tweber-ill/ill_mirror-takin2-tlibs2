@@ -35,7 +35,7 @@
 #include "tlibs2/libs/maths.h"
 #include "units.h"
 #include "phys.h"
-#include "helper.h"
+#include "algos.h"
 
 
 namespace tl2_mag {

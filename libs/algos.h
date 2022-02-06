@@ -4,6 +4,7 @@
  * @author Tobias Weber <tweber@ill.fr>
  * @date 2018-2021
  * @note Forked on 7-Nov-2018 from my privately and TUM-PhD-developed "tlibs" project (https://github.com/t-weber/tlibs).
+ * @note Forked 2018 from my privately developed "misc" project (https://github.com/t-weber/misc).
  * @license GPLv3, see 'LICENSE' file
  *
  * ----------------------------------------------------------------------------
@@ -12,6 +13,8 @@
  *                          Grenoble, France).
  * Copyright (C) 2015-2017  Tobias WEBER (Technische Universitaet Muenchen
  *                          (TUM), Garching, Germany).
+ * "misc" project
+ * Copyright (C) 2017-2021  Tobias WEBER (privately developed).
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -33,6 +36,8 @@
 #include <algorithm>
 #include <string>
 #include <chrono>
+#include <vector>
+
 
 namespace tl2 {
 
@@ -161,6 +166,22 @@ std::string epoch_to_str(T tSeconds, const char *pcFmt="%a %Y-%b-%d %H:%M:%S %Z"
 	char cTime[256];
 	std::strftime(cTime, sizeof cTime, pcFmt, &tm);
 	return std::string(cTime);
+}
+
+
+/**
+ * reorder a vector according to a permutation
+ */
+template<class t_vec, class t_perm = std::vector<std::size_t>>
+t_vec reorder(const t_vec& vec, const t_perm& perm)
+{
+        t_vec vec_new;
+        vec_new.reserve(vec.size());
+
+        for(std::size_t i=0; i<vec.size(); ++i)
+                vec_new.push_back(vec[perm[i]]);
+
+        return vec_new;
 }
 
 }

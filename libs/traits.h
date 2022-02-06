@@ -42,6 +42,7 @@
 #include <utility>
 #include <concepts>
 
+
 namespace tl2 {
 // ----------------------------------------------------------------------------
 // concepts
@@ -291,6 +292,9 @@ using t_fkt_vararg = decltype(
 		std::make_integer_sequence<std::size_t, iNumArgs>()));
 // -----------------------------------------------------------------------------
 
+
+// boolean value
+template<bool value, class=void> constexpr bool bool_value = value;
 
 }
 #endif

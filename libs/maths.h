@@ -2,23 +2,24 @@
  * tlibs2
  * (container-agnostic) math library
  * @author Tobias Weber <tobias.weber@tum.de>, <tweber@ill.fr>
- * @date 2017-2022
+ * @date 2015-2022
  * @license GPLv3, see 'LICENSE' file
  *
  * @note The present version was forked on 8-Nov-2018 from my privately developed "magtools" project (https://github.com/t-weber/magtools).
  * @note Additional functions forked on 7-Nov-2018 from my privately and TUM-PhD-developed "tlibs" project (https://github.com/t-weber/tlibs).
  * @note Further functions and updates forked on 1-Feb-2021 and 19-Apr-2021 from my privately developed "geo" and "misc" projects (https://github.com/t-weber/geo and https://github.com/t-weber/misc).
+ * @note Additional functions forked on 6-Feb-2022 from my privately developed "mathlibs" project (https://github.com/t-weber/mathlibs).
  *
  * @desc for the references, see the 'LITERATURE' file
  *
  * ----------------------------------------------------------------------------
  * tlibs
- * Copyright (C) 2017-2021  Tobias WEBER (Institut Laue-Langevin (ILL),
+ * Copyright (C) 2017-2022  Tobias WEBER (Institut Laue-Langevin (ILL),
  *                          Grenoble, France).
  * Copyright (C) 2015-2017  Tobias WEBER (Technische Universitaet Muenchen
  *                          (TUM), Garching, Germany).
- * "magtools", "geo", and "misc" projects
- * Copyright (C) 2017-2021  Tobias WEBER (privately developed).
+ * "magtools", "geo", "misc", and "mathlibs" projects
+ * Copyright (C) 2017-2022  Tobias WEBER (privately developed).
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -78,7 +79,6 @@
 #include "str.h"
 #include "bits.h"
 #include "traits.h"
-#include "helper.h"
 
 #if __has_include(<lapacke.h>) && USE_LAPACK
 	extern "C"
@@ -5916,6 +5916,40 @@ requires is_mat<t_mat>
 		0.,  0.,  z,   0.,
 		0.,  0.,  0.,  1.
 	});
+}
+
+
+/**
+ * mirror matrix in homogeneous coordinates
+ */
+template<class t_mat, class t_vec>
+t_mat hom_mirror(const t_vec& axis, bool is_normalised=1)
+requires is_vec<t_vec> && is_mat<t_mat>
+{
+	t_mat mat = ortho_mirror_op<t_mat, t_vec>(axis, is_normalised);
+
+	t_mat mat_hom = unit<t_mat>(4,4);
+	tl2::convert<t_mat, t_mat>(mat_hom, mat);
+
+	// in case the matrix is statically sized and was already larger than 4x4
+	mat_hom(3, 3) = 1.;
+	return mat_hom;
+}
+
+
+/**
+ * mirror matrix in homogeneous coordinates with translation
+ */
+template<class t_mat, class t_vec>
+t_mat hom_mirror(const t_vec& axis, const t_vec& pos, bool is_normalised=1)
+requires is_vec<t_vec> && is_mat<t_mat>
+{
+	t_mat mirr = hom_mirror<t_mat, t_vec>(axis, is_normalised);
+
+	t_mat offs = hom_translation<t_mat, t_vec>(pos);
+	t_mat offs_inv = hom_translation<t_mat, t_vec>(-pos);
+
+	return offs * mirr * offs_inv;
 }
 
 
