@@ -32,6 +32,7 @@
 namespace test = boost::unit_test;
 namespace testtools = boost::test_tools;
 
+#include <complex>
 
 #include "libs/expr.h"
 #include "libs/str.h"
@@ -40,6 +41,7 @@ namespace testtools = boost::test_tools;
 
 using t_types_real = std::tuple<double, float>;
 using t_types_int = std::tuple<int, long>;
+using t_types_cplx = std::tuple<std::complex<double>, std::complex<float>>;
 
 
 BOOST_AUTO_TEST_CASE_TEMPLATE(test_expr_real, t_real, t_types_real)
@@ -57,7 +59,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(test_expr_real, t_real, t_types_real)
 	BOOST_TEST(ok);
 	BOOST_TEST(tl2::equals<t_real>(result, 34, eps));
 
-	ok = parser.parse(" - (sqrt(4)-5)^3 -  5/2 ");
+	ok = parser.parse(" - (sqrt(4)-5)^3 - 5/2 ");
 	result = parser.eval();
 	BOOST_TEST(ok);
 	BOOST_TEST(tl2::equals<t_real>(result, 24.5, eps));
@@ -71,6 +73,45 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(test_expr_real, t_real, t_types_real)
 	result = parser.eval();
 	BOOST_TEST(ok);
 	BOOST_TEST(tl2::equals<t_real>(result, -12.2995, 1e-3));
+}
+
+
+BOOST_AUTO_TEST_CASE_TEMPLATE(test_expr_cplx, t_cplx, t_types_cplx)
+{
+	using t_real = typename t_cplx::value_type;
+
+	static constexpr t_real eps = 1e-5;
+	tl2::ExprParser<t_cplx> parser;
+
+	bool ok = parser.parse("imag * imag");
+	auto result = parser.eval();
+	BOOST_TEST(ok);
+	BOOST_TEST(tl2::equals<t_cplx>(result, -1, eps));
+
+	ok = parser.parse("1 + 2*3");
+	result = parser.eval();
+	BOOST_TEST(ok);
+	BOOST_TEST(tl2::equals<t_cplx>(result, 7, eps));
+
+	ok = parser.parse("4 + 5*6");
+	result = parser.eval();
+	BOOST_TEST(ok);
+	BOOST_TEST(tl2::equals<t_cplx>(result, 34, eps));
+
+	ok = parser.parse(" - (sqrt(4)-5)^3 - 5/2 ");
+	result = parser.eval();
+	BOOST_TEST(ok);
+	BOOST_TEST(tl2::equals<t_cplx>(result, 24.5, eps));
+
+	ok = parser.parse("-cos(sin(1.23*pi))^(-1.2 + 3.2)");
+	result = parser.eval();
+	BOOST_TEST(ok);
+	BOOST_TEST(tl2::equals<t_cplx>(result, -0.6228, 1e-3));
+
+	ok = parser.parse("-1.23e1 + 5e-4");
+	result = parser.eval();
+	BOOST_TEST(ok);
+	BOOST_TEST(tl2::equals<t_cplx>(result, -12.2995, 1e-3));
 }
 
 

@@ -78,8 +78,12 @@ t_num expr_modfunc(t_num t1, t_num t2)
 		return std::fmod(t1, t2);
 	else if constexpr(std::is_integral_v<t_num>)
 		return t1%t2;
+	else if constexpr(is_complex<t_num>)
+		throw std::runtime_error{"Invalid mod operation."};
 	else
 		static_assert(tl2::bool_value<0, t_num>, "Invalid type for mod function.");
+
+	return t_num{};
 }
 
 
@@ -633,30 +637,56 @@ protected:
 
 	void register_funcs()
 	{
-		// common functions
-		register_func1("abs", [](t_num t) -> t_num
-			{ return t<t_num(0) ? -t : t; });
-		register_func2("mod", expr_modfunc<t_num>);
+		// common real and integer functions
+		if constexpr(std::is_floating_point_v<t_num> || std::is_integral_v<t_num>)
+		{
+			register_func1("abs", [](t_num t) -> t_num
+				{ return t<t_num(0) ? -t : t; });
+			register_func2("mod", expr_modfunc<t_num>);
+		}
+
+		// common real and complex functions
+		if constexpr(std::is_floating_point_v<t_num> || is_complex<t_num>)
+		{
+			register_func1("sin", [](t_num num) -> t_num
+				{ return std::sin(num); });
+			register_func1("cos", [](t_num num) -> t_num
+				{ return std::cos(num); });
+			register_func1("tan", [](t_num num) -> t_num
+				{ return std::tan(num); });
+			register_func1("asin", [](t_num num) -> t_num
+				{ return std::asin(num); });
+			register_func1("acos", [](t_num num) -> t_num
+				{ return std::acos(num); });
+			register_func1("atan", [](t_num num) -> t_num
+				{ return std::atan(num); });
+			register_func1("sinh", [](t_num num) -> t_num
+				{ return std::sinh(num); });
+			register_func1("cosh", [](t_num num) -> t_num
+				{ return std::cosh(num); });
+			register_func1("tanh", [](t_num num) -> t_num
+				{ return std::tanh(num); });
+			register_func1("asinh", [](t_num num) -> t_num
+				{ return std::asinh(num); });
+			register_func1("acosh", [](t_num num) -> t_num
+				{ return std::acosh(num); });
+			register_func1("atanh", [](t_num num) -> t_num
+				{ return std::atanh(num); });
+			register_func1("sqrt", [](t_num num) -> t_num
+				{ return std::sqrt(num); });
+			register_func1("exp", [](t_num num) -> t_num
+				{ return std::exp(num); });
+			register_func1("log", [](t_num num) -> t_num
+				{ return std::log(num); });
+
+			register_func2("pow", [](t_num num1, t_num num2) -> t_num
+				{ return std::pow(num1, num2); });
+		}
 
 		// real functions
 		if constexpr(std::is_floating_point_v<t_num>)
 		{
-			register_func1("sin", std::sin);
-			register_func1("cos", std::cos);
-			register_func1("tan", std::tan);
-			register_func1("asin", std::asin);
-			register_func1("acos", std::acos);
-			register_func1("atan", std::atan);
-			register_func1("sinh", std::sinh);
-			register_func1("cosh", std::cosh);
-			register_func1("tanh", std::tanh);
-			register_func1("asinh", std::asinh);
-			register_func1("acosh", std::acosh);
-			register_func1("atanh", std::atanh);
-			register_func1("sqrt", std::sqrt);
 			register_func1("cbrt", std::cbrt);
-			register_func1("exp", std::exp);
-			register_func1("log", std::log);
 			register_func1("log2", std::log2);
 			register_func1("log10", std::log10);
 			register_func1("erf", std::erf);
@@ -668,7 +698,6 @@ protected:
 			register_func1("erf_inv", boost::math::erf_inv);
 #endif
 
-			register_func2("pow", std::pow);
 			register_func2("atan2", std::atan2);
 		}
 
@@ -712,8 +741,19 @@ protected:
 #ifdef TL2_USE_UNITS
 			register_const("pi", __pi<t_num>);
 			register_const("hbar",  t_num(hbar<t_num>/meV<t_num>/sec<t_num>));	// hbar in [meV s]
-			register_const("kB",  t_num(kB<t_num>/meV<t_num>*kelvin<t_num>));		// kB in [meV / K]
+			register_const("kB",  t_num(kB<t_num>/meV<t_num>*kelvin<t_num>));	// kB in [meV / K]
 #endif
+		}
+
+		// complex constants
+		else if constexpr(is_complex<t_num>)
+		{
+			using t_real = typename t_num::value_type;
+
+			register_const("imag", t_num(0, 1));					// imaginary unit
+			register_const("pi", __pi<t_real>);
+			register_const("hbar",  t_real(hbar<t_real>/meV<t_real>/sec<t_real>));	// hbar in [meV s]
+			register_const("kB",  t_real(kB<t_real>/meV<t_real>*kelvin<t_real>));	// kB in [meV / K]
 		}
 
 		// integer constants
@@ -773,8 +813,19 @@ protected:
 				matches.push_back(std::make_pair((int)Token::TOK_NUM, val));
 			}
 		}
+		else if constexpr(is_complex<t_num>)
+		{	// TODO: complex
+			std::regex regex{"[0-9]+(\\.)?[0-9]*(E|e|E\\+|E-|e\\+|e-)?[0-9]*"};
+			std::smatch smatch;
+			if(std::regex_match(str, smatch, regex))
+			{
+				t_num val{};
+				std::istringstream{str} >> val;
+				matches.push_back(std::make_pair((int)Token::TOK_NUM, val));
+			}
+		}
 		else if constexpr(std::is_integral_v<t_num>)
-		{	// real
+		{	// integer
 			std::regex regex{"[0-9]+"};
 			std::smatch smatch;
 			if(std::regex_match(str, smatch, regex))
