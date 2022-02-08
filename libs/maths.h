@@ -1328,31 +1328,6 @@ requires tl2::is_basic_mat<t_mat> && tl2::is_dyn_mat<t_mat>
 
 	return ostr;
 }
-
-
-/**
- * prints matrix in nicely formatted form
- */
-template<class t_mat>
-std::ostream& niceprint(std::ostream& ostr, const t_mat& mat)
-requires tl2::is_basic_mat<t_mat> && tl2::is_dyn_mat<t_mat>
-{
-	const std::size_t ROWS = mat.size1();
-	const std::size_t COLS = mat.size2();
-
-	for(std::size_t i=0; i<ROWS; ++i)
-	{
-		ostr << "(";
-		for(std::size_t j=0; j<COLS; ++j)
-			ostr << std::setw(ostr.precision()*1.5) << std::right << mat(i,j);
-		ostr << ")";
-
-		if(i < ROWS-1)
-			ostr << "\n";
-	}
-
-	return ostr;
-}
 // ----------------------------------------------------------------------------
 
 
@@ -2217,6 +2192,72 @@ requires is_basic_mat<t_mat>
 			set_eps_0<t_elem>(mat(i,j), eps);
 };
 // -----------------------------------------------------------------------------
+
+
+
+// -----------------------------------------------------------------------------
+/**
+ * prints a matrix in a 'nicely' formatted form
+ */
+template<class t_mat, class t_elem = typename t_mat::value_type, class t_real = double>
+std::ostream& niceprint(std::ostream& ostr, const t_mat& mat,
+	t_real eps = 1e-6, unsigned int prec = 6)
+requires tl2::is_basic_mat<t_mat> && tl2::is_dyn_mat<t_mat>
+{
+	ostr.precision(prec);
+
+	const std::size_t ROWS = mat.size1();
+	const std::size_t COLS = mat.size2();
+
+	for(std::size_t i=0; i<ROWS; ++i)
+	{
+		ostr << "(";
+		for(std::size_t j=0; j<COLS; ++j)
+		{
+			t_elem elem = mat(i, j);
+			set_eps_0(elem, eps);
+
+			unsigned int field_width = prec * 1.5;
+			if constexpr(is_complex<t_elem>)
+				field_width *= 3;
+			ostr << std::setw(field_width) << std::right << elem;
+		}
+		ostr << ")\n";
+	}
+
+	return ostr;
+}
+
+
+/**
+ * prints a vector in a 'nicely' formatted form
+ */
+template<class t_vec, class t_elem = typename t_vec::value_type, class t_real = double>
+std::ostream& niceprint(std::ostream& ostr, const t_vec& vec,
+	t_real eps = 1e-6, unsigned int prec = 6)
+requires tl2::is_basic_vec<t_vec> && tl2::is_dyn_vec<t_vec>
+{
+	ostr.precision(prec);
+
+	const std::size_t ROWS = vec.size();
+
+	for(std::size_t i=0; i<ROWS; ++i)
+	{
+		ostr << "(";
+		t_elem elem = vec[i];
+		set_eps_0(elem, eps);
+
+		unsigned int field_width = prec * 1.5;
+		if constexpr(is_complex<t_elem>)
+			field_width *= 3;
+		ostr << std::setw(field_width) << std::right << elem;
+		ostr << ")\n";
+	}
+
+	return ostr;
+}
+// -----------------------------------------------------------------------------
+
 
 
 /**
@@ -7242,7 +7283,7 @@ eigenvec(const t_mat& mat, bool only_evals=false, bool is_symmetric=false, bool 
 			{
 				err = LAPACKE_ssyev(LAPACK_COL_MAJOR,
 					(only_evals ? 'N' : 'V'),
-					'L', N, inmat.data(), N, 
+					'L', N, inmat.data(), N,
 					evals_re.data());
 			}
 			else if constexpr(std::is_same_v<t_real, double>)
@@ -7330,7 +7371,7 @@ eigenvec(const t_mat& mat, bool only_evals=false, bool is_symmetric=false, bool 
 				'N', only_evals ? 'N' : 'V', N,
 				inmat.data(), N,
 				evals_re.data(), evals_im.data(),
-				nullptr, N, 
+				nullptr, N,
 				only_evals ? nullptr : outevecs.data(), N);
 		}
 		else if constexpr(std::is_same_v<t_real, double>)
@@ -7396,7 +7437,7 @@ eigenvec(const t_mat& mat, bool only_evals=false, bool is_symmetric=false, bool 
 				t_real sum{0};
 				for(std::size_t j=0; j<N; ++j)
 					sum += std::norm(
-						std::complex(evecs_re[i][j], 
+						std::complex(evecs_re[i][j],
 							evecs_im[i][j]));
 				sum = std::sqrt(sum);
 

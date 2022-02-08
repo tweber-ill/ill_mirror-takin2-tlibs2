@@ -151,53 +151,6 @@ std::tuple<t_vec, t_vec> R_to_uv(const t_mat& R)
 
 	return std::make_tuple(u, v);
 }
-
-
-/**
- * print a matrix
- */
-template<class t_mat> requires tl2::is_mat<t_mat>
-void dbg_print(const t_mat& mat)
-{
-	using t_elem = typename t_mat::value_type;
-
-	t_real eps = 1e-6;
-	int prec = 3;
-	std::cout.precision(prec);
-
-	for(t_size row=0; row<mat.size1(); ++row)
-	{
-		for(t_size col=0; col<mat.size2(); ++col)
-		{
-			t_elem elem = mat(row, col);
-			tl2::set_eps_0(elem, eps);
-			std::cout << std::setw(prec*3) << elem;
-		}
-
-		std::cout << std::endl;
-	}
-}
-
-
-/**
- * print a vector
- */
-template<class t_vec> requires tl2::is_vec<t_vec>
-void dbg_print(const t_vec& vec)
-{
-	using t_elem = typename t_vec::value_type;
-
-	t_real eps = 1e-6;
-	int prec = 3;
-	std::cout.precision(prec);
-
-	for(t_size row=0; row<vec.size(); ++row)
-	{
-		t_elem elem = vec[row];
-		tl2::set_eps_0(elem, eps);
-		std::cout << elem << std::endl;
-	}
-}
 // ----------------------------------------------------------------------------
 
 
@@ -723,8 +676,8 @@ public:
 
 		// see p. 5 in (Toth 2015)
 		t_mat H = C * g * C_herm;
-		//dbg_print(_H);
-		//dbg_print(H);
+		//tl2::niceprint(std::cout, H, 1e-4, 4);
+		//std::cout << std::endl;
 
 		bool is_herm = tl2::is_symm_or_herm<t_mat, t_real>(H, m_eps);
 		if(!is_herm)
@@ -785,13 +738,13 @@ public:
 
 			/*for(t_vec& evec : evecs)
 			{
-				dbg_print<t_vec>(evec);
+				tl2::niceprint(std::cout, evec, 1e-4, 4);
 				std::cout << std::endl;
 			}*/
 
 			t_mat evec_mat = tl2::create<t_mat>(evecs);
 			t_mat evec_mat_herm = tl2::herm(evec_mat);
-			//dbg_print(evec_mat);
+			//tl2::niceprint(std::cout, evec_mag, 1e-4, 4);
 			//std::cout << std::endl;
 
 			// equation (32) from (Toth 2015)
@@ -835,9 +788,9 @@ public:
 			t_mat trafo_herm = tl2::herm(trafo);
 
 			//t_mat D = trafo_herm * _H * trafo;
-			//dbg_print(D);
-			//dbg_print(E);
-			//dbg_print(L);
+			//tl2::niceprint(std::cout, D, 1e-4, 4);
+			//tl2::niceprint(std::cout, E, 1e-4, 4);
+			//tl2::niceprint(std::cout, L, 1e-4, 4);
 			//std::cout << std::endl;
 
 			// momentum
@@ -1340,7 +1293,7 @@ public:
 
 			if(auto optVal = field->get_optional<bool>("align_spins"))
 				m_field.align_spins = *optVal;
-			}
+		}
 
 		// temperature
 		m_temperature = node.get<t_real>("temperature", -1.);
