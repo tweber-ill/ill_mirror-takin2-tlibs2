@@ -61,6 +61,14 @@ public:
 
 
 	/**
+	 * construct a numeric table widget item from a string value
+	 */
+	explicit NumericTableWidgetItem(const std::string& val, std::streamsize prec = 6)
+		: QTableWidgetItem(QString(val.c_str())), m_prec{prec}
+	{}
+
+
+	/**
 	 * compare items
 	 */
 	virtual bool operator<(const QTableWidgetItem& item) const override

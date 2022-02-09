@@ -32,10 +32,11 @@
 #include <boost/property_tree/xml_parser.hpp>
 
 #define USE_LAPACK 1
-#include "tlibs2/libs/maths.h"
+#include "maths.h"
 #include "units.h"
 #include "phys.h"
 #include "algos.h"
+#include "expr.h"
 
 
 namespace tl2_mag {
@@ -76,7 +77,7 @@ struct AtomSite
 
 
 /**
- * storage for temporary per-site results
+ * temporary per-site calculation results
  */
 struct AtomSiteCalc
 {
@@ -97,6 +98,16 @@ struct ExchangeTerm
 	t_size atom2{};     // atom 2 index
 	t_vec_real dist{};  // distance between unit cells
 
+	std::string J{};    // parsable expression for Heisenberg interaction
+	std::string dmi[3]; // parsable expression for Dzyaloshinskij-Moriya interaction
+};
+
+
+/**
+ * temporary per-term calculation results
+ */
+struct ExchangeTermCalc
+{
 	t_cplx J{};         // Heisenberg interaction
 	t_vec dmi{};        // Dzyaloshinskij-Moriya interaction
 };
@@ -125,6 +136,16 @@ struct EnergyAndWeight
 	t_real weight{};
 	t_real weight_spinflip[2] = {0., 0.};
 	t_real weight_nonspinflip{};
+};
+
+
+/**
+ * variables for the expression parser
+ */
+struct Variable
+{
+	std::string name{};
+	t_cplx value{};
 };
 // ----------------------------------------------------------------------------
 
@@ -174,6 +195,7 @@ public:
 	 */
 	void Clear()
 	{
+		ClearVariables();
 		ClearAtomSites();
 		ClearExchangeTerms();
 		ClearExternalField();
@@ -183,6 +205,15 @@ public:
 
 		// clear ordering wave vector
 		m_ordering = tl2::zero<t_vec_real>(3);
+	}
+
+
+	/**
+	 * clear all parser variables
+	 */
+	void ClearVariables()
+	{
+		m_variables.clear();
 	}
 
 
@@ -202,6 +233,7 @@ public:
 	void ClearExchangeTerms()
 	{
 		m_exchange_terms.clear();
+		m_exchange_terms_calc.clear();
 	}
 
 
@@ -220,15 +252,33 @@ public:
 	// --------------------------------------------------------------------
 	// getter
 	// --------------------------------------------------------------------
+	const std::vector<Variable>& GetVariables() const
+	{
+		return m_variables;
+	}
+
+
 	const std::vector<AtomSite>& GetAtomSites() const
 	{
 		return m_sites;
 	}
 
 
+	const std::vector<AtomSiteCalc>& GetAtomSitesCalc() const
+	{
+		return m_sites_calc;
+	}
+
+
 	const std::vector<ExchangeTerm>& GetExchangeTerms() const
 	{
 		return m_exchange_terms;
+	}
+
+
+	const std::vector<ExchangeTermCalc>& GetExchangeTermsCalc() const
+	{
+		return m_exchange_terms_calc;
 	}
 
 
@@ -297,6 +347,13 @@ public:
 	}
 
 
+	void AddVariable(Variable&& var)
+	{
+		m_variables.emplace_back(
+			std::forward<Variable&&>(var));
+	}
+
+
 	void AddAtomSite(AtomSite&& site)
 	{
 		site.index = GetAtomSites().size();
@@ -313,26 +370,11 @@ public:
 	}
 
 
-	void AddExchangeTerm(t_size atom1, t_size atom2,
-		const t_vec_real& dist, const t_cplx& J)
-	{
-		ExchangeTerm term
-		{
-			.atom1 = atom1, // index of first atom
-			.atom2 = atom2, // index of second atom
-			.dist = dist,   // distance between the atom's unit cells (not the atoms)
-			.J = J,         // interaction
-		};
-
-		AddExchangeTerm(std::move(term));
-	}
-
-
 	void SetBraggPeak(t_real h, t_real k, t_real l)
 	{
 		m_bragg = tl2::create<t_vec>({h, k, l});
 
-		// call CalcSpinRotation() afterwards to calculate projector
+		// call CalcAtomSites() afterwards to calculate projector
 	}
 
 
@@ -377,9 +419,9 @@ public:
 
 
 	/**
-	 * calculate the spin rotation trafo
+	 * calculate the spin rotation trafo for the atom sites
 	 */
-	void CalcSpinRotation()
+	void CalcAtomSites()
 	{
 		const t_size num_sites = m_sites.size();
 		if(num_sites == 0)
@@ -445,6 +487,45 @@ public:
 
 
 	/**
+	 * parse the exchange term expressions
+	 */
+	void CalcExchangeTerms()
+	{
+		const t_size num_terms = m_exchange_terms.size();
+		if(num_terms == 0)
+			return;
+
+		tl2::ExprParser<t_cplx> parser;
+		for(const Variable& var : m_variables)
+			parser.register_var(var.name, var.value);
+
+		m_exchange_terms_calc.clear();
+		m_exchange_terms_calc.reserve(num_terms);
+
+		for(t_size term_idx=0; term_idx<num_terms; ++term_idx)
+		{
+			const ExchangeTerm& term = m_exchange_terms[term_idx];
+			ExchangeTermCalc calc;
+
+			bool J_ok = parser.parse(term.J);
+			t_cplx J = parser.eval();
+			calc.J = J;
+
+			bool dmi_x_ok = parser.parse(term.dmi[0]);
+			t_cplx dmi_x = parser.eval();
+			bool dmi_y_ok = parser.parse(term.dmi[1]);
+			t_cplx dmi_y = parser.eval();
+			bool dmi_z_ok = parser.parse(term.dmi[2]);
+			t_cplx dmi_z = parser.eval();
+			calc.dmi = tl2::create<t_vec>({
+				dmi_x, dmi_y, dmi_z });
+
+			m_exchange_terms_calc.emplace_back(std::move(calc));
+		}
+	}
+
+
+	/**
 	 * update the site and term indices
 	 */
 	void CalcIndices()
@@ -465,14 +546,19 @@ public:
 
 	/**
 	 * get the hamiltonian at the given momentum
-	 * (CalcSpinRotation() needs to be called once before this function)
+	 * (CalcAtomSites() needs to be called once before this function)
 	 * @note implements the formalism given by (Toth 2015)
 	 * @note a first version for a simplified ferromagnetic dispersion was based on (Heinsdorf 2021)
 	 */
 	t_mat GetHamiltonian(t_real h, t_real k, t_real l) const
 	{
 		const t_size num_sites = m_sites.size();
-		if(num_sites == 0)
+		const t_size num_terms = m_exchange_terms.size();
+
+		if(num_sites == 0 || num_terms == 0)
+			return {};
+		if(num_sites != m_sites_calc.size() ||
+			num_terms != m_exchange_terms_calc.size())
 			return {};
 
 		// momentum
@@ -490,20 +576,24 @@ public:
 		t_mat J_Q = tl2::zero<t_mat>(num_sites*3, num_sites*3);
 		t_mat J_mQ = tl2::zero<t_mat>(num_sites*3, num_sites*3);
 		t_mat J_Q0 = tl2::zero<t_mat>(num_sites*3, num_sites*3);
-		for(const ExchangeTerm& term : m_exchange_terms)
+
+		for(t_size term_idx=0; term_idx<num_terms; ++term_idx)
 		{
+			const ExchangeTerm& term = m_exchange_terms[term_idx];
+			const ExchangeTermCalc& term_calc = m_exchange_terms_calc[term_idx];
+
 			if(term.atom1 >= num_sites || term.atom2 >= num_sites)
 				continue;
 
 			// exchange interaction matrix with dmi as anti-symmetric part,
 			// see (Toth 2015) p. 2
 			t_mat J = tl2::diag<t_mat>(
-				tl2::create<t_vec>({term.J, term.J, term.J}));
+				tl2::create<t_vec>({term_calc.J, term_calc.J, term_calc.J}));
 
-			if(term.dmi.size() == 3)
+			if(term_calc.dmi.size() == 3)
 			{
 				// cross product matrix
-				J += tl2::skewsymmetric<t_mat, t_vec>(-term.dmi);
+				J += tl2::skewsymmetric<t_mat, t_vec>(-term_calc.dmi);
 			}
 
 			// incommensurate case: rotation wrt magnetic unit cell
@@ -1212,6 +1302,23 @@ public:
 	{
 		Clear();
 
+		// variables
+		if(auto vars = node.get_child_optional("variables"); vars)
+		{
+			for(const auto &var : *vars)
+			{
+				auto name = var.second.get_optional<std::string>("name");
+				if(!name)
+					continue;
+
+				Variable variable;
+				variable.name = *name;
+				variable.value = var.second.get<t_cplx>("value", 0.);
+
+				m_variables.emplace_back(std::move(variable));
+			}
+		}
+
 		// atom sites
 		if(auto sites = node.get_child_optional("atom_sites"); sites)
 		{
@@ -1250,10 +1357,13 @@ public:
 			{
 				ExchangeTerm exchange_term;
 
-				exchange_term.name = term.second.get<std::string>("name", "n/a");
+				exchange_term.name = term.second.get<std::string>(
+					"name", "n/a");
 				exchange_term.index = m_exchange_terms.size();
-				exchange_term.atom1 = term.second.get<t_size>("atom_1_index", 0);
-				exchange_term.atom2 = term.second.get<t_size>("atom_2_index", 0);
+				exchange_term.atom1 = term.second.get<t_size>(
+					"atom_1_index", 0);
+				exchange_term.atom2 = term.second.get<t_size>(
+					"atom_2_index", 0);
 
 				exchange_term.dist = tl2::create<t_vec_real>(
 				{
@@ -1262,14 +1372,15 @@ public:
 					term.second.get<t_real>("distance_z", 0.),
 				});
 
-				exchange_term.J = term.second.get<t_real>("interaction", 0.);
+				exchange_term.J = term.second.get<std::string>(
+					"interaction", "0");
 
-				exchange_term.dmi = tl2::create<t_vec>(
-				{
-					term.second.get<t_real>("dmi_x", 0.),
-					term.second.get<t_real>("dmi_y", 0.),
-					term.second.get<t_real>("dmi_z", 0.),
-				});
+				exchange_term.dmi[0] = term.second.get<std::string>(
+					"dmi_x", "0");
+				exchange_term.dmi[1] = term.second.get<std::string>(
+					"dmi_y", "0");
+				exchange_term.dmi[2] = term.second.get<std::string>(
+					"dmi_z", "0");
 
 				m_exchange_terms.emplace_back(std::move(exchange_term));
 			}
@@ -1322,7 +1433,8 @@ public:
 			SetOrderingWavevector(ordering_vec);
 		}
 
-		CalcSpinRotation();
+		CalcAtomSites();
+		CalcExchangeTerms();
 		return true;
 	}
 
@@ -1358,6 +1470,16 @@ public:
 		// temperature
 		node.put<t_real>("temperature", m_temperature);
 
+		// variables
+		for(const auto& var : GetVariables())
+		{
+			boost::property_tree::ptree itemNode;
+			itemNode.put<std::string>("name", var.name);
+			itemNode.put<t_cplx>("value", var.value);
+
+			node.add_child("variables.variable", itemNode);
+		}
+
 		// atom sites
 		for(const auto& site : GetAtomSites())
 		{
@@ -1384,10 +1506,10 @@ public:
 			itemNode.put<t_real>("distance_x", term.dist[0]);
 			itemNode.put<t_real>("distance_y", term.dist[1]);
 			itemNode.put<t_real>("distance_z", term.dist[2]);
-			itemNode.put<t_real>("interaction", term.J.real());
-			itemNode.put<t_real>("dmi_x", term.dmi[0].real());
-			itemNode.put<t_real>("dmi_y", term.dmi[1].real());
-			itemNode.put<t_real>("dmi_z", term.dmi[2].real());
+			itemNode.put<std::string>("interaction", term.J);
+			itemNode.put<std::string>("dmi_x", term.dmi[0]);
+			itemNode.put<std::string>("dmi_y", term.dmi[1]);
+			itemNode.put<std::string>("dmi_z", term.dmi[2]);
 
 			node.add_child("exchange_terms.term", itemNode);
 		}
@@ -1398,8 +1520,12 @@ public:
 
 private:
 	std::vector<AtomSite> m_sites{};
-	std::vector<ExchangeTerm> m_exchange_terms{};
 	std::vector<AtomSiteCalc> m_sites_calc{};
+
+	std::vector<ExchangeTerm> m_exchange_terms{};
+	std::vector<ExchangeTermCalc> m_exchange_terms_calc{};
+
+	std::vector<Variable> m_variables{};
 
 	// external field
 	ExternalField m_field{};
