@@ -571,6 +571,9 @@ public:
 	}
 
 
+	/**
+	 * parse a given string into an ast (and generate code)
+	 */
 	bool parse(const std::string& str, bool codegen=true)
 	{
 		m_code.clear();
@@ -612,6 +615,9 @@ public:
 	}
 
 
+	/**
+	 * evaluate the ast (or execute the code)
+	 */
 	t_num eval()
 	{
 		// is compiled code available?
@@ -1227,7 +1233,9 @@ protected:
 			else
 			{
 				// register the variable if it doesn't yet exist
-				if(m_vars.find(ident) == m_vars.end() && m_consts.find(ident) == m_consts.end())
+				if(m_vars.find(ident) == m_vars.end() &&
+					m_consts.find(ident) == m_consts.end() &&
+					m_autoregister_var)
 					register_var(ident, t_num{});
 				return std::make_shared<ExprASTVar<t_num>>(ident);
 			}
@@ -1286,8 +1294,24 @@ public:
 	}
 
 
+	void SetDebug(bool b)
+	{
+		m_debug = b;
+	}
+
+
+	void SetAutoregisterVariables(bool b)
+	{
+		m_autoregister_var = b;
+	}
+
+
 private:
+	// debug output
 	bool m_debug = false;
+
+	// automatically register unknown variable
+	bool m_autoregister_var = true;
 
 	// ast root
 	std::shared_ptr<ExprAST<t_num>> m_ast{};
@@ -1303,10 +1327,10 @@ private:
 	std::unordered_map<std::string, t_num(*)(t_num)> m_funcs1{};
 	std::unordered_map<std::string, t_num(*)(t_num, t_num)> m_funcs2{};
 
-
-private:
+	// input stream
 	std::shared_ptr<std::istream> m_istr{};
 
+	// lookahead token
 	int m_lookahead = (int)Token::TOK_INVALID;
 	t_num m_lookahead_val = 0;
 	std::string m_lookahead_text = "";

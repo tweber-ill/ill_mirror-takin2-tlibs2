@@ -496,6 +496,7 @@ public:
 			return;
 
 		tl2::ExprParser<t_cplx> parser;
+		parser.SetAutoregisterVariables(false);
 		for(const Variable& var : m_variables)
 			parser.register_var(var.name, var.value);
 
@@ -507,18 +508,44 @@ public:
 			const ExchangeTerm& term = m_exchange_terms[term_idx];
 			ExchangeTermCalc calc;
 
-			bool J_ok = parser.parse(term.J);
-			t_cplx J = parser.eval();
-			calc.J = J;
+			try
+			{
+				if(bool J_ok = parser.parse(term.J); J_ok)
+				{
+					t_cplx J = parser.eval();
+					calc.J = J;
+				}
+				else
+				{
+					std::cerr << "Error parsing \"" 
+						<< term.J << "\"." 
+						<< std::endl;
+				}
 
-			bool dmi_x_ok = parser.parse(term.dmi[0]);
-			t_cplx dmi_x = parser.eval();
-			bool dmi_y_ok = parser.parse(term.dmi[1]);
-			t_cplx dmi_y = parser.eval();
-			bool dmi_z_ok = parser.parse(term.dmi[2]);
-			t_cplx dmi_z = parser.eval();
-			calc.dmi = tl2::create<t_vec>({
-				dmi_x, dmi_y, dmi_z });
+				calc.dmi = tl2::zero<t_vec>(3);
+
+				for(t_size dmi_idx=0; dmi_idx<3; ++dmi_idx)
+				{
+					// empty string?
+					if(!term.dmi[dmi_idx].size())
+						continue;
+
+					if(bool dmi_ok = parser.parse(term.dmi[dmi_idx]); dmi_ok)
+					{
+						calc.dmi[dmi_idx] = parser.eval();
+					}
+					else
+					{
+						std::cerr << "Error parsing \"" 
+							<< term.dmi[dmi_idx] 
+							<< "\"." << std::endl;
+					}
+				}
+			}
+			catch(const std::exception& ex)
+			{
+				std::cerr << ex.what() << std::endl;
+			}
 
 			m_exchange_terms_calc.emplace_back(std::move(calc));
 		}
