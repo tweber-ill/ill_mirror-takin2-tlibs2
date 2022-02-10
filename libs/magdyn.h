@@ -354,6 +354,28 @@ public:
 	}
 
 
+	void SetVariable(Variable&& var)
+	{
+		// is a variable with the same name already registered?
+		auto iter = std::find_if(m_variables.begin(), m_variables.end(),
+			[&var](const auto& thevar)
+		{
+			return thevar.name == var.name;
+		});
+
+		if(iter == m_variables.end())
+		{
+			// add a new variable
+			AddVariable(std::forward<Variable&&>(var));
+		}
+		else
+		{
+			// replace the value of an existing variable
+			iter->value = var.value;
+		}
+	}
+
+
 	void AddAtomSite(AtomSite&& site)
 	{
 		site.index = GetAtomSites().size();
