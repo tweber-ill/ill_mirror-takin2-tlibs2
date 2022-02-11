@@ -20,3 +20,4 @@ A physical-mathematical C++ template library.
   - Forked and merged project from https://github.com/t-weber/tlibs on 7 November 2018.
   - Forked and merged project from https://github.com/t-weber/magtools on 8 November 2018.
   - Forked and merged project from https://code.ill.fr/tweber/magtools on 20 June 2019.
+  - Continuously merged code from my private maths library, https://github.com/t-weber/mathlibs.
