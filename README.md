@@ -13,3 +13,10 @@ A physical-mathematical C++ template library.
 |2019 - now  |https://code.ill.fr/scientific-software/takin/tlibs          |Main development repository for tlibs 1.        |
 |2016 - 2019 |https://github.com/t-weber/tlibs                             |Old private repository for tlibs 1.             |
 |2015 - 2017 |https://forge.frm2.tum.de/cgit/cgit.cgi/frm2/mira/tlibs.git/ |Former main development repository for tlibs 1. |
+
+
+## Project history
+
+  - Forked and merged project from https://github.com/t-weber/tlibs on 7 November 2018.
+  - Forked and merged project from https://github.com/t-weber/magtools on 8 November 2018.
+  - Forked and merged project from https://code.ill.fr/tweber/magtools on 20 June 2019.
