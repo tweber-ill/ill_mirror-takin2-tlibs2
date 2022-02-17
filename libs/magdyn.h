@@ -469,10 +469,12 @@ public:
 		{
 			// calculate orthogonal projector for magnetic neutron scattering
 			// see (Shirane 2002), p. 37, eq. (2.64)
-			t_vec bragg_rot = use_field ? m_rot_field * m_bragg : m_bragg;
-
+			//t_vec bragg_rot = use_field ? m_rot_field * m_bragg : m_bragg;
+			//
+			//m_proj_neutron = tl2::ortho_projector<t_mat, t_vec>(
+			//	bragg_rot, false);
 			m_proj_neutron = tl2::ortho_projector<t_mat, t_vec>(
-				bragg_rot, false);
+				m_bragg, false);
 		}
 		else
 		{
