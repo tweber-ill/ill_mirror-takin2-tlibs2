@@ -65,14 +65,14 @@ using t_mat = tl2::mat<t_cplx, std::vector>;
  */
 struct AtomSite
 {
-	std::string name{}; // identifier
-	t_size index{};     // index
+	std::string name{};      // identifier
+	t_size index{};          // index
 
-	t_vec_real pos{};   // atom position
+	t_vec_real pos{};        // atom position
 
-	t_vec spin_dir{};   // spin direction
-	t_real spin_mag{};  // spin magnitude
-	t_mat g{};          // g factor
+	std::string spin_dir[3]; // expression for spin direction
+	t_real spin_mag{};       // spin magnitude
+	t_mat g{};               // g factor
 };
 
 
@@ -81,6 +81,8 @@ struct AtomSite
  */
 struct AtomSiteCalc
 {
+	t_vec spin_dir{};        // spin direction
+
 	t_vec u{}, u_conj{};
 	t_vec v{};
 };
@@ -91,15 +93,15 @@ struct AtomSiteCalc
  */
 struct ExchangeTerm
 {
-	std::string name{}; // identifier
-	t_size index{};     // index
+	std::string name{};      // identifier
+	t_size index{};          // index
 
-	t_size atom1{};     // atom 1 index
-	t_size atom2{};     // atom 2 index
-	t_vec_real dist{};  // distance between unit cells
+	t_size atom1{};          // atom 1 index
+	t_size atom2{};          // atom 2 index
+	t_vec_real dist{};       // distance between unit cells
 
-	std::string J{};    // parsable expression for Heisenberg interaction
-	std::string dmi[3]; // parsable expression for Dzyaloshinskij-Moriya interaction
+	std::string J{};         // parsable expression for Heisenberg interaction
+	std::string dmi[3];      // parsable expression for Dzyaloshinskij-Moriya interaction
 };
 
 
@@ -108,8 +110,8 @@ struct ExchangeTerm
  */
 struct ExchangeTermCalc
 {
-	t_cplx J{};         // Heisenberg interaction
-	t_vec dmi{};        // Dzyaloshinskij-Moriya interaction
+	t_cplx J{};              // Heisenberg interaction
+	t_vec dmi{};             // Dzyaloshinskij-Moriya interaction
 };
 
 
@@ -118,9 +120,9 @@ struct ExchangeTermCalc
  */
 struct ExternalField
 {
-	t_vec_real dir{};   // field direction
-	t_real mag{};       // field magnitude
-	bool align_spins{}; // align spins along external field
+	t_vec_real dir{};        // field direction
+	t_real mag{};            // field magnitude
+	bool align_spins{};      // align spins along external field
 };
 
 
@@ -483,29 +485,66 @@ public:
 		}
 
 
+		tl2::ExprParser<t_cplx> parser;
+		parser.SetAutoregisterVariables(false);
+		for(const Variable& var : m_variables)
+			parser.register_var(var.name, var.value);
+
 		for(t_size site_idx=0; site_idx<m_sites.size(); ++site_idx)
 		{
-			const AtomSite& site = m_sites[site_idx];
+			try
+			{
+				const AtomSite& site = m_sites[site_idx];
+				AtomSiteCalc site_calc{};
 
-			// rotate local spin to ferromagnetic [001] direction
-			auto [spin_re, spin_im] =
-				tl2::split_cplx<t_vec, t_vec_real>(site.spin_dir);
-			t_mat rot = tl2::convert<t_mat>(
-				tl2::rotation<t_mat_real, t_vec_real>(spin_re, zdir));
+				site_calc.spin_dir = tl2::zero<t_vec>(3);
 
-			// spin rotation of equation (9) from (Toth 2015)
-			t_vec u, v;
+				for(t_size dir_idx=0; dir_idx<3; ++dir_idx)
+				{
+					// empty string?
+					if(!site.spin_dir[dir_idx].size())
+						continue;
 
-			if(m_field.align_spins)
-				std::tie(u, v) = R_to_uv<t_mat, t_vec, t_cplx>(m_rot_field);
-			else
-				std::tie(u, v) = R_to_uv<t_mat, t_vec, t_cplx>(rot);
+					if(bool dir_ok = parser.parse(site.spin_dir[dir_idx]); dir_ok)
+					{
+						site_calc.spin_dir[dir_idx] = parser.eval();
+					}
+					else
+					{
+						std::cerr << "Error parsing \"" 
+							<< site.spin_dir[dir_idx] 
+							<< "\"." << std::endl;
+					}
+				}
 
-			AtomSiteCalc site_calc{};
-			site_calc.u_conj = std::move(tl2::conj(u));
-			site_calc.u = std::move(u);
-			site_calc.v = std::move(v);
-			m_sites_calc.emplace_back(std::move(site_calc));
+				//tl2::niceprint(std::cout, site_calc.spin_dir, 1e-4, 4);
+				//std::cout << std::endl;
+
+				// rotate local spin to ferromagnetic [001] direction
+				auto [spin_re, spin_im] =
+					tl2::split_cplx<t_vec, t_vec_real>(site_calc.spin_dir);
+				t_mat rot = tl2::convert<t_mat>(
+					tl2::rotation<t_mat_real, t_vec_real>(spin_re, zdir));
+
+				// spin rotation of equation (9) from (Toth 2015)
+				if(m_field.align_spins)
+				{
+					std::tie(site_calc.u, site_calc.v) =
+						R_to_uv<t_mat, t_vec, t_cplx>(m_rot_field);
+				}
+				else
+				{
+					std::tie(site_calc.u, site_calc.v) = 
+						R_to_uv<t_mat, t_vec, t_cplx>(rot);
+				}
+
+				site_calc.u_conj = tl2::conj(site_calc.u);
+				m_sites_calc.emplace_back(std::move(site_calc));
+			}
+			catch(const std::exception& ex)
+			{
+				std::cerr << ex.what() << std::endl;
+			}
 		}
 	}
 
@@ -1387,12 +1426,12 @@ public:
 					site.second.get<t_real>("position_z", 0.),
 				});
 
-				atom_site.spin_dir = tl2::create<t_vec>(
-				{
-					site.second.get<t_real>("spin_x", 0.),
-					site.second.get<t_real>("spin_y", 0.),
-					site.second.get<t_real>("spin_z", 1.),
-				});
+				atom_site.spin_dir[0] = site.second.get<std::string>(
+					"spin_x", "0"),
+				atom_site.spin_dir[1] = site.second.get<std::string>(
+					"spin_y", "0"),
+				atom_site.spin_dir[2] = site.second.get<std::string>(
+					"spin_z", "1"),
 
 				atom_site.spin_mag = site.second.get<t_real>("spin_magnitude", 1.);
 				atom_site.g = -2. * tl2::unit<t_mat>(3);
@@ -1539,9 +1578,9 @@ public:
 			itemNode.put<t_real>("position_x", site.pos[0]);
 			itemNode.put<t_real>("position_y", site.pos[1]);
 			itemNode.put<t_real>("position_z", site.pos[2]);
-			itemNode.put<t_real>("spin_x", site.spin_dir[0].real());
-			itemNode.put<t_real>("spin_y", site.spin_dir[1].real());
-			itemNode.put<t_real>("spin_z", site.spin_dir[2].real());
+			itemNode.put<std::string>("spin_x", site.spin_dir[0]);
+			itemNode.put<std::string>("spin_y", site.spin_dir[1]);
+			itemNode.put<std::string>("spin_z", site.spin_dir[2]);
 			itemNode.put<t_real>("spin_magnitude", site.spin_mag);
 
 			node.add_child("atom_sites.site", itemNode);
