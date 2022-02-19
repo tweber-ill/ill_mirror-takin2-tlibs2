@@ -690,7 +690,7 @@ public:
 			// equations (21), (6) and (2) from (Toth 2015)
 			if(m_is_incommensurate)
 			{
-				t_real rot_UC_angle = tl2::inner<t_vec_real>(m_ordering, term.dist);
+				t_real rot_UC_angle = twopi * tl2::inner<t_vec_real>(m_ordering, term.dist);
 				if(!tl2::equals_0<t_real>(rot_UC_angle, m_eps))
 				{
 					t_mat rot_UC = tl2::convert<t_mat>(
