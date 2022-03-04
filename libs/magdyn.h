@@ -208,6 +208,9 @@ public:
 
 		// clear ordering wave vector
 		m_ordering = tl2::zero<t_vec_real>(3);
+
+		// reset rotation axis
+		m_rotaxis = tl2::create<t_vec_real>({1., 0., 0.});
 	}
 
 
@@ -331,6 +334,12 @@ public:
 	}
 
 
+	bool IsIncommensurate() const
+	{
+		return m_is_incommensurate;
+	}
+
+
 	void SetOrderingWavevector(const t_vec_real& ordering)
 	{
 		m_ordering = ordering;
@@ -347,6 +356,12 @@ public:
 	void SetRotationAxis(const t_vec_real& axis)
 	{
 		m_rotaxis = axis;
+	}
+
+
+	const t_vec_real& GetRotationAxis() const
+	{
+		return m_rotaxis;
 	}
 
 
@@ -668,6 +683,7 @@ public:
 		t_mat J_mQ = tl2::zero<t_mat>(num_sites*3, num_sites*3);
 		t_mat J_Q0 = tl2::zero<t_mat>(num_sites*3, num_sites*3);
 
+		// iterate couplings
 		for(t_size term_idx=0; term_idx<num_terms; ++term_idx)
 		{
 			const ExchangeTerm& term = m_exchange_terms[term_idx];
@@ -691,7 +707,8 @@ public:
 			// equations (21), (6) and (2) from (Toth 2015)
 			if(m_is_incommensurate)
 			{
-				t_real rot_UC_angle = twopi * tl2::inner<t_vec_real>(m_ordering, term.dist);
+				t_real rot_UC_angle = twopi * tl2::inner<t_vec_real>(
+					m_ordering, term.dist);
 				if(!tl2::equals_0<t_real>(rot_UC_angle, m_eps))
 				{
 					t_mat rot_UC = tl2::convert<t_mat>(
@@ -739,6 +756,7 @@ public:
 		bool use_field = !tl2::equals_0<t_real>(m_field.mag, m_eps)
 			&& m_field.dir.size() == 3;
 
+		// iterate sites
 		for(t_size i=0; i<num_sites; ++i)
 		for(t_size j=0; j<num_sites; ++j)
 		{
@@ -1147,7 +1165,8 @@ public:
 						m_rotaxis, true));
 
 				rot_incomm = tl2::unit<t_mat>(3);
-				rot_incomm -= imag * tl2::skewsymmetric<t_mat, t_vec>(m_rotaxis);
+				rot_incomm -= imag * tl2::skewsymmetric<t_mat, t_vec>(
+					m_rotaxis);
 				rot_incomm -= proj_norm;
 				rot_incomm *= 0.5;
 
@@ -1524,6 +1543,19 @@ public:
 			SetOrderingWavevector(ordering_vec);
 		}
 
+		// rotation axis
+		if(auto axis = node.get_child_optional("rotation_axis"); axis)
+		{
+			t_vec_real rotaxis = tl2::create<t_vec_real>(
+			{
+				axis->get<t_real>("h", 1.),
+				axis->get<t_real>("k", 0.),
+				axis->get<t_real>("l", 0.),
+			});
+
+			SetRotationAxis(rotaxis);
+		}
+
 		CalcAtomSites();
 		CalcExchangeTerms();
 		return true;
@@ -1556,6 +1588,14 @@ public:
 			node.put<t_real>("ordering.h", m_ordering[0]);
 			node.put<t_real>("ordering.k", m_ordering[1]);
 			node.put<t_real>("ordering.l", m_ordering[2]);
+		}
+
+		// rotation axis
+		if(m_rotaxis.size() == 3)
+		{
+			node.put<t_real>("rotation_axis.h", m_rotaxis[0]);
+			node.put<t_real>("rotation_axis.k", m_rotaxis[1]);
+			node.put<t_real>("rotation_axis.l", m_rotaxis[2]);
 		}
 
 		// temperature
