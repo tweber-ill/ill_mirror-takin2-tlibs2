@@ -355,7 +355,8 @@ public:
 
 	void SetRotationAxis(const t_vec_real& axis)
 	{
-		m_rotaxis = axis;
+		t_real len = tl2::norm<t_vec_real>(axis);
+		m_rotaxis = axis / len;
 	}
 
 
@@ -1165,8 +1166,7 @@ public:
 						m_rotaxis, true));
 
 				rot_incomm = tl2::unit<t_mat>(3);
-				rot_incomm -= imag * tl2::skewsymmetric<t_mat, t_vec>(
-					m_rotaxis);
+				rot_incomm -= imag * tl2::skewsymmetric<t_mat, t_vec>(m_rotaxis);
 				rot_incomm -= proj_norm;
 				rot_incomm *= 0.5;
 
@@ -1190,10 +1190,10 @@ public:
 
 				if(m_is_incommensurate)
 				{
-					// TODO: formula 40 from (Toth 2015)
-					S = S*proj_norm +
-						S_p*rot_incomm +
-						S_m*rot_incomm_conj;
+					// formula 40 from (Toth 2015)
+					S = S * proj_norm +
+						S_p * rot_incomm +
+						S_m * rot_incomm_conj;
 				}
 
 				if(m_temperature >= 0.)
