@@ -175,6 +175,61 @@ std::tuple<t_vec, t_vec> R_to_uv(const t_mat& R)
 
 	return std::make_tuple(u, v);
 }
+
+
+/**
+ * spin rotation of equation (9) from (Toth 2015)
+ * rotate local spin to ferromagnetic [001] direction
+ */
+template<class t_mat, class t_vec, class t_cplx, class t_vec_real>
+requires tl2::is_mat<t_mat> && tl2::is_vec<t_vec>
+std::tuple<t_vec, t_vec> spin_to_uv_real(const t_vec_real& spin_re)
+{
+	const t_vec_real zdir = tl2::create<t_vec_real>({0., 0., 1.});
+
+	t_mat rot = tl2::convert<t_mat>(
+		tl2::rotation<t_mat_real, t_vec_real>(
+			spin_re, zdir));
+
+	return R_to_uv<t_mat, t_vec, t_cplx>(rot);
+}
+
+
+/**
+ * spin rotation of equation (9) from (Toth 2015)
+ * rotate local spin to ferromagnetic [001] direction
+ */
+template<class t_mat, class t_vec, class t_cplx, class t_vec_real>
+requires tl2::is_mat<t_mat> && tl2::is_vec<t_vec>
+std::tuple<t_vec, t_vec> spin_to_uv(const t_vec& spin_dir)
+{
+	auto [spin_re, spin_im] =
+		tl2::split_cplx<t_vec, t_vec_real>(spin_dir);
+
+	return spin_to_uv_real<t_mat, t_vec, t_cplx, t_vec_real>(spin_re);
+}
+
+
+/**
+ * rotate spin vector for incommensurate structures,
+ * i.e. helices
+ */
+template<class t_mat, class t_vec, class t_real = typename t_mat::value_type>
+requires tl2::is_mat<t_mat> && tl2::is_vec<t_vec>
+void rotate_spin_incommensurate(t_vec& spin_vec,
+	const t_vec& sc_vec, const t_vec& ordering,
+	const t_vec& rotaxis,
+	t_real eps = std::numeric_limits<t_real>::epsilon())
+{
+	t_real sc_angle = t_real(2) * tl2::pi<t_real> *
+		tl2::inner<t_vec>(ordering, sc_vec);
+
+	if(!tl2::equals_0<t_real>(sc_angle, t_real(eps)))
+	{
+		t_mat sc_rot = tl2::rotation<t_mat, t_vec>(rotaxis, sc_angle);
+		spin_vec = sc_rot * spin_vec;
+	}
+}
 // ----------------------------------------------------------------------------
 
 
@@ -537,12 +592,6 @@ public:
 				//tl2::niceprint(std::cout, site_calc.spin_dir, 1e-4, 4);
 				//std::cout << std::endl;
 
-				// rotate local spin to ferromagnetic [001] direction
-				auto [spin_re, spin_im] =
-					tl2::split_cplx<t_vec, t_vec_real>(site_calc.spin_dir);
-				t_mat rot = tl2::convert<t_mat>(
-					tl2::rotation<t_mat_real, t_vec_real>(spin_re, zdir));
-
 				// spin rotation of equation (9) from (Toth 2015)
 				if(m_field.align_spins)
 				{
@@ -552,7 +601,8 @@ public:
 				else
 				{
 					std::tie(site_calc.u, site_calc.v) = 
-						R_to_uv<t_mat, t_vec, t_cplx>(rot);
+						spin_to_uv<t_mat, t_vec, t_cplx, t_vec_real>(
+							site_calc.spin_dir);
 				}
 
 				site_calc.u_conj = tl2::conj(site_calc.u);
@@ -767,18 +817,65 @@ public:
 			// TODO: check units of S_i and S_j
 			t_real S_i = m_sites[i].spin_mag;
 			t_real S_j = m_sites[j].spin_mag;
-			const t_vec& u_i = m_sites_calc[i].u;
-			const t_vec& u_j = m_sites_calc[j].u;
-			const t_vec& u_conj_j = m_sites_calc[j].u_conj;
-			const t_vec& v_i = m_sites_calc[i].v;
+
+			// get the precalculated u and v vectors 
+			// for the commensurate case
+			const t_vec* u_i = &m_sites_calc[i].u;
+			const t_vec* u_j = &m_sites_calc[j].u;
+			const t_vec* u_conj_j = &m_sites_calc[j].u_conj;
+			const t_vec* v_i = &m_sites_calc[i].v;
+
+/*
+			// calculate the u and v vectors
+			// for the incommensurate case
+			t_vec u_i_incomm, u_j_incomm;
+			t_vec u_conj_j_incomm;
+			t_vec v_i_incomm, v_j_incomm;
+
+			if(m_is_incommensurate && !m_field.align_spins)
+			{
+				t_vec spin_dir_i = m_sites_calc[i].spin_dir;
+				t_vec spin_dir_j = m_sites_calc[j].spin_dir;
+
+				auto [spin_dir_i_re, spin_dir_i_im] =
+					tl2::split_cplx<t_vec, t_vec_real>(spin_dir_i);
+				auto [spin_dir_j_re, spin_dir_j_im] =
+					tl2::split_cplx<t_vec, t_vec_real>(spin_dir_j);
+
+				rotate_spin_incommensurate<t_mat_real, t_vec_real, t_real>(
+					spin_dir_i_re, term.dist,
+					tl2::convert<t_vec_real>(m_ordering),
+					tl2::convert<t_vec_real>(m_rotaxis),
+					m_eps);
+				rotate_spin_incommensurate<t_mat_real, t_vec_real, t_real>(
+					spin_dir_j_re, term.dist,
+					tl2::convert<t_vec_real>(m_ordering),
+					tl2::convert<t_vec_real>(m_rotaxis),
+					m_eps);
+
+				std::tie(u_i_incomm, v_i_incomm) = 
+					spin_to_uv_real<t_mat, t_vec, t_cplx, t_vec_real>(
+						spin_dir_i_re);
+				std::tie(u_j_incomm, v_j_incomm) = 
+					spin_to_uv_real<t_mat, t_vec, t_cplx, t_vec_real>(
+						spin_dir_j_re);
+
+				u_conj_j_incomm = tl2::conj(u_j_incomm);
+
+				u_i = &u_i_incomm;
+				u_j = &u_j_incomm;
+				u_conj_j = &u_conj_j_incomm;
+				v_i = &v_i_incomm;
+			}
+*/
 
 			t_real factor = 0.5 * std::sqrt(S_i*S_j);
 			A(i, j) = factor *
-				tl2::inner_noconj<t_vec>(u_i, J_sub_Q * u_conj_j);
+				tl2::inner_noconj<t_vec>(*u_i, J_sub_Q * *u_conj_j);
 			A_mQ(i, j) = factor *
-				tl2::inner_noconj<t_vec>(u_i, J_sub_mQ * u_conj_j);
+				tl2::inner_noconj<t_vec>(*u_i, J_sub_mQ * *u_conj_j);
 			B(i, j) = factor *
-				tl2::inner_noconj<t_vec>(u_i, J_sub_Q * u_j);
+				tl2::inner_noconj<t_vec>(*u_i, J_sub_Q * *u_j);
 
 			if(i == j)
 			{
@@ -786,10 +883,42 @@ public:
 				{
 					// TODO: check unit of S_k
 					t_real S_k = m_sites[k].spin_mag;
-					const t_vec& v_k = m_sites_calc[k].v;
 
-					t_mat J_sub_Q0 = tl2::submat<t_mat>(J_Q0, i*3, k*3, 3, 3);
-					C(i, j) += S_k * tl2::inner_noconj<t_vec>(v_i, J_sub_Q0 * v_k);
+					// get the precalculated u_k and v_k vectors 
+					// for the commensurate case
+					const t_vec *v_k = &m_sites_calc[k].v;
+
+/*
+					// calculate the u_k and v_k vectors
+					// for the incommensurate case
+					t_vec u_k_incomm, v_k_incomm;
+
+					if(m_is_incommensurate && !m_field.align_spins)
+					{
+						t_vec spin_dir_k = m_sites_calc[k].spin_dir;
+
+						auto [spin_dir_k_re, spin_dir_k_im] =
+							tl2::split_cplx<t_vec, t_vec_real>(
+								spin_dir_k);
+
+						rotate_spin_incommensurate<t_mat_real, t_vec_real, t_real>(
+							spin_dir_k_re, term.dist,
+							tl2::convert<t_vec_real>(m_ordering),
+							tl2::convert<t_vec_real>(m_rotaxis),
+							m_eps);
+
+						std::tie(u_k_incomm, v_k_incomm) = 
+							spin_to_uv_real<t_mat, t_vec, t_cplx, t_vec_real>(
+								spin_dir_k_re);
+
+						v_k = &v_k_incomm;
+					}
+*/
+
+					t_mat J_sub_Q0 = tl2::submat<t_mat>(
+						J_Q0, i*3, k*3, 3, 3);
+					C(i, j) += S_k * tl2::inner_noconj<t_vec>(
+						*v_i, J_sub_Q0 * *v_k);
 				}
 			}
 
@@ -800,7 +929,7 @@ public:
 					m_field.dir / tl2::norm<t_vec_real>(m_field.dir));
 				B = B * m_field.mag;
 
-				t_vec gv = m_sites[i].g * v_i;
+				t_vec gv = m_sites[i].g * *v_i;
 				t_cplx Bgv = tl2::inner_noconj<t_vec>(B, gv);
 
 				A(i, j) -= 0.5*muB * Bgv;
@@ -1036,10 +1165,58 @@ public:
 					t_real S_i = m_sites[i].spin_mag;
 					t_real S_j = m_sites[j].spin_mag;
 
-					const t_vec& u_i = m_sites_calc[i].u;
-					const t_vec& u_j = m_sites_calc[j].u;
-					const t_vec& u_conj_i = m_sites_calc[i].u_conj;
-					const t_vec& u_conj_j = m_sites_calc[j].u_conj;
+					// get the precalculated u vectors 
+					// for the commensurate case
+					const t_vec *u_i = &m_sites_calc[i].u;
+					const t_vec *u_j = &m_sites_calc[j].u;
+					const t_vec *u_conj_i = &m_sites_calc[i].u_conj;
+					const t_vec *u_conj_j = &m_sites_calc[j].u_conj;
+
+/*
+					// calculate the u vectors
+					// for the incommensurate case
+					t_vec u_i_incomm, u_j_incomm;
+					t_vec u_conj_i_incomm, u_conj_j_incomm;
+					t_vec v_i_incomm, v_j_incomm;
+
+					if(m_is_incommensurate && !m_field.align_spins)
+					{
+						t_vec spin_dir_i = m_sites_calc[i].spin_dir;
+						t_vec spin_dir_j = m_sites_calc[j].spin_dir;
+
+						auto [spin_dir_i_re, spin_dir_i_im] =
+							tl2::split_cplx<t_vec, t_vec_real>(spin_dir_i);
+						auto [spin_dir_j_re, spin_dir_j_im] =
+							tl2::split_cplx<t_vec, t_vec_real>(spin_dir_j);
+
+						rotate_spin_incommensurate<t_mat_real, t_vec_real, t_real>(
+							spin_dir_i_re, term.dist,
+							tl2::convert<t_vec_real>(m_ordering),
+							tl2::convert<t_vec_real>(m_rotaxis),
+							m_eps);
+
+						rotate_spin_incommensurate<t_mat_real, t_vec_real, t_real>(
+							spin_dir_j_re, term.dist,
+							tl2::convert<t_vec_real>(m_ordering),
+							tl2::convert<t_vec_real>(m_rotaxis),
+							m_eps);
+
+						std::tie(u_i_incomm, v_i_incomm) = 
+							spin_to_uv_real<t_mat, t_vec, t_cplx, t_vec_real>(
+								spin_dir_i_re);
+						std::tie(u_j_incomm, v_j_incomm) = 
+							spin_to_uv_real<t_mat, t_vec, t_cplx, t_vec_real>(
+								spin_dir_j_re);
+
+						u_conj_i_incomm = tl2::conj(u_i_incomm);
+						u_conj_j_incomm = tl2::conj(u_j_incomm);
+
+						u_i = &u_i_incomm;
+						u_j = &u_j_incomm;
+						u_conj_i = &u_conj_i_incomm;
+						u_conj_j = &u_conj_j_incomm;
+					}
+*/
 
 					// TODO: check units of S
 					t_real factor = 4. * std::sqrt(S_i*S_j);
@@ -1048,10 +1225,14 @@ public:
 						tl2::inner<t_vec_real>(pos_j - pos_i, Q));
 
 					// TODO: check phase factors
-					Y(i, j) = factor * phase * u_i[x_idx] * u_conj_j[y_idx];
-					V(i, j) = factor * phase * u_conj_i[x_idx] * u_conj_j[y_idx];
-					Z(i, j) = factor * phase * u_i[x_idx] * u_j[y_idx];
-					W(i, j) = factor * phase * u_conj_i[x_idx] * u_j[y_idx];
+					Y(i, j) = factor * phase *
+						(*u_i)[x_idx] * (*u_conj_j)[y_idx];
+					V(i, j) = factor * phase *
+						(*u_conj_i)[x_idx] * (*u_conj_j)[y_idx];
+					Z(i, j) = factor * phase *
+						(*u_i)[x_idx] * (*u_j)[y_idx];
+					W(i, j) = factor * phase *
+						(*u_conj_i)[x_idx] * (*u_j)[y_idx];
 
 					// incommensurate case
 					if(m_is_incommensurate)
@@ -1064,15 +1245,23 @@ public:
 							tl2::inner<t_vec_real>(pos_j - pos_i,
 								Q - m_ordering));
 
-						Y_p(i, j) = factor * phase_p * u_i[x_idx] * u_conj_j[y_idx];
-						V_p(i, j) = factor * phase_p * u_conj_i[x_idx] * u_conj_j[y_idx];
-						Z_p(i, j) = factor * phase_p * u_i[x_idx] * u_j[y_idx];
-						W_p(i, j) = factor * phase_p * u_conj_i[x_idx] * u_j[y_idx];
+						Y_p(i, j) = factor * phase_p *
+							(*u_i)[x_idx] * (*u_conj_j)[y_idx];
+						V_p(i, j) = factor * phase_p *
+							(*u_conj_i)[x_idx] * (*u_conj_j)[y_idx];
+						Z_p(i, j) = factor * phase_p *
+							(*u_i)[x_idx] * (*u_j)[y_idx];
+						W_p(i, j) = factor * phase_p *
+							(*u_conj_i)[x_idx] * (*u_j)[y_idx];
 
-						Y_m(i, j) = factor * phase_m * u_i[x_idx] * u_conj_j[y_idx];
-						V_m(i, j) = factor * phase_m * u_conj_i[x_idx] * u_conj_j[y_idx];
-						Z_m(i, j) = factor * phase_m * u_i[x_idx] * u_j[y_idx];
-						W_m(i, j) = factor * phase_m * u_conj_i[x_idx] * u_j[y_idx];
+						Y_m(i, j) = factor * phase_m *
+							(*u_i)[x_idx] * (*u_conj_j)[y_idx];
+						V_m(i, j) = factor * phase_m *
+							(*u_conj_i)[x_idx] * (*u_conj_j)[y_idx];
+						Z_m(i, j) = factor * phase_m *
+							(*u_i)[x_idx] * (*u_j)[y_idx];
+						W_m(i, j) = factor * phase_m *
+							(*u_conj_i)[x_idx] * (*u_j)[y_idx];
 					}
 
 					/*std::cout
