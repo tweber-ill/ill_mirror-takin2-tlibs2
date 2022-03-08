@@ -63,14 +63,21 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(test_rotation,
 	// test 2d case
 	const t_vec vecFrom2d = tl2::create<t_vec>({1, 1});
 	const t_vec vecTo2d = tl2::create<t_vec>({1, 0});
-	t_mat mat2d = tl2::rotation<t_mat, t_vec, t_real>(vecFrom2d, vecTo2d, nullptr, eps);
-	t_vec vec2d = mat2d * vecFrom2d / tl2::norm<t_vec>(vecFrom2d);
+	t_mat mat2d = tl2::rotation<t_mat, t_vec, t_real>(vecFrom2d, vecTo2d, nullptr, eps, false);
+	t_vec vec2d = mat2d * vecFrom2d / tl2::norm<t_vec>(vecFrom2d) * tl2::norm<t_vec>(vecTo2d);
 	BOOST_TEST((tl2::equals<t_vec>(vecTo2d, vec2d, eps)));
 
 	// test 3d case
 	const t_vec vecFrom3d = tl2::create<t_vec>({1, 0, 1});
-	const t_vec vecTo3d = tl2::create<t_vec>({1, 0, 0});
-	t_mat mat3d = tl2::rotation<t_mat, t_vec, t_real>(vecFrom3d, vecTo3d, nullptr, eps);
-	t_vec vec3d = mat3d * vecFrom3d / tl2::norm<t_vec>(vecFrom3d);
+	const t_vec vecTo3d = tl2::create<t_vec>({1, -1, 0});
+	t_mat mat3d = tl2::rotation<t_mat, t_vec, t_real>(vecFrom3d, vecTo3d, nullptr, eps, false);
+	t_vec vec3d = mat3d * vecFrom3d / tl2::norm<t_vec>(vecFrom3d) * tl2::norm<t_vec>(vecTo3d);
 	BOOST_TEST((tl2::equals<t_vec>(vecTo3d, vec3d, eps)));
+
+	// test 4d case
+	const t_vec vecFrom4d = tl2::create<t_vec>({1, 0, 1, 0});
+	const t_vec vecTo4d = tl2::create<t_vec>({1, -1, 0, 0});
+	t_mat mat4d = tl2::rotation<t_mat, t_vec, t_real>(vecFrom4d, vecTo4d, nullptr, eps, false);
+	t_vec vec4d = mat4d * vecFrom4d / tl2::norm<t_vec>(vecFrom4d) * tl2::norm<t_vec>(vecTo4d);
+	BOOST_TEST((tl2::equals<t_vec>(vecTo4d, vec4d, eps)));
 }

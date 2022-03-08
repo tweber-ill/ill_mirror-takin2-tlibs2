@@ -4352,6 +4352,24 @@ requires is_mat<t_mat>
 
 
 /**
+ * givens rotation matrix with precalculated sin and cos constants
+ * @see https://en.wikipedia.org/wiki/Givens_rotation
+ */
+template<class t_mat, class t_real = typename t_mat::value_type>
+t_mat givens(std::size_t N, std::size_t i, std::size_t j, t_real s, t_real c)
+requires is_mat<t_mat>
+{
+	t_mat mat = unit<t_mat>(N, N);
+
+	mat(i, j) = -s;
+	mat(j, i) = +s;
+	mat(i, i) = mat(j, j) = c;
+
+	return mat;
+}
+
+
+/**
  * SO(2) rotation matrix
  * @see https://en.wikipedia.org/wiki/Rotation_matrix
  */
@@ -4447,12 +4465,52 @@ t_vec perp(const t_vec& vec, t_scalar eps = std::numeric_limits<t_scalar>::eps()
 
 
 /**
+ * matrix to rotate a vector into [1, 0, 0, ...]
+ * @see (Zhelezov 2017) O. I. Zhelezov, American Journal of Computational and Applied Mathematics 7(2), pp. 51-57 (2017), doi: 10.5923/j.ajcam.20170702.04
+ */
+template<class t_mat, class t_vec, class t_real = typename t_vec::value_type>
+t_mat rotation_x0(const t_vec& _vec, t_real eps = 1e-6)
+requires is_vec<t_vec> && is_mat<t_mat>
+{
+	using t_size = decltype(_vec.size());
+	const t_size N = _vec.size();
+
+	t_vec vec = _vec;
+	t_mat mat = unit<t_mat>(N);
+
+	// equations (6) and (7) in (Zhelezov 2017)
+	for(t_size n=1; n<N; ++n)
+	{
+		t_real angle;
+
+		t_size i = N - n - 1;
+		t_size j = i + 1;
+
+		t_real len = vec[i]*vec[i] + vec[j]*vec[j];
+		if(!equals_0<t_real>(len, eps))
+		{
+			len = std::sqrt(len);
+			t_real s = -vec[j] / len;
+			t_real c = vec[i] / len;
+
+			t_mat rot_ij = givens<t_mat, t_real>(N, i, j, s, c);
+			vec = rot_ij * vec;
+
+			mat = rot_ij * mat;
+		}
+	}
+
+	return mat;
+}
+
+
+/**
  * matrix to rotate vector vec1 into vec2
- * @see O. I. Zhelezov, American Journal of Computational and Applied Mathematics 7(2), pp. 51-57 (2017), doi: 10.5923/j.ajcam.20170702.04
+ * @see (Zhelezov 2017) O. I. Zhelezov, American Journal of Computational and Applied Mathematics 7(2), pp. 51-57 (2017), doi: 10.5923/j.ajcam.20170702.04
  */
 template<class t_mat, class t_vec, class t_real = typename t_vec::value_type>
 t_mat rotation(const t_vec& vec1, const t_vec& vec2,
-	const t_vec *perp_vec = nullptr, t_real eps = 1e-6)
+	const t_vec *perp_vec = nullptr, t_real eps = 1e-6, bool force_3dim = true)
 requires is_vec<t_vec> && is_mat<t_mat>
 {
 	assert(vec1.size() == vec2.size());
@@ -4460,17 +4518,8 @@ requires is_vec<t_vec> && is_mat<t_mat>
 	using t_size = decltype(vec1.size());
 	const t_size dim = vec1.size();
 
-	// 2-dim case
-	if(dim == 2)
-	{
-		t_real angle = std::atan2(vec2[1], vec2[0]) -
-			std::atan2(vec1[1], vec1[0]);
-
-		return rotation_2d<t_mat>(angle);
-	}
-
-	// 3-dim case
-	else if(dim == 3)
+	// 3-dim and 4-dim homogeneous case
+	if(dim == 3 || force_3dim)
 	{
 		// get rotation axis from cross product
 		t_vec axis = cross<t_vec>({ vec1, vec2 });
@@ -4504,11 +4553,29 @@ requires is_vec<t_vec> && is_mat<t_mat>
 		return rotation<t_mat, t_vec>(axis, angle, true);
 	}
 
-	// general case
+	// 2-dim case
+	else if(dim == 2)
+	{
+		t_real angle = std::atan2(vec2[1], vec2[0]) -
+		std::atan2(vec1[1], vec1[0]);
+
+		return rotation_2d<t_mat>(angle);
+	}
+
+	// general case, equation (8) in (Zhelezov 2017)
 	else
 	{
-		// TODO
-		return t_mat{};
+		// matrix to rotate vec1 to [1, 0, 0, ...]
+		t_mat mat1_x0 = rotation_x0<t_mat, t_vec, t_real>(vec1, eps);
+
+		// matrix to rotate vec2 to [1, 0, 0, ...]
+		t_mat mat2_x0 = rotation_x0<t_mat, t_vec, t_real>(vec2, eps);
+
+		// matrix to rotate [1, 0, 0, ...] to vec2
+		auto [mat2_x0_inv, mat2_ok] = inv<t_mat>(mat2_x0);
+
+		// rotate vec1 to [1, 0, 0, ...], then rotate [1, 0, 0, ...] to vec2
+		return mat2_x0_inv * mat1_x0;
 	}
 }
 
