@@ -3504,32 +3504,50 @@ requires is_mat<t_mat> && is_basic_vec<t_vec>
 }
 
 
+template<class t_vec>
+t_vec cross(const t_vec& vec1, const t_vec& vec2)
+requires is_basic_vec<t_vec>;
+
+
 /**
  * general n-dim cross product using determinant definition
+ * @see https://en.wikipedia.org/wiki/Cross_product
  */
 template<class t_vec, template<class...> class t_cont = std::initializer_list>
 t_vec cross(const t_cont<t_vec>& vecs)
 requires is_basic_vec<t_vec>
 {
+	using t_size = decltype(t_vec{}.size());
 	using T = typename t_vec::value_type;
+
 	// N also has to be equal to the vector size!
-	const std::size_t N = vecs.size()+1;
+	const t_size N = vecs.size()+1;
 	t_vec vec = zero<t_vec>(N);
 
-	for(std::size_t iComp=0; iComp<N; ++iComp)
+	// 3-dim case
+	if(N == 3 && vecs.begin()->size() == 3)
 	{
-		std::vector<T> mat = zero<std::vector<T>>(N*N);
-		mat[0*N + iComp] = T(1);
+		return cross<t_vec>(*vecs.begin(), *std::next(vecs.begin(), 1));
+	}
 
-		std::size_t iRow = 0;
-		for(const t_vec& vec : vecs)
+	// general case
+	else
+	{
+		for(t_size iComp=0; iComp<N; ++iComp)
 		{
-			for(std::size_t iCol=0; iCol<N; ++iCol)
-				mat[(iRow+1)*N + iCol] = vec[iCol];
-			++iRow;
-		}
+			std::vector<T> mat = zero<std::vector<T>>(N*N);
+			mat[0*N + iComp] = T(1);
 
-		vec[iComp] = flat_det<decltype(mat)>(mat, N);
+			t_size row_idx = 0;
+			for(const t_vec& vec : vecs)
+			{
+				for(t_size col_idx=0; col_idx<N; ++col_idx)
+					mat[(row_idx+1)*N + col_idx] = vec[col_idx];
+				++row_idx;
+			}
+
+			vec[iComp] = flat_det<decltype(mat)>(mat, N);
+		}
 	}
 
 	return vec;
@@ -4266,6 +4284,7 @@ T chi2_nd(const t_func& func,
 
 /**
  * 3-dim cross product
+ * @see https://en.wikipedia.org/wiki/Cross_product
  */
 template<class t_vec>
 t_vec cross(const t_vec& vec1, const t_vec& vec2)
@@ -4303,9 +4322,30 @@ requires is_basic_vec<t_vec> && is_mat<t_mat>
 	if(mat.size1() > 3 || mat.size2() > 3)
 		mat = unit<t_mat>(mat.size1(), mat.size2());
 
-	mat(0,0) = 0; 		mat(0,1) = -vec[2]; 	mat(0,2) = vec[1];
-	mat(1,0) = vec[2]; 	mat(1,1) = 0; 		mat(1,2) = -vec[0];
-	mat(2,0) = -vec[1]; 	mat(2,1) = vec[0]; 	mat(2,2) = 0;
+	mat(0,0) = 0;       mat(0,1) = -vec[2]; mat(0,2) = vec[1];
+	mat(1,0) = vec[2];  mat(1,1) = 0;       mat(1,2) = -vec[0];
+	mat(2,0) = -vec[1]; mat(2,1) = vec[0];  mat(2,2) = 0;
+
+	return mat;
+}
+
+
+/**
+ * givens rotation matrix
+ * @see https://en.wikipedia.org/wiki/Givens_rotation
+ */
+template<class t_mat, class t_real = typename t_mat::value_type>
+t_mat givens(std::size_t N, std::size_t i, std::size_t j, t_real angle)
+requires is_mat<t_mat>
+{
+	t_mat mat = unit<t_mat>(N, N);
+
+	const t_real s = std::sin(angle);
+	const t_real c = std::cos(angle);
+
+	mat(i, j) = -s;
+	mat(j, i) = +s;
+	mat(i, i) = mat(j, j) = c;
 
 	return mat;
 }
@@ -4319,12 +4359,7 @@ template<class t_mat>
 t_mat rotation_2d(const typename t_mat::value_type angle)
 requires tl2::is_mat<t_mat>
 {
-	using t_real = typename t_mat::value_type;
-
-	const t_real c = std::cos(angle);
-	const t_real s = std::sin(angle);
-
-	return create<t_mat>({{c,s}, {-s,c}});
+	return givens<t_mat>(2, 0, 1, angle);
 }
 
 
@@ -4413,46 +4448,68 @@ t_vec perp(const t_vec& vec, t_scalar eps = std::numeric_limits<t_scalar>::eps()
 
 /**
  * matrix to rotate vector vec1 into vec2
+ * @see O. I. Zhelezov, American Journal of Computational and Applied Mathematics 7(2), pp. 51-57 (2017), doi: 10.5923/j.ajcam.20170702.04
  */
-template<class t_mat, class t_vec>
+template<class t_mat, class t_vec, class t_real = typename t_vec::value_type>
 t_mat rotation(const t_vec& vec1, const t_vec& vec2,
-	const t_vec *perp_vec = nullptr)
+	const t_vec *perp_vec = nullptr, t_real eps = 1e-6)
 requires is_vec<t_vec> && is_mat<t_mat>
 {
-	using t_real = typename t_vec::value_type;
-	constexpr t_real eps = 1e-6;
+	assert(vec1.size() == vec2.size());
 
-	// get rotation axis from cross product
-	t_vec axis = cross<t_vec>({ vec1, vec2 });
-	t_real lenaxis = norm<t_vec>(axis);
+	using t_size = decltype(vec1.size());
+	const t_size dim = vec1.size();
 
-	// rotation angle
-	t_real angle = std::atan2(
-		lenaxis, inner<t_vec>(vec1, vec2));
-
-	// collinear vectors?
-	if(equals<t_real>(angle, 0, eps))
-		return unit<t_mat>(vec1.size());
-
-	// antiparallel vectors?
-	if(equals<t_real>(std::abs(angle), pi<t_real>, eps))
+	// 2-dim case
+	if(dim == 2)
 	{
-		if(perp_vec)
-		{
-			axis = *perp_vec;
-			lenaxis = norm<t_vec>(axis);
-		}
-		else
-		{
-			axis = perp<t_vec>(vec1, eps);
-			lenaxis = t_real(1);
-		}
+		t_real angle = std::atan2(vec2[1], vec2[0]) -
+			std::atan2(vec1[1], vec1[0]);
 
-		angle = pi<t_real>;
+		return rotation_2d<t_mat>(angle);
 	}
 
-	axis /= lenaxis;
-	return rotation<t_mat, t_vec>(axis, angle, true);
+	// 3-dim case
+	else if(dim == 3)
+	{
+		// get rotation axis from cross product
+		t_vec axis = cross<t_vec>({ vec1, vec2 });
+		t_real lenaxis = norm<t_vec>(axis);
+
+		// rotation angle
+		t_real angle = std::atan2(lenaxis, inner<t_vec>(vec1, vec2));
+
+		// collinear vectors?
+		if(equals<t_real>(angle, 0, eps))
+			return unit<t_mat>(vec1.size());
+
+		// antiparallel vectors?
+		if(equals<t_real>(std::abs(angle), pi<t_real>, eps))
+		{
+			if(perp_vec)
+			{
+				axis = *perp_vec;
+				lenaxis = norm<t_vec>(axis);
+			}
+			else
+			{
+				axis = perp<t_vec>(vec1, eps);
+				lenaxis = t_real(1);
+			}
+
+			angle = pi<t_real>;
+		}
+
+		axis /= lenaxis;
+		return rotation<t_mat, t_vec>(axis, angle, true);
+	}
+
+	// general case
+	else
+	{
+		// TODO
+		return t_mat{};
+	}
 }
 
 
@@ -7909,13 +7966,12 @@ requires is_vec<t_vec> && is_dyn_mat<t_mat>
 }
 
 
-
 /**
  * signed angle between two vectors
  */
 template<typename t_vec>
 typename t_vec::value_type angle(const t_vec& vec0,
-	const t_vec& vec1, const t_vec* pvec_norm=nullptr)
+	const t_vec& vec1, const t_vec* pvec_norm = nullptr)
 requires is_vec<t_vec>
 {
 	using namespace tl2_ops;
@@ -7956,7 +8012,6 @@ requires is_vec<t_vec>
 
 	throw std::runtime_error("angle: only implemented for size == 2 and size == 3.");
 }
-
 
 
 /**
