@@ -4487,7 +4487,7 @@ requires is_vec<t_vec> && is_mat<t_mat>
 	t_vec vec = _vec;
 	t_mat mat = unit<t_mat>(N);
 
-	// equations (6) and (7) in (Zhelezov 2017)
+	// equations (6) and (7) from (Zhelezov 2017)
 	for(t_size n=1; n<N; ++n)
 	{
 		t_size i = N - n - 1;
@@ -4502,7 +4502,6 @@ requires is_vec<t_vec> && is_mat<t_mat>
 
 			t_mat rot_ij = givens<t_mat, t_real>(N, i, j, s, c);
 			vec = rot_ij * vec;
-
 			mat = rot_ij * mat;
 		}
 	}
@@ -4569,7 +4568,7 @@ requires is_vec<t_vec> && is_mat<t_mat>
 		return rotation_2d<t_mat>(angle);
 	}
 
-	// general case, equation (8) in (Zhelezov 2017)
+	// general case, equation (8) from (Zhelezov 2017)
 	else
 	{
 		// matrix to rotate vec1 to [1, 0, 0, ...]

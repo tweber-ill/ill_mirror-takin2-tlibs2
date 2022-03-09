@@ -69,6 +69,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(test_rotation,
 	tl2::niceprint(std::cout, mat2d, 1e-4, 4);
 	std::cout << std::endl;
 	BOOST_TEST((tl2::equals<t_vec>(vecTo2d, vec2d, eps)));
+	BOOST_TEST((tl2::equals<t_real>(tl2::det<t_mat>(mat2d), 1., eps)));
 
 	// test 3d case
 	const t_vec vecFrom3d = tl2::create<t_vec>({-1, -1, 0});
@@ -78,7 +79,11 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(test_rotation,
 	std::cout << "3d rotation:\n";
 	tl2::niceprint(std::cout, mat3d, 1e-4, 4);
 	std::cout << std::endl;
+	//std::cout << "test rotation:\n";
+	//tl2::niceprint(std::cout, mat3d*tl2::create<t_vec>({1., 2., 3}), 1e-4, 4);
+	//std::cout << std::endl;
 	BOOST_TEST((tl2::equals<t_vec>(vecTo3d, vec3d, eps)));
+	BOOST_TEST((tl2::equals<t_real>(tl2::det<t_mat>(mat3d), 1., eps)));
 
 	// test 4d case
 	const t_vec vecFrom4d = tl2::create<t_vec>({1, 0, 1, 0});
@@ -89,4 +94,5 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(test_rotation,
 	tl2::niceprint(std::cout, mat4d, 1e-4, 4);
 	std::cout << std::endl;
 	BOOST_TEST((tl2::equals<t_vec>(vecTo4d, vec4d, eps)));
+	BOOST_TEST((tl2::equals<t_real>(tl2::det<t_mat>(mat4d), 1., eps)));
 }
