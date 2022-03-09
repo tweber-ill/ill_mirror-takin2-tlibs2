@@ -2147,6 +2147,15 @@ requires is_scalar<t_real> && (!is_complex<t_real>)
 };
 
 
+template<typename t_real, typename t_real_2>
+void set_eps_0(t_real& d, t_real_2 eps = std::numeric_limits<t_real_2>::epsilon())
+requires is_scalar<t_real> && is_scalar<t_real_2> && (!is_complex<t_real> && !is_complex<t_real_2>)
+{
+	if(std::abs(d) < t_real(eps))
+		d = t_real(0);
+};
+
+
 /**
  * set values lower than epsilon to zero
  * complex version
@@ -2217,7 +2226,7 @@ requires tl2::is_basic_mat<t_mat> && tl2::is_dyn_mat<t_mat>
 			t_elem elem = mat(i, j);
 			set_eps_0(elem, eps);
 
-			unsigned int field_width = prec * 1.5;
+			unsigned int field_width = prec * 1.5 + 4;
 			if constexpr(is_complex<t_elem>)
 				field_width *= 3;
 			ostr << std::setw(field_width) << std::right << elem;
@@ -2247,7 +2256,7 @@ requires tl2::is_basic_vec<t_vec> && tl2::is_dyn_vec<t_vec>
 		t_elem elem = vec[i];
 		set_eps_0(elem, eps);
 
-		unsigned int field_width = prec * 1.5;
+		unsigned int field_width = prec * 1.5 + 4;
 		if constexpr(is_complex<t_elem>)
 			field_width *= 3;
 		ostr << std::setw(field_width) << std::right << elem;
@@ -4481,8 +4490,6 @@ requires is_vec<t_vec> && is_mat<t_mat>
 	// equations (6) and (7) in (Zhelezov 2017)
 	for(t_size n=1; n<N; ++n)
 	{
-		t_real angle;
-
 		t_size i = N - n - 1;
 		t_size j = i + 1;
 
@@ -6293,6 +6300,158 @@ requires is_complex<typename t_mat_cplx::value_type> && is_mat<t_mat_cplx> && is
 
 
 /**
+ * split a complex vector into a real vector with the real and imag components
+ */
+template<class t_vec_cplx, class t_vec_real>
+t_vec_real split_cplx_real(const t_vec_cplx& vec)
+requires is_complex<typename t_vec_cplx::value_type> && is_vec<t_vec_cplx> && is_vec<t_vec_real>
+{
+	using t_real = typename t_vec_real::value_type;
+	t_vec_real vecReal = zero<t_vec_real>(vec.size() * 2);
+
+	auto iter = vec.begin();
+	auto iterRe = vecReal.begin();
+	auto iterIm = std::next(vecReal.begin(), vec.size());
+
+	for(; iter!=vec.end(); )
+	{
+		*iterRe = t_real{iter->real()};
+		*iterIm = t_real{iter->imag()};
+
+		std::advance(iter, 1);
+		std::advance(iterRe, 1);
+		std::advance(iterIm, 1);
+	}
+
+	return vecReal;
+}
+
+
+/**
+ * split a complex matrix into a real matrix with the real and imag components
+ */
+template<class t_mat_cplx, class t_mat_real>
+t_mat_real split_cplx_real(const t_mat_cplx& mat)
+requires is_complex<typename t_mat_cplx::value_type> && is_mat<t_mat_cplx> && is_mat<t_mat_real>
+{
+	t_mat_real matRe = zero<t_mat_real>(mat.size1()*2, mat.size2()*2);
+
+	for(std::size_t i=0; i<mat.size1(); ++i)
+	{
+		for(std::size_t j=0; j<mat.size2(); ++j)
+		{
+			matRe(i,j) = mat(i,j).real();
+			matRe(i + mat.size1(), j + mat.size2()) = mat(i,j).imag();
+		}
+	}
+
+	return matRe;
+}
+
+
+/**
+ * create a complex vector from two real vectors
+ */
+template<class t_vec_cplx, class t_vec_real>
+t_vec_cplx unite_cplx(const t_vec_real& vecRe, const t_vec_real& vecIm)
+requires is_complex<typename t_vec_cplx::value_type> && is_vec<t_vec_cplx> && is_vec<t_vec_real>
+{
+	assert(vecRe.size() == vecIm.size());
+	t_vec_cplx vec = zero<t_vec_cplx>(vecRe.size());
+
+	auto iter = vec.begin();
+	auto iterRe = vecRe.begin();
+	auto iterIm = vecIm.begin();
+
+	for(; iterRe!=vecRe.end(); )
+	{
+		(*iter).real(*iterRe);
+		(*iter).imag(*iterIm);
+
+		std::advance(iter, 1);
+		std::advance(iterRe, 1);
+		std::advance(iterIm, 1);
+	}
+
+	return vec;
+}
+
+
+/**
+ * create a complex matrix from two real matrices
+ */
+template<class t_mat_cplx, class t_mat_real>
+t_mat_cplx unite_cplx(const t_mat_real& matRe, const t_mat_real& matIm)
+requires is_complex<typename t_mat_cplx::value_type> && is_mat<t_mat_cplx> && is_mat<t_mat_real>
+{
+	assert(matRe.size1() == matIm.size1());
+	assert(matRe.size2() == matIm.size2());
+
+	t_mat_cplx mat = zero<t_mat_cplx>(matRe.size1(), matRe.size2());
+
+	for(std::size_t i=0; i<matRe.size1(); ++i)
+	{
+		for(std::size_t j=0; j<matRe.size2(); ++j)
+		{
+			mat(i, j).real(matRe(i, j));
+			mat(i, j).imag(matIm(i, j));
+		}
+	}
+
+	return mat;
+}
+
+
+/**
+ * create a complex vector from a real vectors having real and imag components
+ */
+template<class t_vec_cplx, class t_vec_real>
+t_vec_cplx unite_cplx_real(const t_vec_real& vecReIm)
+requires is_complex<typename t_vec_cplx::value_type> && is_vec<t_vec_cplx> && is_vec<t_vec_real>
+{
+	t_vec_cplx vec = zero<t_vec_cplx>(vecReIm.size() / 2);
+
+	auto iter = vec.begin();
+	auto iterRe = vecReIm.begin();
+	auto iterIm = std::next(vecReIm.begin(), vec.size());
+
+	for(; iter!=vec.end(); )
+	{
+		(*iter).real(*iterRe);
+		(*iter).imag(*iterIm);
+
+		std::advance(iter, 1);
+		std::advance(iterRe, 1);
+		std::advance(iterIm, 1);
+	}
+
+	return vec;
+}
+
+
+/**
+ * create a complex matrix from a real matrix having real and imag components
+ */
+template<class t_mat_cplx, class t_mat_real>
+t_mat_cplx unite_cplx_real(const t_mat_real& matReIm)
+requires is_complex<typename t_mat_cplx::value_type> && is_mat<t_mat_cplx> && is_mat<t_mat_real>
+{
+	t_mat_cplx mat = zero<t_mat_cplx>(matReIm.size1()/2, matReIm.size2()/2);
+
+	for(std::size_t i=0; i<mat.size1(); ++i)
+	{
+		for(std::size_t j=0; j<mat.size2(); ++j)
+		{
+			mat(i, j).real(matReIm(i, j));
+			mat(i, j).imag(matReIm(i+mat.size1(), j+mat.size2()));
+		}
+	}
+
+	return mat;
+}
+
+
+/**
  * SU(2) generators, pauli matrices sig_i = 2*S_i
  * @see (Arfken 2013), p. 110
  */
@@ -6710,6 +6869,7 @@ namespace tl2_la {
  * LU decomposition of a matrix, mat = P * L * U, returning raw results
  * @returns [ok, LU, perm]
  * @see http://www.math.utah.edu/software/lapack/lapack-d/dgetrf.html
+ * @see http://www.math.utah.edu/software/lapack/lapack-z/zgetrf.html
  */
 template<class t_mat, template<class...> class t_vec = std::vector>
 std::tuple<bool, t_vec<typename t_mat::value_type>, t_vec<lapack_int>> _lu_raw(const t_mat& mat)
@@ -6821,6 +6981,8 @@ requires tl2::is_mat<t_mat>
 
 /**
  * inverted matrix
+ * @see http://www.math.utah.edu/software/lapack/lapack-d/dgetri.html
+ * @see http://www.math.utah.edu/software/lapack/lapack-z/zgetri.html
  */
 template<class t_mat>
 std::tuple<t_mat, bool> inv(const t_mat& mat)
@@ -6992,7 +7154,6 @@ requires tl2::is_mat<t_mat>
 }
 
 
-
 /**
  * cholesky decomposition of a hermitian, positive-definite matrix, mat = C^H C
  * @returns [ok, C]
@@ -7068,7 +7229,6 @@ requires tl2::is_mat<t_mat>
 	//std::cerr << "error value: " << err << std::endl;
 	return std::make_tuple(err == 0, C);
 }
-
 
 
 /**

@@ -40,6 +40,8 @@
 #include "expr.h"
 
 
+//#define TL2_MAG_USE_COMPLEX_SPIN
+
 namespace tl2_mag {
 
 // ----------------------------------------------------------------------------
@@ -183,13 +185,21 @@ std::tuple<t_vec, t_vec> R_to_uv(const t_mat& R)
  */
 template<class t_mat, class t_vec, class t_cplx, class t_vec_real>
 requires tl2::is_mat<t_mat> && tl2::is_vec<t_vec>
-std::tuple<t_vec, t_vec> spin_to_uv_real(const t_vec_real& spin_re)
+std::tuple<t_vec, t_vec> spin_to_uv_real(const t_vec_real& spin_re,
+	t_real eps = std::numeric_limits<t_real>::epsilon())
 {
-	const t_vec_real zdir = tl2::create<t_vec_real>({0., 0., 1.});
+	t_vec_real zdir = tl2::zero<t_vec_real>(spin_re.size());
+	zdir[2] = 1;
 
-	t_mat rot = tl2::convert<t_mat>(
-		tl2::rotation<t_mat_real, t_vec_real>(
-			spin_re, zdir));
+	t_mat_real _rot = tl2::rotation<t_mat_real, t_vec_real>(
+		spin_re, zdir, nullptr, eps, false);
+
+#ifdef TL2_MAG_USE_COMPLEX_SPIN
+	// TODO: correctly unite matrix
+	t_mat rot = unite_cplx_real<t_mat, t_mat_real>(_rot);
+#else
+	t_mat rot = convert<t_mat, t_mat_real>(_rot);
+#endif
 
 	return R_to_uv<t_mat, t_vec, t_cplx>(rot);
 }
@@ -201,12 +211,18 @@ std::tuple<t_vec, t_vec> spin_to_uv_real(const t_vec_real& spin_re)
  */
 template<class t_mat, class t_vec, class t_cplx, class t_vec_real>
 requires tl2::is_mat<t_mat> && tl2::is_vec<t_vec>
-std::tuple<t_vec, t_vec> spin_to_uv(const t_vec& spin_dir)
+std::tuple<t_vec, t_vec> spin_to_uv(const t_vec& spin_dir,
+	t_real eps = std::numeric_limits<t_real>::epsilon())
 {
+#ifdef TL2_MAG_USE_COMPLEX_SPIN
+	t_vec_real spin_re =
+		tl2::split_cplx_real<t_vec, t_vec_real>(spin_dir);
+#else
 	auto [spin_re, spin_im] =
 		tl2::split_cplx<t_vec, t_vec_real>(spin_dir);
+#endif
 
-	return spin_to_uv_real<t_mat, t_vec, t_cplx, t_vec_real>(spin_re);
+	return spin_to_uv_real<t_mat, t_vec, t_cplx, t_vec_real>(spin_re, eps);
 }
 
 
@@ -536,7 +552,15 @@ public:
 			// rotate field to [001] direction
 			m_rot_field = tl2::convert<t_mat>(
 				tl2::rotation<t_mat_real, t_vec_real>(
-					-m_field.dir, zdir));
+					-m_field.dir, zdir, nullptr, m_eps, false));
+
+			/*std::cout << "Field rotation from:\n";
+			tl2::niceprint(std::cout, -m_field.dir, 1e-4, 4);
+			std::cout << "\nto:\n";
+			tl2::niceprint(std::cout, zdir, 1e-4, 4);
+			std::cout << "\nmatrix:\n";
+			tl2::niceprint(std::cout, m_rot_field, 1e-4, 4);
+			std::cout << std::endl;*/
 		}
 
 		if(m_bragg.size() == 3)
@@ -583,8 +607,8 @@ public:
 					}
 					else
 					{
-						std::cerr << "Error parsing \"" 
-							<< site.spin_dir[dir_idx] 
+						std::cerr << "Error parsing \""
+							<< site.spin_dir[dir_idx]
 							<< "\"." << std::endl;
 					}
 				}
@@ -600,9 +624,9 @@ public:
 				}
 				else
 				{
-					std::tie(site_calc.u, site_calc.v) = 
+					std::tie(site_calc.u, site_calc.v) =
 						spin_to_uv<t_mat, t_vec, t_cplx, t_vec_real>(
-							site_calc.spin_dir);
+							site_calc.spin_dir, m_eps);
 				}
 
 				site_calc.u_conj = tl2::conj(site_calc.u);
@@ -647,8 +671,8 @@ public:
 				}
 				else
 				{
-					std::cerr << "Error parsing \"" 
-						<< term.J << "\"." 
+					std::cerr << "Error parsing \""
+						<< term.J << "\"."
 						<< std::endl;
 				}
 
@@ -666,8 +690,8 @@ public:
 					}
 					else
 					{
-						std::cerr << "Error parsing \"" 
-							<< term.dmi[dmi_idx] 
+						std::cerr << "Error parsing \""
+							<< term.dmi[dmi_idx]
 							<< "\"." << std::endl;
 					}
 				}
@@ -818,7 +842,7 @@ public:
 			t_real S_i = m_sites[i].spin_mag;
 			t_real S_j = m_sites[j].spin_mag;
 
-			// get the precalculated u and v vectors 
+			// get the precalculated u and v vectors
 			// for the commensurate case
 			const t_vec* u_i = &m_sites_calc[i].u;
 			const t_vec* u_j = &m_sites_calc[j].u;
@@ -853,10 +877,10 @@ public:
 					tl2::convert<t_vec_real>(m_rotaxis),
 					m_eps);
 
-				std::tie(u_i_incomm, v_i_incomm) = 
+				std::tie(u_i_incomm, v_i_incomm) =
 					spin_to_uv_real<t_mat, t_vec, t_cplx, t_vec_real>(
 						spin_dir_i_re);
-				std::tie(u_j_incomm, v_j_incomm) = 
+				std::tie(u_j_incomm, v_j_incomm) =
 					spin_to_uv_real<t_mat, t_vec, t_cplx, t_vec_real>(
 						spin_dir_j_re);
 
@@ -884,7 +908,7 @@ public:
 					// TODO: check unit of S_k
 					t_real S_k = m_sites[k].spin_mag;
 
-					// get the precalculated u_k and v_k vectors 
+					// get the precalculated u_k and v_k vectors
 					// for the commensurate case
 					const t_vec *v_k = &m_sites_calc[k].v;
 
@@ -907,7 +931,7 @@ public:
 							tl2::convert<t_vec_real>(m_rotaxis),
 							m_eps);
 
-						std::tie(u_k_incomm, v_k_incomm) = 
+						std::tie(u_k_incomm, v_k_incomm) =
 							spin_to_uv_real<t_mat, t_vec, t_cplx, t_vec_real>(
 								spin_dir_k_re);
 
@@ -1165,7 +1189,7 @@ public:
 					t_real S_i = m_sites[i].spin_mag;
 					t_real S_j = m_sites[j].spin_mag;
 
-					// get the precalculated u vectors 
+					// get the precalculated u vectors
 					// for the commensurate case
 					const t_vec *u_i = &m_sites_calc[i].u;
 					const t_vec *u_j = &m_sites_calc[j].u;
@@ -1201,10 +1225,10 @@ public:
 							tl2::convert<t_vec_real>(m_rotaxis),
 							m_eps);
 
-						std::tie(u_i_incomm, v_i_incomm) = 
+						std::tie(u_i_incomm, v_i_incomm) =
 							spin_to_uv_real<t_mat, t_vec, t_cplx, t_vec_real>(
 								spin_dir_i_re);
-						std::tie(u_j_incomm, v_j_incomm) = 
+						std::tie(u_j_incomm, v_j_incomm) =
 							spin_to_uv_real<t_mat, t_vec, t_cplx, t_vec_real>(
 								spin_dir_j_re);
 

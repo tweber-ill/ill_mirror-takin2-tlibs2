@@ -49,7 +49,7 @@ namespace ty = boost::typeindex;
 
 
 BOOST_AUTO_TEST_CASE_TEMPLATE(test_rotation,
-	t_real, decltype(std::tuple<float, double, long double>{}))
+	t_real, decltype(std::tuple<float, double/*, long double*/>{}))
 {
 	using t_vec = tl2::vec<t_real, std::vector>;
 	using t_mat = tl2::mat<t_real, std::vector>;
@@ -65,13 +65,19 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(test_rotation,
 	const t_vec vecTo2d = tl2::create<t_vec>({1, 0});
 	t_mat mat2d = tl2::rotation<t_mat, t_vec, t_real>(vecFrom2d, vecTo2d, nullptr, eps, false);
 	t_vec vec2d = mat2d * vecFrom2d / tl2::norm<t_vec>(vecFrom2d) * tl2::norm<t_vec>(vecTo2d);
+	std::cout << "2d rotation:\n";
+	tl2::niceprint(std::cout, mat2d, 1e-4, 4);
+	std::cout << std::endl;
 	BOOST_TEST((tl2::equals<t_vec>(vecTo2d, vec2d, eps)));
 
 	// test 3d case
-	const t_vec vecFrom3d = tl2::create<t_vec>({1, 0, 1});
-	const t_vec vecTo3d = tl2::create<t_vec>({1, -1, 0});
+	const t_vec vecFrom3d = tl2::create<t_vec>({-1, -1, 0});
+	const t_vec vecTo3d = tl2::create<t_vec>({0, 0, 1});
 	t_mat mat3d = tl2::rotation<t_mat, t_vec, t_real>(vecFrom3d, vecTo3d, nullptr, eps, false);
 	t_vec vec3d = mat3d * vecFrom3d / tl2::norm<t_vec>(vecFrom3d) * tl2::norm<t_vec>(vecTo3d);
+	std::cout << "3d rotation:\n";
+	tl2::niceprint(std::cout, mat3d, 1e-4, 4);
+	std::cout << std::endl;
 	BOOST_TEST((tl2::equals<t_vec>(vecTo3d, vec3d, eps)));
 
 	// test 4d case
@@ -79,5 +85,8 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(test_rotation,
 	const t_vec vecTo4d = tl2::create<t_vec>({1, -1, 0, 0});
 	t_mat mat4d = tl2::rotation<t_mat, t_vec, t_real>(vecFrom4d, vecTo4d, nullptr, eps, false);
 	t_vec vec4d = mat4d * vecFrom4d / tl2::norm<t_vec>(vecFrom4d) * tl2::norm<t_vec>(vecTo4d);
+	std::cout << "4d rotation:\n";
+	tl2::niceprint(std::cout, mat4d, 1e-4, 4);
+	std::cout << std::endl;
 	BOOST_TEST((tl2::equals<t_vec>(vecTo4d, vec4d, eps)));
 }
