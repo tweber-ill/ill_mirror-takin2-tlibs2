@@ -186,13 +186,14 @@ std::tuple<t_vec, t_vec> R_to_uv(const t_mat& R)
 template<class t_mat, class t_vec, class t_cplx, class t_vec_real>
 requires tl2::is_mat<t_mat> && tl2::is_vec<t_vec>
 std::tuple<t_vec, t_vec> spin_to_uv_real(const t_vec_real& spin_re,
-	t_real eps = std::numeric_limits<t_real>::epsilon())
+	t_real eps = std::numeric_limits<t_real>::epsilon(),
+	const t_vec_real *rotaxis = nullptr)
 {
 	t_vec_real zdir = tl2::zero<t_vec_real>(spin_re.size());
 	zdir[2] = 1;
 
 	t_mat_real _rot = tl2::rotation<t_mat_real, t_vec_real>(
-		spin_re, zdir, nullptr, eps, false);
+ 		spin_re, zdir, rotaxis, eps, false);
 
 #ifdef TL2_MAG_USE_COMPLEX_SPIN
 	// TODO: correctly unite matrix
@@ -212,7 +213,8 @@ std::tuple<t_vec, t_vec> spin_to_uv_real(const t_vec_real& spin_re,
 template<class t_mat, class t_vec, class t_cplx, class t_vec_real>
 requires tl2::is_mat<t_mat> && tl2::is_vec<t_vec>
 std::tuple<t_vec, t_vec> spin_to_uv(const t_vec& spin_dir,
-	t_real eps = std::numeric_limits<t_real>::epsilon())
+	t_real eps = std::numeric_limits<t_real>::epsilon(),
+	const t_vec_real *rotaxis = nullptr)
 {
 #ifdef TL2_MAG_USE_COMPLEX_SPIN
 	t_vec_real spin_re =
@@ -222,7 +224,7 @@ std::tuple<t_vec, t_vec> spin_to_uv(const t_vec& spin_dir,
 		tl2::split_cplx<t_vec, t_vec_real>(spin_dir);
 #endif
 
-	return spin_to_uv_real<t_mat, t_vec, t_cplx, t_vec_real>(spin_re, eps);
+	return spin_to_uv_real<t_mat, t_vec, t_cplx, t_vec_real>(spin_re, eps, rotaxis);
 }
 
 
@@ -552,7 +554,7 @@ public:
 			// rotate field to [001] direction
 			m_rot_field = tl2::convert<t_mat>(
 				tl2::rotation<t_mat_real, t_vec_real>(
-					-m_field.dir, zdir, nullptr, m_eps, false));
+					-m_field.dir, zdir, &m_rotaxis, m_eps, false));
 
 			/*std::cout << "Field rotation from:\n";
 			tl2::niceprint(std::cout, -m_field.dir, 1e-4, 4);
@@ -626,7 +628,7 @@ public:
 				{
 					std::tie(site_calc.u, site_calc.v) =
 						spin_to_uv<t_mat, t_vec, t_cplx, t_vec_real>(
-							site_calc.spin_dir, m_eps);
+							site_calc.spin_dir, m_eps, &m_rotaxis);
 				}
 
 				site_calc.u_conj = tl2::conj(site_calc.u);
@@ -879,10 +881,10 @@ public:
 
 				std::tie(u_i_incomm, v_i_incomm) =
 					spin_to_uv_real<t_mat, t_vec, t_cplx, t_vec_real>(
-						spin_dir_i_re);
+						spin_dir_i_re, m_eps, &m_rotaxis);
 				std::tie(u_j_incomm, v_j_incomm) =
 					spin_to_uv_real<t_mat, t_vec, t_cplx, t_vec_real>(
-						spin_dir_j_re);
+						spin_dir_j_re, m_eps, &m_rotaxis);
 
 				u_conj_j_incomm = tl2::conj(u_j_incomm);
 
@@ -933,7 +935,7 @@ public:
 
 						std::tie(u_k_incomm, v_k_incomm) =
 							spin_to_uv_real<t_mat, t_vec, t_cplx, t_vec_real>(
-								spin_dir_k_re);
+								spin_dir_k_re, m_eps, &m_rotaxis);
 
 						v_k = &v_k_incomm;
 					}
@@ -1227,10 +1229,10 @@ public:
 
 						std::tie(u_i_incomm, v_i_incomm) =
 							spin_to_uv_real<t_mat, t_vec, t_cplx, t_vec_real>(
-								spin_dir_i_re);
+								spin_dir_i_re, m_eps, &m_rotaxis);
 						std::tie(u_j_incomm, v_j_incomm) =
 							spin_to_uv_real<t_mat, t_vec, t_cplx, t_vec_real>(
-								spin_dir_j_re);
+								spin_dir_j_re, m_eps, &m_rotaxis);
 
 						u_conj_i_incomm = tl2::conj(u_i_incomm);
 						u_conj_j_incomm = tl2::conj(u_j_incomm);

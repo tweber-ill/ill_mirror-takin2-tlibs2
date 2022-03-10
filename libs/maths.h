@@ -4524,8 +4524,17 @@ requires is_vec<t_vec> && is_mat<t_mat>
 	using t_size = decltype(vec1.size());
 	const t_size dim = vec1.size();
 
+	// 2-dim case
+	if(dim == 2)
+	{
+		t_real angle = std::atan2(vec2[1], vec2[0]) -
+		std::atan2(vec1[1], vec1[0]);
+
+		return rotation_2d<t_mat>(angle);
+	}
+
 	// 3-dim and 4-dim homogeneous case
-	if(dim == 3 || force_3dim)
+	else if(dim == 3 || (dim == 4 && force_3dim))
 	{
 		// get rotation axis from cross product
 		t_vec axis = cross<t_vec>({ vec1, vec2 });
@@ -4557,15 +4566,6 @@ requires is_vec<t_vec> && is_mat<t_mat>
 
 		axis /= lenaxis;
 		return rotation<t_mat, t_vec>(axis, angle, true);
-	}
-
-	// 2-dim case
-	else if(dim == 2)
-	{
-		t_real angle = std::atan2(vec2[1], vec2[0]) -
-		std::atan2(vec1[1], vec1[0]);
-
-		return rotation_2d<t_mat>(angle);
 	}
 
 	// general case, equation (8) from (Zhelezov 2017)
