@@ -2025,6 +2025,22 @@ requires is_basic_mat<t_mat> && is_basic_vec<t_vec>
 
 
 /**
+ * diagonal matrix
+ */
+template<class t_mat, class t_val = typename t_mat::value_type>
+t_mat diag(t_val val, std::size_t N)
+requires is_basic_mat<t_mat>
+{
+	t_mat mat = create<t_mat>(N, N);
+
+	for(std::size_t i=0; i<N; ++i)
+		mat(i, i) = val;
+
+	return mat;
+}
+
+
+/**
  * vector of diagonal matrix elements
  */
 template<class t_vec, class t_mat>
