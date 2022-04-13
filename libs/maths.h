@@ -2028,7 +2028,7 @@ requires is_basic_mat<t_mat> && is_basic_vec<t_vec>
  * diagonal matrix
  */
 template<class t_mat, class t_val = typename t_mat::value_type>
-t_mat diag(t_val val, std::size_t N)
+t_mat diag(std::size_t N, const t_val& val)
 requires is_basic_mat<t_mat>
 {
 	t_mat mat = create<t_mat>(N, N);
