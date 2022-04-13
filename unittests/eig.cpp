@@ -61,6 +61,8 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(test_eig, t_real, t_types)
 	// real version
 	{
 		std::cout << "--------------------------------------------------------------------------------" << std::endl;
+		std::cout << "real" << std::endl;
+		std::cout << "--------------------------------------------------------------------------------" << std::endl;
 		auto mat = tl2::zero<t_mat>(dim,dim);
 		for(std::size_t i=0; i<dim; ++i)
 			for(std::size_t j=0; j<dim; ++j)
@@ -115,6 +117,8 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(test_eig, t_real, t_types)
 
 	// real version, symmetric
 	{
+		std::cout << "--------------------------------------------------------------------------------" << std::endl;
+		std::cout << "real, symmetric" << std::endl;
 		std::cout << "--------------------------------------------------------------------------------" << std::endl;
 		auto mat = tl2::zero<t_mat>(dim,dim);
 		for(std::size_t i=0; i<dim; ++i)
@@ -205,6 +209,8 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(test_eig, t_real, t_types)
 	// complex version
 	{
 		std::cout << "--------------------------------------------------------------------------------" << std::endl;
+		std::cout << "complex" << std::endl;
+		std::cout << "--------------------------------------------------------------------------------" << std::endl;
 
 		auto mat = tl2::zero<t_mat_cplx>(dim, dim);
 		for(std::size_t i=0; i<dim; ++i)
@@ -241,6 +247,8 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(test_eig, t_real, t_types)
 
 	// complex version, hermitian
 	{
+		std::cout << "--------------------------------------------------------------------------------" << std::endl;
+		std::cout << "complex, hermitian" << std::endl;
 		std::cout << "--------------------------------------------------------------------------------" << std::endl;
 
 		auto mat = tl2::zero<t_mat_cplx>(dim, dim);

@@ -2128,6 +2128,42 @@ requires is_mat<t_mat>
 
 
 /**
+ * tests for skew-symmetric or skew-hermitian matrix
+ * @see https://en.wikipedia.org/wiki/Skew-Hermitian_matrix
+ */
+template<class t_mat, class t_real = typename t_mat::value_type>
+bool is_skew_symm_or_herm(const t_mat& mat,
+	t_real eps = std::numeric_limits<t_real>::epsilon())
+requires is_mat<t_mat>
+{
+	using t_elem = typename t_mat::value_type;
+	if(mat.size1() != mat.size2())
+		return false;
+
+	for(std::size_t i=0; i<mat.size1(); ++i)
+	{
+		for(std::size_t j=i+1; j<mat.size2(); ++j)
+		{
+			if constexpr(is_complex<t_elem>)
+			{
+				// not hermitian?
+				if(!equals<t_elem>(mat(i,j), -std::conj(mat(j,i)), eps))
+					return false;
+			}
+			else
+			{
+				// not skew-symmetric?
+				if(!equals<t_elem>(mat(i,j), -mat(j,i), eps))
+					return false;
+			}
+		}
+	}
+
+	return true;
+}
+
+
+/**
  * tests for diagonal matrix
  */
 template<class t_mat, class t_real = typename t_mat::value_type>
