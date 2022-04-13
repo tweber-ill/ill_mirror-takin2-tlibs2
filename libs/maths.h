@@ -2031,7 +2031,7 @@ template<class t_mat, class t_val = typename t_mat::value_type>
 t_mat diag(std::size_t N, const t_val& val)
 requires is_basic_mat<t_mat>
 {
-	t_mat mat = create<t_mat>(N, N);
+	t_mat mat = zero<t_mat>(N, N);
 
 	for(std::size_t i=0; i<N; ++i)
 		mat(i, i) = val;
