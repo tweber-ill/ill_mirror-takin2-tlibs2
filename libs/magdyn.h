@@ -565,24 +565,6 @@ public:
 			std::cout << std::endl;*/
 		}
 
-		if(m_bragg.size() == 3)
-		{
-			// calculate orthogonal projector for magnetic neutron scattering
-			// see (Shirane 2002), p. 37, eq. (2.64)
-			//t_vec bragg_rot = use_field ? m_rot_field * m_bragg : m_bragg;
-			//
-			//m_proj_neutron = tl2::ortho_projector<t_mat, t_vec>(
-			//	bragg_rot, false);
-			m_proj_neutron = tl2::ortho_projector<t_mat, t_vec>(
-				m_bragg, false);
-		}
-		else
-		{
-			// no bragg peak given -> don't project
-			m_proj_neutron = tl2::unit<t_mat>(3);
-		}
-
-
 		tl2::ExprParser<t_cplx> parser;
 		parser.SetAutoregisterVariables(false);
 		for(const Variable& var : m_variables)
@@ -985,6 +967,16 @@ public:
 		t_mat _H, t_real h, t_real k, t_real l,
 		bool only_energies = false) const
 	{
+		// momentum transfer
+		const t_vec_real Q = tl2::create<t_vec_real>({ h, k, l });
+
+		// orthogonal projector for magnetic neutron scattering,
+		// see (Shirane 2002), p. 37, eq. (2.64)
+		//t_vec bragg_rot = use_field ? m_rot_field * m_bragg : m_bragg;
+		//proj_neutron = tl2::ortho_projector<t_mat, t_vec>(bragg_rot, false);
+		t_mat proj_neutron = tl2::ortho_projector<t_mat, t_vec>(Q, false);
+
+
 		const t_size num_sites = m_sites.size();
 		if(num_sites == 0 || _H.size1() == 0)
 			return {};
@@ -1148,8 +1140,6 @@ public:
 			//tl2::niceprint(std::cout, L, 1e-4, 4);
 			//std::cout << std::endl;
 
-			// momentum
-			const t_vec_real Q = tl2::create<t_vec_real>({h, k, l});
 
 			/*std::cout << "Y = np.zeros(3*3*4*4, dtype=complex).reshape((4,4,3,3))" << std::endl;
 			std::cout << "V = np.zeros(3*3*4*4, dtype=complex).reshape((4,4,3,3))" << std::endl;
@@ -1419,8 +1409,8 @@ public:
 				}
 
 				// apply the orthogonal projector for magnetic neutron scattering
-				S_perp = (m_proj_neutron * tl2::herm(S)) * (S * m_proj_neutron);
-				//S_perp = m_proj_neutron * S;
+				S_perp = (proj_neutron * tl2::herm(S)) * (S * proj_neutron);
+				//S_perp = proj_neutron * S;
 
 				// weights
 				w_SF1 = std::abs(S_perp(0, 0).real());
@@ -1893,10 +1883,6 @@ private:
 
 	// bose cutoff energy to avoid infinities
 	t_real m_bose_cutoff = 0.025;
-
-	// orthogonal projector for magnetic neutron scattering
-	// see (Shirane 2002), p. 37, eq. (2.64)
-	t_mat m_proj_neutron = tl2::unit<t_mat>(3);
 
 	t_size m_retries_chol = 10;
 	t_real m_eps_chol = 0.05;
