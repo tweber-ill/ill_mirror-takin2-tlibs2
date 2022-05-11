@@ -3116,13 +3116,13 @@ requires is_vec<t_vec>
 {
 	if(bIsNormalised)
 	{
-		return inner<t_vec>(vec, vecProj) * vecProj;
+		return inner_noconj<t_vec>(vec, vecProj) * vecProj;
 	}
 	else
 	{
 		const auto len = norm<t_vec>(vecProj);
 		const t_vec _vecProj = vecProj / len;
-		return inner<t_vec>(vec, _vecProj) * _vecProj;
+		return inner_noconj<t_vec>(vec, _vecProj) * _vecProj;
 	}
 }
 
