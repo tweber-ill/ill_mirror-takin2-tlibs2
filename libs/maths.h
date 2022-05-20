@@ -3086,10 +3086,10 @@ requires is_basic_mat<t_mat> && is_basic_vec<t_vec>
  * @see (Arens 2015), p. 814 for the projection tensor
  */
 template<class t_mat, class t_vec>
-t_mat projector(const t_vec& vec, bool bIsNormalised = true)
+t_mat projector(const t_vec& vec, bool is_normalised = true)
 requires is_vec<t_vec> && is_mat<t_mat>
 {
-	if(bIsNormalised)
+	if(is_normalised)
 	{
 		return outer<t_mat, t_vec>(vec, vec);
 	}
@@ -3111,18 +3111,18 @@ requires is_vec<t_vec> && is_mat<t_mat>
  * @see (Arens 2015), p. 814 for the projection tensor
  */
 template<class t_vec>
-t_vec project(const t_vec& vec, const t_vec& vecProj, bool bIsNormalised = true)
+t_vec project(const t_vec& vec, const t_vec& vecProj, bool is_normalised = true)
 requires is_vec<t_vec>
 {
-	if(bIsNormalised)
+	if(is_normalised)
 	{
-		return inner_noconj<t_vec>(vec, vecProj) * vecProj;
+		return inner<t_vec>(vecProj, vec) * vecProj;
 	}
 	else
 	{
 		const auto len = norm<t_vec>(vecProj);
 		const t_vec _vecProj = vecProj / len;
-		return inner_noconj<t_vec>(vec, _vecProj) * _vecProj;
+		return inner<t_vec>(_vecProj, vec) * _vecProj;
 	}
 }
 
@@ -3134,18 +3134,18 @@ requires is_vec<t_vec>
  * @see (Arens 2015), p. 814 for the projection tensor
  */
 template<class t_vec, class t_real = typename t_vec::value_type>
-t_real project_scalar(const t_vec& vec, const t_vec& vecProj, bool bIsNormalised = true)
+t_real project_scalar(const t_vec& vec, const t_vec& vecProj, bool is_normalised = true)
 requires is_vec<t_vec>
 {
-	if(bIsNormalised)
+	if(is_normalised)
 	{
-		return inner<t_vec>(vec, vecProj);
+		return inner<t_vec>(vecProj, vec);
 	}
 	else
 	{
 		const auto len = norm<t_vec>(vecProj);
 		const t_vec _vecProj = vecProj / len;
-		return inner<t_vec>(vec, _vecProj);
+		return inner<t_vec>(_vecProj, vec);
 	}
 }
 
@@ -3159,10 +3159,10 @@ requires is_vec<t_vec>
  */
 template<class t_vec, class t_real = typename t_vec::value_type>
 std::tuple<t_vec, t_real, t_real> project_line(const t_vec& vec,
-	const t_vec& lineOrigin, const t_vec& _lineDir, bool bIsNormalised = true)
+	const t_vec& lineOrigin, const t_vec& _lineDir, bool is_normalised = true)
 requires is_vec<t_vec>
 {
-	const t_real lenDir = bIsNormalised ? 1 : norm<t_vec>(_lineDir);
+	const t_real lenDir = is_normalised ? 1 : norm<t_vec>(_lineDir);
 	const t_vec lineDir = _lineDir / lenDir;
 	const t_vec ptShifted = vec - lineOrigin;
 
@@ -3230,12 +3230,12 @@ requires is_vec<t_vec>
  * @see (Arens 2015), p. 814 for the projection tensor
  */
 template<class t_mat, class t_vec>
-t_mat ortho_projector(const t_vec& vec, bool bIsNormalised = true)
+t_mat ortho_projector(const t_vec& vec, bool is_normalised = true)
 requires is_vec<t_vec> && is_mat<t_mat>
 {
 	const std::size_t iSize = vec.size();
 	return unit<t_mat>(iSize) -
-		projector<t_mat, t_vec>(vec, bIsNormalised);
+		projector<t_mat, t_vec>(vec, is_normalised);
 }
 
 
@@ -3246,14 +3246,14 @@ requires is_vec<t_vec> && is_mat<t_mat>
  * @see (Arens 2015), p. 710
  */
 template<class t_mat, class t_vec>
-t_mat ortho_mirror_op(const t_vec& vec, bool bIsNormalised = true)
+t_mat ortho_mirror_op(const t_vec& vec, bool is_normalised = true)
 requires is_vec<t_vec> && is_mat<t_mat>
 {
 	using T = typename t_vec::value_type;
 	const std::size_t iSize = vec.size();
 
 	return unit<t_mat>(iSize) -
-		T(2)*projector<t_mat, t_vec>(vec, bIsNormalised);
+		T(2)*projector<t_mat, t_vec>(vec, is_normalised);
 }
 
 
@@ -3293,10 +3293,10 @@ requires is_vec<t_vec> && is_mat<t_mat>
  * (e.g. used to calculate magnetic interaction vector M_perp)
  */
 template<class t_vec>
-t_vec ortho_project(const t_vec& vec, const t_vec& vecNorm, bool bIsNormalised = true)
+t_vec ortho_project(const t_vec& vec, const t_vec& vecNorm, bool is_normalised = true)
 requires is_vec<t_vec>
 {
-	return vec - project<t_vec>(vec, vecNorm, bIsNormalised);
+	return vec - project<t_vec>(vec, vecNorm, is_normalised);
 }
 
 
@@ -4486,7 +4486,7 @@ requires tl2::is_mat<t_mat>
  */
 template<class t_mat, class t_vec>
 t_mat rotation(const t_vec& axis, const typename t_vec::value_type angle,
-	bool bIsNormalised = 1)
+	bool is_normalised = 1)
 requires is_vec<t_vec> && is_mat<t_mat>
 {
 	using t_real = typename t_vec::value_type;
@@ -4495,7 +4495,7 @@ requires is_vec<t_vec> && is_mat<t_mat>
 	const t_real s = std::sin(angle);
 
 	t_real len = 1;
-	if(!bIsNormalised)
+	if(!is_normalised)
 		len = norm<t_vec>(axis);
 
 	// ----------------------------------------------------
@@ -4510,10 +4510,10 @@ requires is_vec<t_vec> && is_mat<t_mat>
 	// ----------------------------------------------------
 	// general case
 	// project along rotation axis
-	t_mat matProj1 = projector<t_mat, t_vec>(axis, bIsNormalised);
+	t_mat matProj1 = projector<t_mat, t_vec>(axis, is_normalised);
 
 	// project along axis 2 in plane perpendicular to rotation axis
-	t_mat matProj2 = ortho_projector<t_mat, t_vec>(axis, bIsNormalised) * c;
+	t_mat matProj2 = ortho_projector<t_mat, t_vec>(axis, is_normalised) * c;
 
 	// project along axis 3 in plane perpendicular to rotation axis and axis 2
 	t_mat matProj3 = skewsymmetric<t_mat, t_vec>(axis/len) * s;
@@ -6285,10 +6285,10 @@ requires is_vec<t_vec> && is_mat<t_mat>
  */
 template<class t_mat, class t_vec>
 t_mat hom_rotation(const t_vec& axis, typename t_vec::value_type angle,
-	bool bIsNormalised = true)
+	bool is_normalised = true)
 requires is_vec<t_vec> && is_mat<t_mat>
 {
-	t_mat rot = rotation<t_mat, t_vec>(axis, angle, bIsNormalised);
+	t_mat rot = rotation<t_mat, t_vec>(axis, angle, is_normalised);
 
 	return create<t_mat>({
 		rot(0,0), rot(0,1), rot(0,2), 0.,
@@ -6590,11 +6590,11 @@ requires is_basic_vec<t_vec> && is_mat<typename t_vec::value_type>
  * proj = <sigma|vec>
  */
 template<class t_vec, class t_mat>
-t_mat proj_su2(const t_vec& vec, bool bIsNormalised=1)
+t_mat proj_su2(const t_vec& vec, bool is_normalised=1)
 requires is_vec<t_vec> && is_mat<t_mat>
 {
 	typename t_vec::value_type len = 1;
-	if(!bIsNormalised)
+	if(!is_normalised)
 		len = norm<t_vec>(vec);
 
 	const auto sigma = su2_matrices<std::vector<t_mat>>(false);
