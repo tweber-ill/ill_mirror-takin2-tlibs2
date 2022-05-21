@@ -3982,7 +3982,7 @@ requires is_vec<t_vec>
 	{
 		const T len = norm<t_vec>(vecProj);
 		const t_vec _vecProj = vecProj / len;
-		T lam = inner<t_vec>(vec, _vecProj);
+		T lam = inner<t_vec>(_vecProj, vec);
 		return lam / len;
 	};
 
