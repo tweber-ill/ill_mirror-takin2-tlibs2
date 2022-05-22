@@ -63,6 +63,9 @@ std::string get_typename(bool bFull=1)
 }
 
 
+extern std::string get_stacktrace();
+
+
 enum class LogColor
 {
 	NONE,
@@ -76,6 +79,7 @@ class Log
 {
 private:
 	int m_iDepth = 0;
+
 
 protected:
 	static std::recursive_mutex s_mtx;
@@ -97,6 +101,7 @@ protected:
 
 	static bool s_bTermCmds;
 
+
 protected:
 	static std::string get_timestamp();
 	static std::string get_thread_id();
@@ -109,6 +114,7 @@ protected:
 
 	void inc_depth();
 	void dec_depth();
+
 
 public:
 	Log();

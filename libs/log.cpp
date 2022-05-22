@@ -30,12 +30,29 @@
 #include "log.h"
 #include <iomanip>
 #include <boost/date_time/c_time.hpp>
+#if !defined(NDEBUG)
+	#include <boost/stacktrace.hpp>
+#endif
 
 
 namespace tl2 {
 
 std::recursive_mutex Log::s_mtx;
 bool Log::s_bTermCmds = 1;
+
+
+std::string get_stacktrace()
+{
+#if !defined(NDEBUG) && defined(_GNU_SOURCE)
+	std::ostringstream ostr{};
+	boost::stacktrace::stacktrace trace{};
+	ostr << trace;
+	return ostr.str();
+#else
+	return "";
+#endif
+}
+
 
 std::string Log::get_timestamp()
 {
@@ -74,12 +91,14 @@ std::string Log::get_timestamp()
 	}
 }
 
+
 std::string Log::get_thread_id()
 {
 	std::ostringstream ostr;
 	ostr << std::hex << std::this_thread::get_id();
 	return ostr.str();
 }
+
 
 std::string Log::get_color(LogColor col, bool bBold)
 {
@@ -99,6 +118,7 @@ std::string Log::get_color(LogColor col, bool bBold)
 		default: return "\033[0m";
 	}
 }
+
 
 void Log::begin_log()
 {
@@ -150,6 +170,7 @@ void Log::begin_log()
 	}
 }
 
+
 void Log::end_log()
 {
 	const std::vector<t_pairOstr>& vecOstrsTh = GetThreadOstrs();
@@ -169,6 +190,7 @@ void Log::end_log()
 	s_mtx.unlock();
 }
 
+
 void Log::inc_depth()
 {
 	std::lock_guard<decltype(s_mtx)> _lck(s_mtx);
@@ -176,6 +198,7 @@ void Log::inc_depth()
 	if(m_iDepth++ == 0)
 		begin_log();
 }
+
 
 void Log::dec_depth()
 {
@@ -187,13 +210,16 @@ void Log::dec_depth()
 	}
 }
 
+
 Log::Log() : m_vecOstrs{{&std::cerr, 1}}, m_mapOstrsTh{}, m_strInfo{}
 {}
+
 
 Log::Log(const std::string& strInfo, LogColor col, std::ostream* pOstr)
 	: m_vecOstrs{{pOstr ? pOstr : &std::cerr, 1}},
 		m_mapOstrsTh{}, m_strInfo(strInfo), m_col(col)
 {}
+
 
 Log::~Log()
 {
@@ -203,10 +229,12 @@ Log::~Log()
 	m_vecOstrs.clear();
 }
 
+
 std::vector<Log::t_pairOstr>& Log::GetThreadOstrs()
 {
 	return m_mapOstrsTh[std::this_thread::get_id()];
 }
+
 
 void Log::AddOstr(std::ostream* pOstr, bool bCol, bool bThreadLocal)
 {
@@ -221,6 +249,7 @@ void Log::AddOstr(std::ostream* pOstr, bool bCol, bool bThreadLocal)
 		m_vecOstrs.push_back({pOstr, bCol});
 	}
 }
+
 
 void Log::RemoveOstr(std::ostream* pOstr)
 {
