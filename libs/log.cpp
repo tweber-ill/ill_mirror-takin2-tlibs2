@@ -274,6 +274,7 @@ void Log::RemoveOstr(std::ostream* pOstr)
 }
 
 
+// use -fvisibility=hidden to avoid multiple calls to the destructors in loaded external libraries
 Log log_info("INFO", LogColor::WHITE, &std::cerr),
 	log_warn("WARNING", LogColor::YELLOW, &std::cerr),
 	log_err("ERROR", LogColor::RED, &std::cerr),
