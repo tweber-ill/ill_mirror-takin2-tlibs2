@@ -211,7 +211,7 @@ class Chi2Function : public ROOT::Minuit2::FCNBase
 protected:
 	const FitterFuncModel<t_real_min> *m_pfkt = nullptr;
 
-	std::size_t m_unum_pts = 0;
+	std::size_t m_num_pts = 0;
 	const t_real* m_px = nullptr;
 	const t_real* m_py = nullptr;
 	const t_real* m_pdy = nullptr;
@@ -222,9 +222,9 @@ protected:
 
 public:
 	Chi2Function(const FitterFuncModel<t_real_min>* fkt=0,
-		std::size_t unum_pts=0, const t_real *px=0,
+		std::size_t num_pts=0, const t_real *px=0,
 		const t_real *py=0, const t_real *pdy=0)
-		: m_pfkt{fkt}, m_unum_pts{unum_pts}, m_px{px}, m_py{py}, m_pdy{pdy}
+		: m_pfkt{fkt}, m_num_pts{num_pts}, m_px{px}, m_py{py}, m_pdy{pdy}
 	{}
 
 	virtual ~Chi2Function() = default;
@@ -259,7 +259,7 @@ public:
 		FitterFuncModel<t_real_min>* pfkt = uptrFkt.get();
 
 		pfkt->SetParams(vecParams);
-		return tl2::chi2<t_real_min, decltype(*pfkt), const t_real*>(*pfkt, m_unum_pts, m_px, m_py, m_pdy);
+		return tl2::chi2<t_real_min, decltype(*pfkt), const t_real*>(*pfkt, m_num_pts, m_px, m_py, m_pdy);
 	}
 
 	virtual t_real_min Up() const override { return m_dSigma*m_dSigma; }

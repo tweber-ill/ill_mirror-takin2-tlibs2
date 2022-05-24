@@ -49,7 +49,7 @@ add_compile_options(-Wall -Wextra)
 
 # -----------------------------------------------------------------------------
 # Boost
-add_definitions(-DBOOST_SYSTEM_NO_DEPRECATED)
+add_definitions(-DBOOST_SYSTEM_NO_DEPRECATED -DBOOST_STACKTRACE_USE_NOOP)
 find_package(Boost REQUIRED)
 add_definitions(${Boost_CXX_FLAGS})
 
