@@ -1624,7 +1624,7 @@ requires is_scalar<t_num>
  * mod operation, keeping result positive
  */
 template<class t_real>
-t_real mod_pos(t_real val, t_real tomod=t_real{2}*pi<t_real>)
+t_real mod_pos(t_real val, t_real tomod = t_real{2}*pi<t_real>)
 requires is_scalar<t_real>
 {
 	val = std::fmod(val, tomod);
@@ -1638,7 +1638,9 @@ requires is_scalar<t_real>
  * are two angles equal within an epsilon range?
  */
 template<class T>
-bool angle_equals(T t1, T t2, T eps = std::numeric_limits<T>::epsilon(), T tomod=T{2}*pi<T>)
+bool angle_equals(T t1, T t2,
+	T eps = std::numeric_limits<T>::epsilon(),
+	T tomod = T{2}*pi<T>)
 requires is_scalar<T>
 {
 	t1 = mod_pos<T>(t1, tomod);
@@ -1651,13 +1653,22 @@ requires is_scalar<T>
 /**
  * are two complex numbers equal within an epsilon range?
  */
-template<class T>
+template<class T> requires is_complex<T>
 bool equals(const T& t1, const T& t2,
 	typename T::value_type eps = std::numeric_limits<typename T::value_type>::epsilon())
-requires is_complex<T>
 {
 	return (std::abs(t1.real() - t2.real()) <= eps) &&
 		(std::abs(t1.imag() - t2.imag()) <= eps);
+}
+
+
+/**
+ * are two complex numbers equal within an epsilon range?
+ */
+template<class T> requires is_complex<T>
+bool equals(const T& t1, const T& t2, const T& eps)
+{
+	return equals<T>(t1, t2, eps.real());
 }
 
 // ----------------------------------------------------------------------------
@@ -1848,6 +1859,29 @@ requires is_basic_mat<t_mat>
 
 
 /**
+ * is mat a unit matrix?
+ */
+template<class t_mat, class t_scalar = typename t_mat::value_type>
+bool is_unit(const t_mat& mat,
+	t_scalar eps = std::numeric_limits<t_scalar>::epsilon())
+requires is_mat<t_mat>
+{
+	for(std::size_t i=0; i<mat.size1(); ++i)
+	{
+		for(std::size_t j=0; j<mat.size2(); ++j)
+		{
+			if(i==j && !equals<t_scalar>(mat(i, j), t_scalar(1), eps))
+				return false;
+			if(i!=j && !equals<t_scalar>(mat(i, j), t_scalar(0), eps))
+				return false;
+		}
+	}
+
+	return true;
+}
+
+
+/**
  * zero matrix
  */
 template<class t_mat>
@@ -1880,6 +1914,27 @@ requires is_basic_mat<t_mat>
 
 
 /**
+ * is mat a zero matrix?
+ */
+template<class t_mat, class t_scalar = typename t_mat::value_type>
+bool is_zero(const t_mat& mat,
+	t_scalar eps = std::numeric_limits<t_scalar>::epsilon())
+requires is_mat<t_mat>
+{
+	for(std::size_t i=0; i<mat.size1(); ++i)
+	{
+		for(std::size_t j=0; j<mat.size2(); ++j)
+		{
+			if(!equals<t_scalar>(mat(i, j), t_scalar(0), eps))
+				return false;
+		}
+	}
+
+	return true;
+}
+
+
+/**
  * zero vector
  */
 template<class t_vec>
@@ -1896,6 +1951,24 @@ requires is_basic_vec<t_vec>
 		vec[i] = 0;
 
 	return vec;
+}
+
+
+/**
+ * is vec a zero vector?
+ */
+template<class t_vec, class t_scalar = typename t_vec::value_type>
+bool is_zero(const t_vec& vec,
+	t_scalar eps = std::numeric_limits<t_scalar>::epsilon())
+requires is_vec<t_vec>
+{
+	for(std::size_t i=0; i<vec.size(); ++i)
+	{
+		if(!equals<t_scalar>(vec[i], t_scalar(0), eps))
+			return false;
+	}
+
+	return true;
 }
 
 
@@ -5943,6 +6016,53 @@ bool collide_bounding_boxes(
 // ----------------------------------------------------------------------------
 // 3-dim algos in homogeneous coordinates
 // ----------------------------------------------------------------------------
+
+/**
+ * does the homogeneous matrix mat have a translation component?
+ */
+template<class t_mat, class t_real = typename t_mat::value_type>
+bool hom_has_translation_components(const t_mat& mat,
+	t_real eps = std::numeric_limits<t_real>::epsilon())
+requires is_mat<t_mat>
+{
+	const std::size_t N = mat.size1();
+	if(N != mat.size2())
+		return false;
+
+	// translation?
+	for(std::size_t i=0; i<N-1; ++i)
+	{
+		if(!equals<t_real>(mat(i, N-1), t_real(0), eps))
+			return true;
+	}
+
+	return false;
+}
+
+
+/**
+ * is mat a centering matrix in homogeneous coords?
+ */
+template<class t_mat, class t_real = typename t_mat::value_type>
+bool hom_is_centering(const t_mat& mat,
+	t_real eps = std::numeric_limits<t_real>::epsilon())
+requires is_mat<t_mat>
+{
+	const std::size_t N = mat.size1();
+	if(N != mat.size2())
+		return false;
+
+	// is the left-upper 3x3 a rotation matrix (and no unit matrix)?
+	if(!is_unit(submat<t_mat>(mat, N-1, N-1)))
+		return false;
+
+	// translation?
+	if(hom_has_translation_components<t_mat, t_real>(mat, eps))
+		return true;
+
+	return false;
+}
+
 
 /**
  * project a homogeneous vector to screen coordinates

@@ -151,6 +151,8 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(test_mat0, t_real, t_types)
 		BOOST_TEST(ok3b);
 
 		auto ident = tl2::unit<t_mat_cplx>(Z.size1(), Z.size2());
+		BOOST_TEST((tl2::is_unit<t_mat_cplx>(ident, t_cplx(eps))));
+
 		auto mata1 = inva*Z;
 		auto mata2 = Z*inva;
 		auto matb1 = invb*Z;
