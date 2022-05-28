@@ -1595,6 +1595,18 @@ requires is_scalar<T>
 
 
 /**
+ * is the given value an integer?
+ */
+template<class T = double>
+bool is_integer(T val, T eps = std::numeric_limits<T>::epsilon())
+requires is_scalar<T>
+{
+	T val_diff = val - std::round(val);
+	return equals<T>(val_diff, T(0), eps);
+}
+
+
+/**
  * get next multiple of the given granularity
  */
 template<typename t_num = unsigned int>
@@ -6053,7 +6065,7 @@ requires is_mat<t_mat>
 		return false;
 
 	// is the left-upper 3x3 a rotation matrix (and no unit matrix)?
-	if(!is_unit(submat<t_mat>(mat, N-1, N-1)))
+	if(!is_unit(submat<t_mat>(mat, 0, 0, 3, 3), eps))
 		return false;
 
 	// translation?
