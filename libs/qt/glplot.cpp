@@ -55,7 +55,8 @@ GlPlotRenderer::GlPlotRenderer(GlPlot *pPlot) : m_pPlot{pPlot}
 	if constexpr(m_usetimer)
 	{
 		connect(&m_timer, &QTimer::timeout,
-			this, static_cast<void (GlPlotRenderer::*)()>(&GlPlotRenderer::tick));
+			this, static_cast<void (GlPlotRenderer::*)()>(
+				&GlPlotRenderer::tick));
 		m_timer.start(std::chrono::milliseconds(1000 / 60));
 	}
 
@@ -111,7 +112,8 @@ GlPlotObj GlPlotRenderer::CreateTriangleObject(const std::vector<t_vec3_gl>& ver
 }
 
 
-GlPlotObj GlPlotRenderer::CreateLineObject(const std::vector<t_vec3_gl>& verts, const t_vec_gl& colour)
+GlPlotObj GlPlotRenderer::CreateLineObject(
+	const std::vector<t_vec3_gl>& verts, const t_vec_gl& colour)
 {
 	GlPlotObj obj;
 	create_line_object(m_pPlot, obj, verts, colour, m_attrVertex, m_attrVertexCol);
@@ -136,7 +138,8 @@ const t_mat_gl& GlPlotRenderer::GetObjectMatrix(std::size_t idx) const
 }
 
 
-void GlPlotRenderer::SetObjectCol(std::size_t idx, t_real_gl r, t_real_gl g, t_real_gl b, t_real_gl a)
+void GlPlotRenderer::SetObjectCol(std::size_t idx,
+	t_real_gl r, t_real_gl g, t_real_gl b, t_real_gl a)
 {
 	if(idx >= m_objs.size()) return;
 	m_objs[idx].m_colour = tl2::create<t_vec_gl>({r,g,b,a});
@@ -241,11 +244,13 @@ std::size_t GlPlotRenderer::AddSphere(t_real_gl rad, t_real_gl x, t_real_gl y, t
 	auto [triagverts, norms, uvs] = tl2::spherify<t_vec3_gl>(
 		tl2::subdivide_triangles<t_vec3_gl>(
 			tl2::create_triangles<t_vec3_gl>(solid), numsubdivs), rad);
-	auto [boundingSpherePos, boundingSphereRad] = tl2::bounding_sphere<t_vec3_gl>(triagverts);
+	auto [boundingSpherePos, boundingSphereRad] =
+		tl2::bounding_sphere<t_vec3_gl>(triagverts);
 
 	QMutexLocker _locker{&m_mutexObj};
 
-	auto obj = CreateTriangleObject(std::get<0>(solid), triagverts, norms, tl2::create<t_vec_gl>({r,g,b,a}), true);
+	auto obj = CreateTriangleObject(std::get<0>(solid),
+		triagverts, norms, tl2::create<t_vec_gl>({r,g,b,a}), true);
 	obj.m_mat = tl2::hom_translation<t_mat_gl>(x, y, z);
 	obj.m_boundingSpherePos = std::move(boundingSpherePos);
 	obj.m_boundingSphereRad = boundingSphereRad;
@@ -262,11 +267,13 @@ std::size_t GlPlotRenderer::AddCylinder(t_real_gl rad, t_real_gl h,
 {
 	auto solid = tl2::create_cylinder<t_vec3_gl>(rad, h, true);
 	auto [triagverts, norms, uvs] = tl2::create_triangles<t_vec3_gl>(solid);
-	auto [boundingSpherePos, boundingSphereRad] = tl2::bounding_sphere<t_vec3_gl>(triagverts);
+	auto [boundingSpherePos, boundingSphereRad] =
+		tl2::bounding_sphere<t_vec3_gl>(triagverts);
 
 	QMutexLocker _locker{&m_mutexObj};
 
-	auto obj = CreateTriangleObject(std::get<0>(solid), triagverts, norms, tl2::create<t_vec_gl>({r,g,b,a}), false);
+	auto obj = CreateTriangleObject(std::get<0>(solid),
+		triagverts, norms, tl2::create<t_vec_gl>({r,g,b,a}), false);
 	obj.m_mat = tl2::hom_translation<t_mat_gl>(x, y, z);
 	obj.m_boundingSpherePos = std::move(boundingSpherePos);
 	obj.m_boundingSphereRad = boundingSphereRad;
@@ -282,11 +289,13 @@ std::size_t GlPlotRenderer::AddCone(t_real_gl rad, t_real_gl h,
 {
 	auto solid = tl2::create_cone<t_vec3_gl>(rad, h);
 	auto [triagverts, norms, uvs] = tl2::create_triangles<t_vec3_gl>(solid);
-	auto [boundingSpherePos, boundingSphereRad] = tl2::bounding_sphere<t_vec3_gl>(triagverts);
+	auto [boundingSpherePos, boundingSphereRad] =
+		tl2::bounding_sphere<t_vec3_gl>(triagverts);
 
 	QMutexLocker _locker{&m_mutexObj};
 
-	auto obj = CreateTriangleObject(std::get<0>(solid), triagverts, norms, tl2::create<t_vec_gl>({r,g,b,a}), false);
+	auto obj = CreateTriangleObject(std::get<0>(solid),
+		triagverts, norms, tl2::create<t_vec_gl>({r,g,b,a}), false);
 	obj.m_mat = tl2::hom_translation<t_mat_gl>(x, y, z);
 	obj.m_boundingSpherePos = std::move(boundingSpherePos);
 	obj.m_boundingSphereRad = boundingSphereRad;
@@ -302,13 +311,17 @@ std::size_t GlPlotRenderer::AddArrow(t_real_gl rad, t_real_gl h,
 {
 	auto solid = tl2::create_cylinder<t_vec3_gl>(rad, h, 2, 32, rad, rad*1.5);
 	auto [triagverts, norms, uvs] = tl2::create_triangles<t_vec3_gl>(solid);
-	auto [boundingSpherePos, boundingSphereRad] = tl2::bounding_sphere<t_vec3_gl>(triagverts);
+	auto [boundingSpherePos, boundingSphereRad] =
+		tl2::bounding_sphere<t_vec3_gl>(triagverts);
 
 	QMutexLocker _locker{&m_mutexObj};
 
-	auto obj = CreateTriangleObject(std::get<0>(solid), triagverts, norms, tl2::create<t_vec_gl>({r,g,b,a}), false);
+	auto obj = CreateTriangleObject(std::get<0>(solid),
+		triagverts, norms, tl2::create<t_vec_gl>({r,g,b,a}), false);
 	obj.m_mat = tl2::get_arrow_matrix<t_vec_gl, t_mat_gl, t_real_gl>(
-		tl2::create<t_vec_gl>({1,0,0}), 1., tl2::create<t_vec_gl>({x,y,z}), tl2::create<t_vec_gl>({0,0,1}));
+		tl2::create<t_vec_gl>({1,0,0}), 1.,
+		tl2::create<t_vec_gl>({x,y,z}),
+		tl2::create<t_vec_gl>({0,0,1}));
 	obj.m_boundingSpherePos = std::move(boundingSpherePos);
 	obj.m_boundingSphereRad = boundingSphereRad;
 	obj.m_labelPos = tl2::create<t_vec3_gl>({0., 0., 0.75});
@@ -322,11 +335,13 @@ std::size_t GlPlotRenderer::AddTriangleObject(const std::vector<t_vec3_gl>& tria
 	const std::vector<t_vec3_gl>& triag_norms,
 	t_real_gl r, t_real_gl g, t_real_gl b, t_real_gl a)
 {
-	auto [boundingSpherePos, boundingSphereRad] = tl2::bounding_sphere<t_vec3_gl>(triag_verts);
+	auto [boundingSpherePos, boundingSphereRad] =
+		tl2::bounding_sphere<t_vec3_gl>(triag_verts);
 
 	QMutexLocker _locker{&m_mutexObj};
 
-	auto obj = CreateTriangleObject(triag_verts, triag_verts, triag_norms, tl2::create<t_vec_gl>({r,g,b,a}), false);
+	auto obj = CreateTriangleObject(triag_verts, triag_verts,
+		triag_norms, tl2::create<t_vec_gl>({r,g,b,a}), false);
 	obj.m_mat = tl2::hom_translation<t_mat_gl, t_real_gl>(0., 0., 0.);
 	obj.m_boundingSpherePos = std::move(boundingSpherePos);
 	obj.m_boundingSphereRad = boundingSphereRad;
@@ -592,9 +607,11 @@ void main()
 		// compile & link shaders
 		m_pShaders = std::make_shared<QOpenGLShaderProgram>(this);
 
-		if(!m_pShaders->addShaderFromSourceCode(QOpenGLShader::Fragment, strFragShader.c_str()))
+		if(!m_pShaders->addShaderFromSourceCode(
+			QOpenGLShader::Fragment, strFragShader.c_str()))
 			shader_err("Cannot compile fragment shader.");
-		if(!m_pShaders->addShaderFromSourceCode(QOpenGLShader::Vertex, strVertexShader.c_str()))
+		if(!m_pShaders->addShaderFromSourceCode(
+			QOpenGLShader::Vertex, strVertexShader.c_str()))
 			shader_err("Cannot compile vertex shader.");
 
 		if(!m_pShaders->link())
@@ -626,10 +643,12 @@ void main()
 	// check threading compatibility
 	if constexpr(m_isthreaded)
 	{
-		if(auto *pContext = ((QOpenGLWidget*)m_pPlot)->context(); pContext && !pContext->supportsThreadedOpenGL())
+		if(auto *pContext = ((QOpenGLWidget*)m_pPlot)->context();
+			pContext && !pContext->supportsThreadedOpenGL())
 		{
 			m_bPlatformSupported = false;
-			std::cerr << "Threaded GL is not supported on this platform." << std::endl;
+			std::cerr << "Threaded GL is not supported on this platform."
+				<< std::endl;
 		}
 	}
 }
@@ -807,7 +826,8 @@ void GlPlotRenderer::UpdatePicker()
 		tl2::create<t_vec3_gl>({0,0,0}), t_real_gl(m_pickerSphereRadius));
 	for(const auto& result : intersUnitSphere)
 	{
-		t_vec_gl vecInters4 = tl2::create<t_vec_gl>({result[0], result[1], result[2], 1});
+		t_vec_gl vecInters4 = tl2::create<t_vec_gl>(
+			{ result[0], result[1], result[2], 1 });
 
 		if(!hasSphereInters)
 		{	// first intersection
@@ -853,7 +873,8 @@ void GlPlotRenderer::UpdatePicker()
 		if(obj.linkedObj)
 			linkedObj = &m_objs[*obj.linkedObj];
 
-		if(linkedObj->m_type != GlPlotObjType::TRIANGLES || !obj.m_visible || !obj.m_valid)
+		if(linkedObj->m_type != GlPlotObjType::TRIANGLES ||
+			!obj.m_visible || !obj.m_valid)
 			continue;
 
 
@@ -865,7 +886,8 @@ void GlPlotRenderer::UpdatePicker()
 		// intersection with bounding sphere?
 		auto boundingInters =
 			tl2::intersect_line_sphere<t_vec3_gl, std::vector>(org3, dir3,
-				matTrafo * linkedObj->m_boundingSpherePos, scale*linkedObj->m_boundingSphereRad);
+				matTrafo * linkedObj->m_boundingSpherePos,
+				scale*linkedObj->m_boundingSphereRad);
 		if(boundingInters.size() == 0)
 			continue;
 
@@ -888,11 +910,13 @@ void GlPlotRenderer::UpdatePicker()
 
 			// coordTrafoInv only keeps 3d objects from locally distorting
 			auto [vecInters, bInters, lamInters] =
-				tl2::intersect_line_poly<t_vec3_gl, t_mat_gl>(org3, dir3, poly, matTrafo);
+				tl2::intersect_line_poly<t_vec3_gl, t_mat_gl>(
+					org3, dir3, poly, matTrafo);
 
 			if(bInters)
 			{
-				t_vec_gl vecInters4 = tl2::create<t_vec_gl>({vecInters[0], vecInters[1], vecInters[2], 1});
+				t_vec_gl vecInters4 = tl2::create<t_vec_gl>(
+					{vecInters[0], vecInters[1], vecInters[2], 1});
 
 				if(!hasInters)
 				{	// first intersection
@@ -920,8 +944,10 @@ void GlPlotRenderer::UpdatePicker()
 	}
 
 	m_bPickerNeedsUpdate = false;
-	t_vec3_gl vecClosestInters3 = tl2::create<t_vec3_gl>({vecClosestInters[0], vecClosestInters[1], vecClosestInters[2]});
-	t_vec3_gl vecClosestSphereInters3 = tl2::create<t_vec3_gl>({vecClosestSphereInters[0], vecClosestSphereInters[1], vecClosestSphereInters[2]});
+	t_vec3_gl vecClosestInters3 = tl2::create<t_vec3_gl>(
+		{vecClosestInters[0], vecClosestInters[1], vecClosestInters[2]});
+	t_vec3_gl vecClosestSphereInters3 = tl2::create<t_vec3_gl>(
+		{vecClosestSphereInters[0], vecClosestSphereInters[1], vecClosestSphereInters[2]});
 	emit PickerIntersection(hasInters ? &vecClosestInters3 : nullptr, objInters,
 		hasSphereInters ? &vecClosestSphereInters3 : nullptr);
 }
@@ -1008,7 +1034,10 @@ void GlPlotRenderer::DoPaintGL(qgl_funcs *pGl)
 	// options
 	pGl->glCullFace(GL_BACK);
 	pGl->glFrontFace(GL_CCW);
-	pGl->glEnable(GL_CULL_FACE);
+	if(m_bCull)
+		pGl->glEnable(GL_CULL_FACE);
+	else
+		pGl->glDisable(GL_CULL_FACE);
 
 	pGl->glDisable(GL_BLEND);
 
@@ -1068,7 +1097,8 @@ void GlPlotRenderer::DoPaintGL(qgl_funcs *pGl)
 		m_pShaders->setUniformValue(m_uniMatrixObj, obj.m_mat);
 
 		// set to untransformed coordinate system if the object is invariant
-		m_pShaders->setUniformValue(m_uniCoordSys, linkedObj->m_invariant ? 0 : m_iCoordSys.load());
+		m_pShaders->setUniformValue(m_uniCoordSys,
+			linkedObj->m_invariant ? 0 : m_iCoordSys.load());
 
 
 		// main vertex array object
@@ -1129,14 +1159,20 @@ void GlPlotRenderer::DoPaintNonGL(QPainter &painter)
 
 			std::ostringstream ostrF;
 			ostrF << f;
-			painter.drawText(GlToScreenCoords(tl2::create<t_vec_gl>({f,0.,0.,1.})), ostrF.str().c_str());
-			painter.drawText(GlToScreenCoords(tl2::create<t_vec_gl>({0.,f,0.,1.})), ostrF.str().c_str());
-			painter.drawText(GlToScreenCoords(tl2::create<t_vec_gl>({0.,0.,f,1.})), ostrF.str().c_str());
+			painter.drawText(GlToScreenCoords(
+				tl2::create<t_vec_gl>({f,0.,0.,1.})), ostrF.str().c_str());
+			painter.drawText(GlToScreenCoords(
+				tl2::create<t_vec_gl>({0.,f,0.,1.})), ostrF.str().c_str());
+			painter.drawText(GlToScreenCoords(
+				tl2::create<t_vec_gl>({0.,0.,f,1.})), ostrF.str().c_str());
 		}
 
-		painter.drawText(GlToScreenCoords(tl2::create<t_vec_gl>({m_CoordMax*t_real_gl(1.2), 0., 0., 1.})), "x");
-		painter.drawText(GlToScreenCoords(tl2::create<t_vec_gl>({0., m_CoordMax*t_real_gl(1.2), 0., 1.})), "y");
-		painter.drawText(GlToScreenCoords(tl2::create<t_vec_gl>({0., 0., m_CoordMax*t_real_gl(1.2), 1.})), "z");
+		painter.drawText(GlToScreenCoords(
+			tl2::create<t_vec_gl>({m_CoordMax*t_real_gl(1.2), 0., 0., 1.})), "x");
+		painter.drawText(GlToScreenCoords(
+			tl2::create<t_vec_gl>({0., m_CoordMax*t_real_gl(1.2), 0., 1.})), "y");
+		painter.drawText(GlToScreenCoords(
+			tl2::create<t_vec_gl>({0., 0., m_CoordMax*t_real_gl(1.2), 1.})), "z");
 	}
 
 
@@ -1216,9 +1252,11 @@ void GlPlotRenderer::paintGL()
 		if(auto *pContext = m_pPlot->context(); !pContext) return;
 
 #if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)
-		QMetaObject::invokeMethod(m_pPlot, &GlPlot::MoveContextToThread, Qt::ConnectionType::BlockingQueuedConnection);
+		QMetaObject::invokeMethod(m_pPlot,
+			&GlPlot::MoveContextToThread, Qt::ConnectionType::BlockingQueuedConnection);
 #else
-		QMetaObject::invokeMethod(m_pPlot, "MoveContextToThread", Qt::ConnectionType::BlockingQueuedConnection);
+		QMetaObject::invokeMethod(m_pPlot,
+			"MoveContextToThread", Qt::ConnectionType::BlockingQueuedConnection);
 #endif
 		if(!m_pPlot->IsContextInThread())
 		{
@@ -1274,8 +1312,10 @@ GlPlot::GlPlot(QWidget *pParent) : QOpenGLWidget(pParent),
 	{
 		m_renderer->moveToThread(m_thread_impl.get());
 
-		connect(m_thread_impl.get(), &QThread::started, m_renderer.get(), &GlPlotRenderer::startedThread);
-		connect(m_thread_impl.get(), &QThread::finished, m_renderer.get(), &GlPlotRenderer::stoppedThread);
+		connect(m_thread_impl.get(), &QThread::started,
+			m_renderer.get(), &GlPlotRenderer::startedThread);
+		connect(m_thread_impl.get(), &QThread::finished,
+			m_renderer.get(), &GlPlotRenderer::stoppedThread);
 	}
 
 	connect(this, &QOpenGLWidget::aboutToCompose, this, &GlPlot::beforeComposing);
@@ -1456,9 +1496,11 @@ void GlPlot::afterComposing()
 	{
 		m_mutex.unlock();
 #if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)
-		QMetaObject::invokeMethod(m_renderer.get(), &GlPlotRenderer::paintGL, Qt::ConnectionType::QueuedConnection);
+		QMetaObject::invokeMethod(m_renderer.get(),
+			&GlPlotRenderer::paintGL, Qt::ConnectionType::QueuedConnection);
 #else
-		QMetaObject::invokeMethod(m_renderer.get(), "paintGL", Qt::ConnectionType::QueuedConnection);
+		QMetaObject::invokeMethod(m_renderer.get(),
+			"paintGL", Qt::ConnectionType::QueuedConnection);
 #endif
 	}
 }

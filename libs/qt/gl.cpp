@@ -210,7 +210,9 @@ bool create_triangle_object(QOpenGLWidget* pGLWidget, GlRenderObj& obj,
 		obj.m_normals_buffer->create();
 		obj.m_normals_buffer->bind();
 
-		auto vecNorms = bUseVertsAsNorm ? to_float_array(triagverts, 1, 4, true, 0.) : to_float_array(norms, 3, 4, false, 0.);
+		auto vecNorms = bUseVertsAsNorm
+			? to_float_array(triagverts, 1, 4, true, 0.)
+			: to_float_array(norms, 3, 4, false, 0.);
 		obj.m_normals_buffer->allocate(
 			vecNorms.data(),
 			vecNorms.size()*sizeof(typename decltype(vecNorms)::value_type));
@@ -300,7 +302,8 @@ bool create_line_object(QOpenGLWidget* pGLWidget, GlRenderObj& obj,
 	obj.m_colour = colour;
 
 	// flatten vertex array into raw float array
-	auto to_float_array = [](const std::vector<t_vec3_gl>& verts, int iElems=3) -> std::vector<t_real_gl>
+	auto to_float_array = [](const std::vector<t_vec3_gl>& verts, int iElems=3)
+		-> std::vector<t_real_gl>
 	{
 		std::vector<t_real_gl> vecRet;
 		vecRet.reserve(verts.size()*iElems);

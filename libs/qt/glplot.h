@@ -104,6 +104,7 @@ protected:
 	std::atomic<bool> m_bPickerNeedsUpdate = false;
 	std::atomic<bool> m_bLightsNeedUpdate = false;
 	std::atomic<bool> m_bBTrafoNeedsUpdate = false;
+	std::atomic<bool> m_bCull = true;
 	std::atomic<int> m_iCoordSys = 0;
 	std::atomic<int> m_iScreenDims[2] = { 800, 600 };
 	t_real_gl m_pickerSphereRadius = 1;
@@ -205,6 +206,8 @@ public:
 	void SetCoordMax(t_real_gl d) { m_CoordMax = d; }
 
 	void SetLight(std::size_t idx, const t_vec3_gl& pos);
+
+	void SetCull(bool b) { m_bCull = b; }
 
 	void SetBTrafo(const t_mat_gl& matB, const t_mat_gl* matA = nullptr);
 	void SetCoordSys(int iSys);
