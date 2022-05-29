@@ -1991,7 +1991,7 @@ template<typename t_scalar>
 t_scalar rand()
 requires is_scalar<t_scalar> && (!is_complex<t_scalar>)
 {
-	return get_rand<t_scalar>();
+	return get_rand<t_scalar>(0, 1);
 };
 
 
