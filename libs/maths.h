@@ -4617,7 +4617,7 @@ requires is_vec<t_vec> && is_mat<t_mat>
  */
 template<class t_vec, class t_scalar = typename t_vec::value_type>
 requires is_vec<t_vec>
-t_vec perp(const t_vec& vec, t_scalar eps = std::numeric_limits<t_scalar>::eps())
+t_vec perp(const t_vec& vec, t_scalar eps = std::numeric_limits<t_scalar>::epsilon())
 {
 	if(vec.size() == 2)
 	{
@@ -8941,7 +8941,7 @@ requires is_quat<t_quat> && is_vec<t_vec>
 	else if(equals<t_vec>(vec0, -vec1))
 	{
 		t_vec vecPerp = perp<t_vec>(vec0);
-		return rotation_quat<t_quat, t_vec, T>(vecPerp, pi<T>);
+		return rotation_quat<t_vec, t_quat>(vecPerp, pi<T>);
 	}
 
 	// rotation axis from cross product
