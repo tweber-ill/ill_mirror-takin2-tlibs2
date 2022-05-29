@@ -963,7 +963,8 @@ void GlPlotRenderer::mouseMoveEvent(const QPointF& pos)
 
 		m_cam.Rotate(
 			diff.x() / 180. * tl2::pi<t_real_gl>,
-			diff.y() / 180. * tl2::pi<t_real_gl>);
+			diff.y() / 180. * tl2::pi<t_real_gl>,
+			m_restrict_cam_theta);
 		UpdateCam();
 	}
 	else

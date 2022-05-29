@@ -117,6 +117,7 @@ protected:
 	QPointF m_posMouse{};
 	QPointF m_posMouseRotationStart{}, m_posMouseRotationEnd{};
 	bool m_bInRotation = false;
+	bool m_restrict_cam_theta = true;
 
 	QTimer m_timer{};
 	t_cam m_cam{};
@@ -208,6 +209,7 @@ public:
 	void SetLight(std::size_t idx, const t_vec3_gl& pos);
 
 	void SetCull(bool b) { m_bCull = b; }
+	void SetRestrictCamTheta(bool b) { m_restrict_cam_theta = b; }
 
 	void SetBTrafo(const t_mat_gl& matB, const t_mat_gl* matA = nullptr);
 	void SetCoordSys(int iSys);

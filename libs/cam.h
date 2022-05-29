@@ -235,7 +235,7 @@ public:
 	/**
 	 * rotate the camera by the given delta angles
 	 */
-	void Rotate(t_real dphi, t_real dtheta)
+	void Rotate(t_real dphi, t_real dtheta, bool restrict_theta = true)
 	{
 		m_phi = dphi + m_phi_saved;
 		m_theta = dtheta + m_theta_saved;
@@ -250,8 +250,9 @@ public:
 		m_theta = std::fmod(m_theta, t_real(2)*tl2::pi<t_real>);
 
 		// restrict theta angle
-		m_theta = tl2::clamp<t_real>(
-			m_theta, -t_real(0.5)*tl2::pi<t_real>, 0.);
+		if(restrict_theta)
+			m_theta = tl2::clamp<t_real>(
+				m_theta, -t_real(0.5)*tl2::pi<t_real>, 0.);
 
 		m_trafo_needs_update = true;
 	}
