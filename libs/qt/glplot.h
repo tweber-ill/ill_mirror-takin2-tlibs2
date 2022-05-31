@@ -105,6 +105,7 @@ protected:
 	std::atomic<bool> m_bLightsNeedUpdate = false;
 	std::atomic<bool> m_bBTrafoNeedsUpdate = false;
 	std::atomic<bool> m_bCull = true;
+	std::atomic<bool> m_bBlend = false;
 	std::atomic<int> m_iCoordSys = 0;
 	std::atomic<int> m_iScreenDims[2] = { 800, 600 };
 	t_real_gl m_pickerSphereRadius = 1;
@@ -185,6 +186,9 @@ public:
 	std::size_t AddArrow(t_real_gl rad=1, t_real_gl h=1,
 		t_real_gl x=0, t_real_gl y=0, t_real_gl z=0,
 		t_real_gl r=0, t_real_gl g=0, t_real_gl b=0, t_real_gl a=1);
+	std::size_t AddPlane(t_real_gl nx=0, t_real_gl ny=0, t_real_gl nz=1,
+		t_real_gl x=0, t_real_gl y=0, t_real_gl z=1, t_real_gl size=10,
+		t_real_gl r=0, t_real_gl g=0, t_real_gl b=0, t_real_gl a=1);
 	std::size_t AddTriangleObject(const std::vector<t_vec3_gl>& triag_verts,
 		const std::vector<t_vec3_gl>& triag_norms,
 		t_real_gl r=0, t_real_gl g=0, t_real_gl b=0, t_real_gl a=1);
@@ -196,6 +200,7 @@ public:
 	void SetObjectDataString(std::size_t idx, const std::string& data);
 	void SetObjectVisible(std::size_t idx, bool visible);
 	void SetObjectHighlight(std::size_t idx, bool highlight);
+	void SetObjectPriority(std::size_t idx, int prio);
 
 	const t_mat_gl& GetObjectMatrix(std::size_t idx) const;
 	const std::string& GetObjectLabel(std::size_t idx) const;
@@ -209,6 +214,7 @@ public:
 	void SetLight(std::size_t idx, const t_vec3_gl& pos);
 
 	void SetCull(bool b) { m_bCull = b; }
+	void SetBlend(bool b) { m_bBlend = b; }
 	void SetRestrictCamTheta(bool b) { m_restrict_cam_theta = b; }
 
 	void SetBTrafo(const t_mat_gl& matB, const t_mat_gl* matA = nullptr);

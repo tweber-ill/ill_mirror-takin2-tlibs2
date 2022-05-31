@@ -197,6 +197,7 @@ struct GlPlotObj : public GlRenderObj
 	bool m_visible = true;		// object shown?
 	bool m_highlighted = false;	// object highlighted?
 	bool m_valid = true;		// object deleted?
+	int m_priority = 1;		// object rendering priority
 
 	t_vec3_gl m_labelPos = tl2::create<t_vec3_gl>({0., 0., 0.});
 	std::string m_label{};

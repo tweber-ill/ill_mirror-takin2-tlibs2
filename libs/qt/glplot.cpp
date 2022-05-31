@@ -197,6 +197,13 @@ void GlPlotRenderer::SetObjectHighlight(std::size_t idx, bool highlight)
 }
 
 
+void GlPlotRenderer::SetObjectPriority(std::size_t idx, int prio)
+{
+	if(idx >= m_objs.size()) return;
+	m_objs[idx].m_priority = prio;
+}
+
+
 bool GlPlotRenderer::GetObjectHighlight(std::size_t idx) const
 {
 	if(idx >= m_objs.size()) return 0;
@@ -235,7 +242,8 @@ std::size_t GlPlotRenderer::AddLinkedObject(std::size_t linkTo,
 }
 
 
-std::size_t GlPlotRenderer::AddSphere(t_real_gl rad, t_real_gl x, t_real_gl y, t_real_gl z,
+std::size_t GlPlotRenderer::AddSphere(
+	t_real_gl rad, t_real_gl x, t_real_gl y, t_real_gl z,
 	t_real_gl r, t_real_gl g, t_real_gl b, t_real_gl a)
 {
 	constexpr int numsubdivs = 2;
@@ -317,7 +325,7 @@ std::size_t GlPlotRenderer::AddArrow(t_real_gl rad, t_real_gl h,
 	QMutexLocker _locker{&m_mutexObj};
 
 	auto obj = CreateTriangleObject(std::get<0>(solid),
-		triagverts, norms, tl2::create<t_vec_gl>({r,g,b,a}), false);
+		triagverts, norms, tl2::create<t_vec_gl>({ r,g,b,a }), false);
 	obj.m_mat = tl2::get_arrow_matrix<t_vec_gl, t_mat_gl, t_real_gl>(
 		tl2::create<t_vec_gl>({1,0,0}), 1.,
 		tl2::create<t_vec_gl>({x,y,z}),
@@ -325,6 +333,32 @@ std::size_t GlPlotRenderer::AddArrow(t_real_gl rad, t_real_gl h,
 	obj.m_boundingSpherePos = std::move(boundingSpherePos);
 	obj.m_boundingSphereRad = boundingSphereRad;
 	obj.m_labelPos = tl2::create<t_vec3_gl>({0., 0., 0.75});
+	m_objs.emplace_back(std::move(obj));
+
+	return m_objs.size()-1;		// object handle
+}
+
+
+std::size_t GlPlotRenderer::AddPlane(
+	t_real_gl nx, t_real_gl ny, t_real_gl nz,
+	t_real_gl x, t_real_gl y, t_real_gl z, t_real_gl size,
+	t_real_gl r, t_real_gl g, t_real_gl b, t_real_gl a)
+{
+	t_vec3_gl norm = tl2::create<t_vec3_gl>({ nx, ny, nz });
+	norm /= tl2::norm<t_vec3_gl>(norm);
+
+	auto solid = tl2::create_plane<t_mat_gl, t_vec3_gl>(norm, size, size);
+	auto [triagverts, norms, uvs] = tl2::create_triangles<t_vec3_gl>(solid);
+	auto [boundingSpherePos, boundingSphereRad] =
+		tl2::bounding_sphere<t_vec3_gl>(triagverts);
+
+	QMutexLocker _locker{&m_mutexObj};
+
+	auto obj = CreateTriangleObject(std::get<0>(solid),
+		triagverts, norms, tl2::create<t_vec_gl>({ r,g,b,a }), false);
+	obj.m_mat = tl2::hom_translation<t_mat_gl>(x, y, z);
+	obj.m_boundingSpherePos = std::move(boundingSpherePos);
+	obj.m_boundingSphereRad = boundingSphereRad;
 	m_objs.emplace_back(std::move(obj));
 
 	return m_objs.size()-1;		// object handle
@@ -1040,7 +1074,15 @@ void GlPlotRenderer::DoPaintGL(qgl_funcs *pGl)
 	else
 		pGl->glDisable(GL_CULL_FACE);
 
-	pGl->glDisable(GL_BLEND);
+	if(m_bBlend)
+	{
+		pGl->glEnable(GL_BLEND);
+		pGl->glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	}
+	else
+	{
+		pGl->glDisable(GL_BLEND);
+	}
 
 	pGl->glEnable(GL_MULTISAMPLE);
 	pGl->glEnable(GL_LINE_SMOOTH);
@@ -1068,12 +1110,23 @@ void GlPlotRenderer::DoPaintGL(qgl_funcs *pGl)
 	m_pShaders->setUniformValue(m_uniMatrixCamInv, m_cam.GetInverseTransformation());
 
 
-	auto colOverride = tl2::create<t_vec_gl>({1,1,1,1});
-	auto colHighlight = tl2::create<t_vec_gl>({1,1,1,1});
+	auto colOverride = tl2::create<t_vec_gl>({ 1, 1, 1, 1 });
+	auto colHighlight = tl2::create<t_vec_gl>({ 1, 1, 1, 1 });
+
+	// get rendering order
+	std::vector<std::size_t> obj_order(m_objs.size());
+	std::iota(obj_order.begin(), obj_order.end(), 0);
+	std::stable_sort(obj_order.begin(), obj_order.end(),
+		[this](std::size_t idx1, std::size_t idx2) -> bool
+		{
+			return m_objs[idx1].m_priority >= m_objs[idx2].m_priority;
+		});
 
 	// render triangle geometry
-	for(const auto& obj : m_objs)
+	for(std::size_t obj_idx : obj_order)
 	{
+		const auto& obj = m_objs[obj_idx];
+
 		const GlPlotObj *linkedObj = &obj;
 		if(obj.linkedObj)
 		{
