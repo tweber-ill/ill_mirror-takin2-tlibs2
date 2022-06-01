@@ -3746,32 +3746,71 @@ requires is_basic_vec<t_vec>
  *
  * @see http://mathworld.wolfram.com/Line-PlaneIntersection.html
  */
-template<class t_vec>
-std::tuple<t_vec, int, typename t_vec::value_type>
+template<class t_vec, class t_real = typename t_vec::value_type>
+std::tuple<t_vec, int, t_real>
 intersect_line_plane(
 	const t_vec& lineOrg, const t_vec& lineDir,
-	const t_vec& planeNorm, typename t_vec::value_type plane_d)
+	const t_vec& planeNorm, t_real plane_d,
+	t_real eps = std::numeric_limits<t_real>::epsilon())
 requires is_vec<t_vec>
 {
-	using T = typename t_vec::value_type;
-
 	// are line and plane parallel?
-	const T dir_n = inner<t_vec>(lineDir, planeNorm);
-	if(equals<T>(dir_n, 0))
+	const t_real dir_n = inner<t_vec>(lineDir, planeNorm);
+	if(equals<t_real>(dir_n, 0, eps))
 	{
-		const T org_n = inner<t_vec>(lineOrg, planeNorm);
+		const t_real org_n = inner<t_vec>(lineOrg, planeNorm);
 		// line on plane?
-		if(equals<T>(org_n, plane_d))
-			return std::make_tuple(t_vec(), 2, T(0));
+		if(equals<t_real>(org_n, plane_d, eps))
+			return std::make_tuple(t_vec(), 2, t_real(0));
 		// no intersection
-		return std::make_tuple(t_vec(), 0, T(0));
+		return std::make_tuple(t_vec(), 0, t_real(0));
 	}
 
-	const T org_n = inner<t_vec>(lineOrg, planeNorm);
-	const T lam = (plane_d - org_n) / dir_n;
+	const t_real org_n = inner<t_vec>(lineOrg, planeNorm);
+	const t_real lam = (plane_d - org_n) / dir_n;
 
 	const t_vec vecInters = lineOrg + lam*lineDir;
 	return std::make_tuple(vecInters, 1, lam);
+}
+
+
+/**
+ * intersection of plane <x|n> = d and a polygon
+ * @return vertices of plane - polygon edge intersections
+ */
+template<class t_vec, class t_real = typename t_vec::value_type,
+	template<class...> class t_cont>
+t_cont<t_vec> intersect_plane_poly(
+	const t_vec& planeNorm, t_real plane_d,
+	const t_cont<t_vec>& polyVerts,
+	t_real eps = std::numeric_limits<t_real>::epsilon())
+requires is_vec<t_vec>
+{
+	t_cont<t_vec> edgeInters;
+
+	// intersect with each polygon edge
+	for(std::size_t i = 0; i < polyVerts.size(); ++i)
+	{
+		std::size_t j = (i+1) % polyVerts.size();
+
+		t_vec lineOrg = polyVerts[i];
+		t_vec lineDir = polyVerts[j] - lineOrg;
+
+		auto [pos, ty, lam] = intersect_line_plane(
+			lineOrg, lineDir, planeNorm, plane_d, eps);
+
+		if(ty == 1 && lam >= 0. && lam < 1.)
+		{
+			edgeInters.emplace_back(std::move(pos));
+		}
+		if(ty == 2)
+		{
+			edgeInters.push_back(polyVerts[i]);
+			edgeInters.push_back(polyVerts[j]);
+		}
+	}
+
+	return edgeInters;
 }
 
 
