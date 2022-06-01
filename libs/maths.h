@@ -1810,7 +1810,8 @@ template<class t_obj, template<class...> class t_cont = std::vector>
 t_cont<t_obj> remove_duplicates(const t_cont<t_obj>& objs,
 	typename t_obj::value_type eps = std::numeric_limits<typename t_obj::value_type>::epsilon())
 {
-	t_cont<t_obj> newobjs = objs;
+	t_cont<t_obj> newobjs;
+	newobjs.reserve(objs.size());
 
 	for(const auto& elem : objs)
 	{
