@@ -63,7 +63,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(test_expr_real, t_real, t_types_real)
 	std::vector<t_real> vals{{amp*t_real{1.2}, freq*t_real{0.8}, offs*t_real{0.9}}};
 	std::vector<t_real> errs{{0.5, 0.1, 1.}};
 	std::vector<bool> fixed{false, false, false};
-	
+
 	bool ok = tl2::fit<t_real, 4>(func, xs, ys, yerrs, params, vals, errs, &fixed);
 
 	BOOST_TEST(ok);

@@ -6096,7 +6096,7 @@ requires is_mat<t_mat>
  * is mat a centering matrix in homogeneous coords?
  */
 template<class t_mat, class t_real = typename t_mat::value_type>
-bool hom_is_centering(const t_mat& mat,
+bool hom_is_centring(const t_mat& mat,
 	t_real eps = std::numeric_limits<t_real>::epsilon())
 requires is_mat<t_mat>
 {
