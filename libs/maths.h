@@ -2355,8 +2355,8 @@ requires is_basic_vec<t_vec>
 {
 	using t_elem = typename t_vec::value_type;
 
-	for(t_real& d : vec)
-		set_eps_0<t_elem>(d, eps);
+	for(std::size_t i=0; i<vec.size(); ++i)
+		set_eps_0<t_elem>(vec[i], eps);
 };
 
 
