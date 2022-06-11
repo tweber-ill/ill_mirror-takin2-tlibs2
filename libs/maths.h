@@ -837,6 +837,34 @@ std::tuple<T,T> stereographic_proj(T twophi_crys, T twotheta_crys, T rad)
 // ----------------------------------------------------------------------------
 // adapters
 // ----------------------------------------------------------------------------
+/**
+ * vector-like access adapter to a matrix
+ */
+template<class t_mat> requires is_basic_mat<t_mat>
+class matvec_adapter
+{
+public:
+	using value_type = typename t_mat::value_type;
+	using size_type = decltype(t_mat{}.size1());
+
+public:
+	matvec_adapter(const t_mat &mat) : m_mat{mat} {}
+	~matvec_adapter() = default;
+
+	size_type size() const { return m_mat.size1() * m_mat.size2(); }
+
+	const value_type& operator[](size_type i) const
+	{
+		size_type row = i/m_mat.size2();
+		size_type col = i%m_mat.size2();
+
+		return m_mat(row, col);
+	}
+
+private:
+	const t_mat& m_mat;
+};
+
 
 template<typename size_t, size_t N, typename T, template<size_t, size_t, class...> class t_mat_base>
 class qvec_adapter : public t_mat_base<1, N, T>
@@ -3456,8 +3484,8 @@ requires is_vec<t_vec>
 /**
  * submatrix removing a column/row from a matrix stored in a vector container
  */
-template<class t_vec>
-t_vec flat_submat(const t_vec& mat,
+template<class t_vec, class t_matvec = t_vec>
+t_vec flat_submat(const t_matvec& mat,
 	std::size_t iNumRows, std::size_t iNumCols,
 	std::size_t iRemRow, std::size_t iRemCol)
 requires is_basic_vec<t_vec>
@@ -3577,8 +3605,8 @@ requires is_basic_mat<t_mat> && is_dyn_mat<t_mat>
  * determinant from a square matrix stored in a vector container
  * @see (Merziger 2006), p. 185
  */
-template<class t_vec>
-typename t_vec::value_type flat_det(const t_vec& mat, std::size_t iN)
+template<class t_vec, class t_matvec = t_vec>
+typename t_vec::value_type flat_det(const t_matvec& mat, std::size_t iN)
 requires is_basic_vec<t_vec>
 {
 	using T = typename t_vec::value_type;
@@ -3620,7 +3648,8 @@ requires is_basic_vec<t_vec>
 			continue;
 
 		const T sgn = ((iRow+iCol) % 2) == 0 ? T(1) : T(-1);
-		const t_vec subMat = flat_submat<t_vec>(mat, iN, iN, iRow, iCol);
+		const t_vec subMat = flat_submat<t_vec, t_matvec>(
+			mat, iN, iN, iRow, iCol);
 		const T subDet = flat_det<t_vec>(subMat, iN-1) * sgn;
 
 		fullDet += elem * subDet;
@@ -8269,7 +8298,7 @@ requires is_mat<t_mat>
 	using t_vec = std::vector<T>;
 	const std::size_t N = mat.size1();
 
-	const t_vec matFlat = convert<t_vec, t_mat>(mat);
+	const auto& matFlat = matvec_adapter<t_mat>{mat};
 	const T fullDet = flat_det<t_vec>(matFlat, N);
 
 	// fail if determinant is zero
@@ -8343,7 +8372,7 @@ requires is_mat<t_mat>
 
 #else
 
-	std::vector<T> matFlat = convert<std::vector<T>, t_mat>(mat);
+	const auto& matFlat = matvec_adapter<t_mat>{mat};
 	return flat_det<std::vector<T>>(matFlat, mat.size1());
 
 #endif
