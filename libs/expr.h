@@ -267,7 +267,7 @@ public:
 		}
 
 		if(m_stack.size() != 1)
-			throw std::runtime_error("Result not on stack");
+			throw std::runtime_error("Result not on stack.");
 		t_num result = m_stack.top(); m_stack.pop();
 		return result;
 	}
