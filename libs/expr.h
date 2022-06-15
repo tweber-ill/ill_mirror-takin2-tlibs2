@@ -580,11 +580,17 @@ public:
 
 		m_istr = std::make_shared<std::istringstream>(str);
 		next_lookahead();
+
+		// no input given?
+		bool at_eof = (m_lookahead == (int)Token::TOK_INVALID || m_lookahead == (int)Token::TOK_END);
+		if(at_eof)
+			return false;
+
 		m_ast = plus_term();
 
 		// check if there would be are more tokens available?
 		next_lookahead();
-		bool at_eof = (m_lookahead == (int)Token::TOK_INVALID || m_lookahead == (int)Token::TOK_END);
+		at_eof = (m_lookahead == (int)Token::TOK_INVALID || m_lookahead == (int)Token::TOK_END);
 		if(!at_eof)
 			throw std::underflow_error("Not all input tokens have been consumed.");
 
