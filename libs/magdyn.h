@@ -123,9 +123,9 @@ struct ExchangeTermCalc
  */
 struct ExternalField
 {
+	bool align_spins{};      // align spins along external field
 	t_vec_real dir{};        // field direction
 	t_real mag{};            // field magnitude
-	bool align_spins{};      // align spins along external field
 };
 
 
@@ -532,7 +532,8 @@ public:
 		m_sites_calc.clear();
 		m_sites_calc.reserve(num_sites);
 
-		bool use_field = !tl2::equals_0<t_real>(m_field.mag, m_eps)
+		bool use_field =
+			(!tl2::equals_0<t_real>(m_field.mag, m_eps) || m_field.align_spins)
 			&& m_field.dir.size() == 3;
 
 		if(use_field)
@@ -1125,7 +1126,6 @@ public:
 			//tl2::niceprint(std::cout, E, 1e-4, 4);
 			//tl2::niceprint(std::cout, L, 1e-4, 4);
 			//std::cout << std::endl;
-
 
 			/*std::cout << "Y = np.zeros(3*3*4*4, dtype=complex).reshape((4,4,3,3))" << std::endl;
 			std::cout << "V = np.zeros(3*3*4*4, dtype=complex).reshape((4,4,3,3))" << std::endl;
