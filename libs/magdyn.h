@@ -367,12 +367,6 @@ public:
 	}
 
 
-	const t_vec& GetBraggPeak() const
-	{
-		return m_bragg;
-	}
-
-
 	t_real GetTemperature() const
 	{
 		return m_temperature;
@@ -481,14 +475,6 @@ public:
 		term.index = GetExchangeTerms().size();
 		m_exchange_terms.emplace_back(
 			std::forward<ExchangeTerm&&>(term));
-	}
-
-
-	void SetBraggPeak(t_real h, t_real k, t_real l)
-	{
-		m_bragg = tl2::create<t_vec>({h, k, l});
-
-		// call CalcAtomSites() afterwards to calculate projector
 	}
 
 
@@ -1724,17 +1710,6 @@ public:
 		// temperature
 		m_temperature = node.get<t_real>("temperature", -1.);
 
-		// bragg peak
-		if(auto bragg = node.get_child_optional("bragg"); bragg)
-		{
-			m_bragg = tl2::create<t_vec>(
-			{
-				bragg->get<t_real>("h", 1.),
-				bragg->get<t_real>("k", 0.),
-				bragg->get<t_real>("l", 0.),
-			});
-		}
-
 		// ordering vector
 		if(auto ordering = node.get_child_optional("ordering"); ordering)
 		{
@@ -1778,14 +1753,6 @@ public:
 		node.put<t_real>("field.direction_l", m_field.dir[2]);
 		node.put<t_real>("field.magnitude", m_field.mag);
 		node.put<bool>("field.align_spins", m_field.align_spins);
-
-		// bragg peak
-		if(m_bragg.size() == 3)
-		{
-			node.put<t_real>("bragg.h", m_bragg[0].real());
-			node.put<t_real>("bragg.k", m_bragg[1].real());
-			node.put<t_real>("bragg.l", m_bragg[2].real());
-		}
 
 		// ordering vector
 		if(m_ordering.size() == 3)
@@ -1874,9 +1841,6 @@ private:
 	bool m_is_incommensurate{false};
 
 	bool m_unite_degenerate_energies{true};
-
-	// bragg peak needed for calculating projector
-	t_vec m_bragg{};
 
 	// temperature (-1: disable bose factor)
 	t_real m_temperature{-1};
