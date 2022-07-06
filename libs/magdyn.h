@@ -262,6 +262,9 @@ public:
 	MagDyn() = default;
 	~MagDyn() = default;
 
+	MagDyn(const MagDyn&) = default;
+	MagDyn& operator=(const MagDyn&) = default;
+
 
 	// --------------------------------------------------------------------
 	// cleanup functions
