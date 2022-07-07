@@ -193,7 +193,7 @@ std::tuple<t_vec, t_vec> spin_to_uv_real(const t_vec_real& spin_re,
 	zdir[2] = 1;
 
 	t_mat_real _rot = tl2::rotation<t_mat_real, t_vec_real>(
- 		spin_re, zdir, rotaxis, eps, false);
+		spin_re, zdir, rotaxis, eps);
 
 #ifdef TL2_MAG_USE_COMPLEX_SPIN
 	// TODO: correctly unite matrix
@@ -224,6 +224,7 @@ std::tuple<t_vec, t_vec> spin_to_uv(const t_vec& spin_dir,
 		tl2::split_cplx<t_vec, t_vec_real>(spin_dir);
 #endif
 
+	//spin_re /= tl2::norm<t_vec_real>(spin_re);
 	return spin_to_uv_real<t_mat, t_vec, t_cplx, t_vec_real>(spin_re, eps, rotaxis);
 }
 
@@ -544,7 +545,7 @@ public:
 			// rotate field to [001] direction
 			m_rot_field = tl2::convert<t_mat>(
 				tl2::rotation<t_mat_real, t_vec_real>(
-					-m_field.dir, zdir, &m_rotaxis, m_eps, false));
+					-m_field.dir, zdir, &m_rotaxis, m_eps));
 
 			/*std::cout << "Field rotation from:\n";
 			tl2::niceprint(std::cout, -m_field.dir, 1e-4, 4);
@@ -581,7 +582,7 @@ public:
 					}
 					else
 					{
-						std::cerr << "Error parsing \""
+						std::cerr << "Error parsing in spin direction \""
 							<< site.spin_dir[dir_idx]
 							<< "\"." << std::endl;
 					}
@@ -645,7 +646,7 @@ public:
 				}
 				else
 				{
-					std::cerr << "Error parsing \""
+					std::cerr << "Error parsing J term \""
 						<< term.J << "\"."
 						<< std::endl;
 				}
@@ -664,7 +665,7 @@ public:
 					}
 					else
 					{
-						std::cerr << "Error parsing \""
+						std::cerr << "Error parsing DMI term \""
 							<< term.dmi[dmi_idx]
 							<< "\"." << std::endl;
 					}

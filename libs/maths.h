@@ -4754,6 +4754,7 @@ requires is_vec<t_vec> && is_mat<t_mat>
 
 /**
  * matrix to rotate vector vec1 into vec2
+ * (the vectors do not need to be normalised)
  * @see (Zhelezov 2017) O. I. Zhelezov, American Journal of Computational and Applied Mathematics 7(2), pp. 51-57 (2017), doi: 10.5923/j.ajcam.20170702.04
  */
 template<class t_mat, class t_vec, class t_real = typename t_vec::value_type>
@@ -4769,8 +4770,8 @@ requires is_vec<t_vec> && is_mat<t_mat>
 	// 2-dim case
 	if(dim == 2)
 	{
-		t_real angle = std::atan2(vec2[1], vec2[0]) -
-		std::atan2(vec1[1], vec1[0]);
+		t_real angle = std::atan2(vec2[1], vec2[0])
+			     - std::atan2(vec1[1], vec1[0]);
 
 		return rotation_2d<t_mat>(angle);
 	}
