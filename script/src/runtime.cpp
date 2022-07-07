@@ -161,7 +161,7 @@ int ext_equals(t_real x, t_real y, t_real eps)
 void ext_submat(const t_real* M, t_int N, t_real* M_new, t_int iremove, t_int jremove)
 {
 	t_vec mat(N*N, M);
-	t_vec submat = tl2::flat_submat(mat, N, N, iremove, jremove);
+	t_vec submat = tl2::flat_submat<t_vec>(mat, N, N, iremove, jremove);
 	submat.to_array(M_new);
 }
 

@@ -91,7 +91,7 @@ add_executable(mcalc
 )
 
 #add_dependencies(parser parser_impl lexer_impl)
-target_link_libraries(mcalc ${Boost_LIBRARIES})
+target_link_libraries(mcalc ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
 
 
 
