@@ -1399,8 +1399,8 @@ public:
 				}
 
 				// apply the orthogonal projector for magnetic neutron scattering
-				S_perp = (proj_neutron * tl2::herm(S)) * (S * proj_neutron);
-				//S_perp = proj_neutron * S;
+				//S_perp = (proj_neutron * tl2::herm(S)) * (S * proj_neutron);
+				S_perp = proj_neutron * S * proj_neutron;
 
 				// weights
 				w_SF1 = std::abs(S_perp(0, 0).real());
