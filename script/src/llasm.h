@@ -277,6 +277,7 @@ void LLAsm::generate_loop(t_funcCond funcCond, t_funcBody funcBody, std::optiona
 	std::string labelStart = get_label();
 	std::string labelBegin = get_label();
 	std::string labelEnd = get_label();
+	std::string block = get_label();
 	std::string labelFooter{};
 
 	Func& actfunc = m_funcstack.top();
@@ -292,6 +293,7 @@ void LLAsm::generate_loop(t_funcCond funcCond, t_funcBody funcBody, std::optiona
 	(*m_ostr) << ";-------------------------------------------------------------\n";
 	(*m_ostr) << "br label %" << labelStart << "\n";
 	(*m_ostr) << labelStart << ":\n";
+	(*m_ostr) << "%" << block << " = call i8* @llvm.stacksave()\n";
 	t_astret cond = funcCond();
 	(*m_ostr) << "br i1 %" << cond->name << ", label %" << labelBegin << ", label %" << labelEnd << "\n";
 
@@ -300,6 +302,7 @@ void LLAsm::generate_loop(t_funcCond funcCond, t_funcBody funcBody, std::optiona
 	(*m_ostr) << ";-------------------------------------------------------------\n";
 	(*m_ostr) << labelBegin << ":\n";
 	funcBody();
+	(*m_ostr) << "call void @llvm.stackrestore(i8* %" << block << ")\n";
 	(*m_ostr) << ";-------------------------------------------------------------\n";
 
 	if(funcFooter)
@@ -315,6 +318,7 @@ void LLAsm::generate_loop(t_funcCond funcCond, t_funcBody funcBody, std::optiona
 
 	(*m_ostr) << "br label %" << labelStart << "\n";
 	(*m_ostr) << labelEnd << ":\n";
+	(*m_ostr) << "call void @llvm.stackrestore(i8* %" << block << ")\n";
 	(*m_ostr) << ";-------------------------------------------------------------\n\n";
 
 	if(funcFooter)

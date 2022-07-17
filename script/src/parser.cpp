@@ -302,6 +302,9 @@ int main(int argc, char** argv)
 		(*ostr) << "\n" << R"START(
 ; -----------------------------------------------------------------------------
 ; further imported external functions
+declare i8* @llvm.stacksave()
+declare void @llvm.stackrestore(i8*)
+
 declare i8* @strncpy(i8*, i8*, i64)
 declare i8* @strncat(i8*, i8*, i64)
 declare i32 @strncmp(i8*, i8*, i64)

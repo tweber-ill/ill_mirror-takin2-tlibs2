@@ -30,7 +30,7 @@
 #include "log.h"
 #include <iomanip>
 #include <boost/date_time/c_time.hpp>
-#if !defined(NDEBUG)
+#if !defined(NDEBUG) && defined(_GNU_SOURCE)
 	#include <boost/stacktrace.hpp>
 #endif
 
