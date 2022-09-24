@@ -49,6 +49,7 @@
 #include <string>
 #include <algorithm>
 #include <limits>
+#include <type_traits>
 
 #include "log.h"
 #include "expr.h"
@@ -64,8 +65,8 @@ namespace tl2 {
 // @see http://seal.cern.ch/documents/minuit/mnusersguide.pdf
 // ----------------------------------------------------------------------------
 #ifdef __TLIBS2_USE_MINUIT__
-using t_real_min = typename std::result_of<
-	decltype(&ROOT::Minuit2::MnFcn::Up)(ROOT::Minuit2::MnFcn)>::type;
+using t_real_min = std::invoke_result_t<
+	decltype(&ROOT::Minuit2::MnFcn::Up), ROOT::Minuit2::MnFcn>;
 
 
 // ----------------------------------------------------------------------------

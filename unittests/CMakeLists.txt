@@ -66,7 +66,7 @@ add_definitions(-DUSE_LAPACK)
 # further packages
 find_package(Minuit2 REQUIRED)
 find_package(Threads REQUIRED)
-find_package(OpenMP REQUIRED)
+#find_package(OpenMP REQUIRED)
 # -----------------------------------------------------------------------------
 
 
@@ -106,9 +106,9 @@ target_link_libraries(leastsq ${Lapacke_LIBRARIES})
 target_link_libraries(eig ${Lapacke_LIBRARIES})
 target_link_libraries(chol ${Lapacke_LIBRARIES})
 target_link_libraries(ode ${Lapacke_LIBRARIES})
-target_link_libraries(min0 ${Minuit2_LIBRARIES} Threads::Threads OpenMP::OpenMP_CXX)
-target_link_libraries(fit0 ${Minuit2_LIBRARIES} Threads::Threads OpenMP::OpenMP_CXX)
-target_link_libraries(fit1 ${Minuit2_LIBRARIES} OpenMP::OpenMP_CXX)
+target_link_libraries(min0 ${Minuit2_LIBRARIES} Threads::Threads) #OpenMP::OpenMP_CXX)
+target_link_libraries(fit0 ${Minuit2_LIBRARIES} Threads::Threads) #OpenMP::OpenMP_CXX)
+target_link_libraries(fit1 ${Minuit2_LIBRARIES}) #OpenMP::OpenMP_CXX)
 # -----------------------------------------------------------------------------
 
 

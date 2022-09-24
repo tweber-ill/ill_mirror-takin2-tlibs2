@@ -36,7 +36,7 @@
 
 // parser options
 %skeleton "lalr1.cc"
-%glr-parser
+//%glr-parser
 %require "3.2"
 
 %define api.parser.class { Parser }

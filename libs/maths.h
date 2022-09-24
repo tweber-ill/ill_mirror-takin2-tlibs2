@@ -8093,7 +8093,7 @@ requires tl2::is_mat<t_mat>
 		}
 		else
 		{
-			static_assert(tl2::bool_value<t_real>, "Invalid element type");
+			static_assert(tl2::bool_value<0, t_real>, "Invalid element type");
 			//throw std::domain_error("Invalid element type.");
 		}
 	}
