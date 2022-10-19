@@ -1418,11 +1418,13 @@ bool FilePsi<t_real>::MergeWith(const FileInstrBase<t_real>* pDat)
 	return true;
 }
 
-// TODO
 template<class t_real>
 bool FilePsi<t_real>::IsKiFixed() const
 {
-	return 0;
+	typename t_mapIParams::const_iterator iter = m_mapParameters.find("FX");
+	t_real val = (iter!=m_mapParameters.end() ? iter->second : 2.);
+
+	return equals<t_real>(val, 1., 0.25);
 }
 
 template<class t_real>
