@@ -7066,17 +7066,17 @@ requires is_basic_mat<t_mat>
  * wrap atom positions back to unit cell
  */
 template<class t_vec, class t_real = typename t_vec::value_type>
-t_vec keep_atom_in_uc(const t_vec& _atom)
+t_vec keep_atom_in_uc(const t_vec& _atom, std::size_t dim = 3)
 requires is_vec<t_vec>
 {
-	auto newatom = _atom;
+	t_vec newatom = _atom;
 
-	for(std::size_t i=0; i<newatom.size(); ++i)
+	for(std::size_t i=0; i</*newatom.size()*/ dim; ++i)
 	{
 		newatom[i] = std::fmod(newatom[i], t_real{1});
-		if(newatom[i] < t_real{-0.5})
+		if(newatom[i] <= t_real{-0.5})
 			newatom[i] += std::abs(std::floor(newatom[i]));
-		if(newatom[i] >= t_real{0.5})
+		if(newatom[i] > t_real{0.5})
 			newatom[i] -= std::abs(std::ceil(newatom[i]));
 	}
 
@@ -7090,14 +7090,14 @@ requires is_vec<t_vec>
  */
 template<class t_vec, class t_real = typename t_vec::value_type,
 	template<class...> class t_cont = std::vector>
-t_cont<t_vec> keep_atoms_in_uc(const t_cont<t_vec>& _atoms)
+t_cont<t_vec> keep_atoms_in_uc(const t_cont<t_vec>& _atoms, std::size_t dim = 3)
 requires is_vec<t_vec>
 {
 	t_cont<t_vec> newatoms;
 	newatoms.reserve(_atoms.size());
 
 	for(const auto& _atom : _atoms)
-		newatoms.emplace_back(keep_atom_in_uc<t_vec, t_real>(_atom));
+		newatoms.emplace_back(keep_atom_in_uc<t_vec, t_real>(_atom, dim));
 
 	return newatoms;
 }
@@ -7111,13 +7111,14 @@ template<class t_vec, class t_real = typename t_vec::value_type,
 	template<class...> class t_cont = std::vector>
 std::tuple<bool, std::size_t, t_vec>
 get_supercell(const t_vec& sc_pos, const t_cont<t_vec>& _uc_sites,
+	std::size_t dim = 3,
 	t_real eps = std::numeric_limits<t_real>::eps())
 requires is_vec<t_vec>
 {
-	t_cont<t_vec> uc_sites = keep_atoms_in_uc<t_vec, t_real, t_cont>(_uc_sites);
+	t_cont<t_vec> uc_sites = keep_atoms_in_uc<t_vec, t_real, t_cont>(_uc_sites, dim);
 
 	// unit cell position corresponding to supercell position
-	t_vec uc_pos = keep_atom_in_uc<t_vec, t_real>(sc_pos);
+	t_vec uc_pos = keep_atom_in_uc<t_vec, t_real>(sc_pos, dim);
 
 	// get corresponding unit cell index
 	bool found = false;
@@ -7145,7 +7146,8 @@ requires is_vec<t_vec>
 template<class t_vec, class t_mat, class t_real = typename t_vec::value_type,
 	template<class...> class t_cont = std::vector>
 t_cont<t_vec> apply_ops_hom(const t_vec& _atom, const t_cont<t_mat>& ops,
-	t_real eps=std::numeric_limits<t_real>::epsilon(), bool keepInUnitCell = true)
+	t_real eps=std::numeric_limits<t_real>::epsilon(),
+	bool keepInUnitCell = true, bool ignore_occupied = false, bool ret_hom = false)
 requires is_vec<t_vec> && is_mat<t_mat>
 {
 	// in homogeneous coordinates
@@ -7159,13 +7161,18 @@ requires is_vec<t_vec> && is_mat<t_mat>
 	for(const auto& op : ops)
 	{
 		auto newatom = op*atom;
-		newatom.resize(3);
+
+		// return a homogeneous 4-vector or a 3-vector
+		if(!ret_hom)
+			newatom.resize(3);
 
 		if(keepInUnitCell)
-			newatom = keep_atom_in_uc<t_vec>(newatom);
+			newatom = keep_atom_in_uc<t_vec>(newatom, 3);
 
 		// position already occupied?
-		if(std::find_if(newatoms.begin(), newatoms.end(), [&newatom, eps](const t_vec& vec)->bool
+		if(ignore_occupied ||
+			std::find_if(newatoms.begin(), newatoms.end(),
+				[&newatom, eps](const t_vec& vec) -> bool
 		{
 			return tl2::equals<t_vec>(vec, newatom, eps);
 		}) == newatoms.end())
