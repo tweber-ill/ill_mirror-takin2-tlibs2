@@ -7105,12 +7105,47 @@ requires is_vec<t_vec>
 
 
 /**
+ * get the supercell vector and the unitcell atom index from a supercell atom position
+ */
+template<class t_vec, class t_real = typename t_vec::value_type,
+	template<class...> class t_cont = std::vector>
+std::tuple<bool, std::size_t, t_vec>
+get_supercell(const t_vec& sc_pos, const t_cont<t_vec>& _uc_sites,
+	t_real eps = std::numeric_limits<t_real>::eps())
+requires is_vec<t_vec>
+{
+	t_cont<t_vec> uc_sites = keep_atoms_in_uc<t_vec, t_real, t_cont>(_uc_sites);
+
+	// unit cell position corresponding to supercell position
+	t_vec uc_pos = keep_atom_in_uc<t_vec, t_real>(sc_pos);
+
+	// get corresponding unit cell index
+	bool found = false;
+	std::size_t uc_site_idx = 0;
+	t_vec sc_vec = sc_pos - uc_pos;
+
+	if(auto iter = std::find_if(uc_sites.begin(), uc_sites.end(),
+		[&uc_pos, &eps](const t_vec& vec) -> bool
+	{
+		return equals<t_vec>(uc_pos, vec, eps);
+	}); iter != uc_sites.end())
+	{
+		found = true;
+		uc_site_idx = iter - uc_sites.begin();
+	}
+
+	return std::make_tuple(found, uc_site_idx, sc_vec);
+}
+
+
+
+/**
  * create positions using the given symmetry operations
  */
 template<class t_vec, class t_mat, class t_real = typename t_vec::value_type,
 	template<class...> class t_cont = std::vector>
 t_cont<t_vec> apply_ops_hom(const t_vec& _atom, const t_cont<t_mat>& ops,
-	t_real eps=std::numeric_limits<t_real>::epsilon(), bool bKeepInUnitCell=true)
+	t_real eps=std::numeric_limits<t_real>::epsilon(), bool keepInUnitCell = true)
 requires is_vec<t_vec> && is_mat<t_mat>
 {
 	// in homogeneous coordinates
@@ -7126,7 +7161,7 @@ requires is_vec<t_vec> && is_mat<t_mat>
 		auto newatom = op*atom;
 		newatom.resize(3);
 
-		if(bKeepInUnitCell)
+		if(keepInUnitCell)
 			newatom = keep_atom_in_uc<t_vec>(newatom);
 
 		// position already occupied?
