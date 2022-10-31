@@ -18,6 +18,9 @@
 #ifndef __TLIBS2_MAGDYN_H__
 #define __TLIBS2_MAGDYN_H__
 
+//#define USE_LAPACK 1
+//#define TL2_MAG_USE_COMPLEX_SPIN
+
 #include <vector>
 #include <tuple>
 #include <string>
@@ -32,15 +35,12 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/xml_parser.hpp>
 
-#define USE_LAPACK 1
 #include "maths.h"
 #include "units.h"
 #include "phys.h"
 #include "algos.h"
 #include "expr.h"
 
-
-//#define TL2_MAG_USE_COMPLEX_SPIN
 
 namespace tl2_mag {
 
@@ -75,7 +75,8 @@ template<class t_mat, class t_vec,
 	class t_mat_real, class t_vec_real,
 	class t_cplx = typename t_mat::value_type,
 	class t_real = typename t_mat_real::value_type>
-requires tl2::is_mat<t_mat> && tl2::is_vec<t_vec>
+requires tl2::is_mat<t_mat> && tl2::is_vec<t_vec> &&
+	tl2::is_mat<t_mat_real> && tl2::is_vec<t_vec_real>
 std::tuple<t_vec, t_vec> spin_to_uv_real(const t_vec_real& spin_re,
 	t_real eps = std::numeric_limits<t_real>::epsilon(),
 	const t_vec_real *rotaxis = nullptr)
@@ -105,7 +106,8 @@ template<class t_mat, class t_vec,
 	class t_mat_real, class t_vec_real,
 	class t_cplx = typename t_mat::value_type,
 	class t_real = typename t_mat_real::value_type>
-requires tl2::is_mat<t_mat> && tl2::is_vec<t_vec>
+requires tl2::is_mat<t_mat> && tl2::is_vec<t_vec> &&
+	tl2::is_mat<t_mat_real> && tl2::is_vec<t_vec_real>
 std::tuple<t_vec, t_vec> spin_to_uv(const t_vec& spin_dir,
 	t_real eps = std::numeric_limits<t_real>::epsilon(),
 	const t_vec_real *rotaxis = nullptr)
@@ -158,6 +160,8 @@ template<
 	class t_cplx = typename t_mat::value_type,
 	class t_real = typename t_mat_real::value_type,
 	class t_size = std::size_t>
+requires tl2::is_mat<t_mat> && tl2::is_vec<t_vec> &&
+	tl2::is_mat<t_mat_real> && tl2::is_vec<t_vec_real>
 class MagDyn
 {
 public:
@@ -498,6 +502,24 @@ public:
 	// --------------------------------------------------------------------
 
 
+	// --------------------------------------------------------------------
+	/**
+	 * get an expression parser object with registered variables
+	 */
+	tl2::ExprParser<t_cplx> GetExprParser() const
+	{
+		tl2::ExprParser<t_cplx> parser;
+
+		// register all variables
+		parser.SetAutoregisterVariables(false);
+		for(const Variable& var : m_variables)
+			parser.register_var(var.name, var.value);
+
+		return parser;
+	}
+	// --------------------------------------------------------------------
+
+
 	/**
 	 * get the needed supercell ranges from the exchange terms
 	 */
@@ -553,10 +575,7 @@ public:
 			std::cout << std::endl;*/
 		}
 
-		tl2::ExprParser<t_cplx> parser;
-		parser.SetAutoregisterVariables(false);
-		for(const Variable& var : m_variables)
-			parser.register_var(var.name, var.value);
+		tl2::ExprParser parser = GetExprParser();
 
 		for(t_size site_idx=0; site_idx<m_sites.size(); ++site_idx)
 		{
@@ -621,10 +640,7 @@ public:
 		if(num_terms == 0)
 			return;
 
-		tl2::ExprParser<t_cplx> parser;
-		parser.SetAutoregisterVariables(false);
-		for(const Variable& var : m_variables)
-			parser.register_var(var.name, var.value);
+		tl2::ExprParser parser = GetExprParser();
 
 		m_exchange_terms_calc.clear();
 		m_exchange_terms_calc.reserve(num_terms);
