@@ -45,118 +45,6 @@
 namespace tl2_mag {
 
 // ----------------------------------------------------------------------------
-// data types
-// ----------------------------------------------------------------------------
-using t_size = std::size_t;
-using t_real = double;
-using t_cplx = std::complex<t_real>;
-
-using t_vec_real = tl2::vec<t_real, std::vector>;
-using t_mat_real = tl2::mat<t_real, std::vector>;
-
-using t_vec = tl2::vec<t_cplx, std::vector>;
-using t_mat = tl2::mat<t_cplx, std::vector>;
-// ----------------------------------------------------------------------------
-
-
-
-// ----------------------------------------------------------------------------
-// input- and output structs
-// ----------------------------------------------------------------------------
-/**
- * magnetic atom sites
- */
-struct AtomSite
-{
-	std::string name{};      // identifier
-	t_size index{};          // index
-
-	t_vec_real pos{};        // atom position
-
-	std::string spin_dir[3]; // expression for spin direction
-	t_real spin_mag{};       // spin magnitude
-	t_mat g{};               // g factor
-};
-
-
-/**
- * temporary per-site calculation results
- */
-struct AtomSiteCalc
-{
-	t_vec spin_dir{};        // spin direction
-
-	t_vec u{}, u_conj{};
-	t_vec v{};
-};
-
-
-/**
- * couplings between magnetic atoms
- */
-struct ExchangeTerm
-{
-	std::string name{};      // identifier
-	t_size index{};          // index
-
-	t_size atom1{};          // atom 1 index
-	t_size atom2{};          // atom 2 index
-	t_vec_real dist{};       // distance between unit cells
-
-	std::string J{};         // parsable expression for Heisenberg interaction
-	std::string dmi[3];      // parsable expression for Dzyaloshinskij-Moriya interaction
-};
-
-
-/**
- * temporary per-term calculation results
- */
-struct ExchangeTermCalc
-{
-	t_cplx J{};              // Heisenberg interaction
-	t_vec dmi{};             // Dzyaloshinskij-Moriya interaction
-};
-
-
-/**
- * terms related to an external magnetic field
- */
-struct ExternalField
-{
-	bool align_spins{};      // align spins along external field
-	t_vec_real dir{};        // field direction
-	t_real mag{};            // field magnitude
-};
-
-
-/**
- * eigenenergies and spin-spin correlation matrix
- */
-struct EnergyAndWeight
-{
-	t_real E{};
-	t_mat S{};
-	t_mat S_p{}, S_m;
-	t_mat S_perp{};
-	t_real weight{};
-	t_real weight_spinflip[2] = {0., 0.};
-	t_real weight_nonspinflip{};
-};
-
-
-/**
- * variables for the expression parser
- */
-struct Variable
-{
-	std::string name{};
-	t_cplx value{};
-};
-// ----------------------------------------------------------------------------
-
-
-
-// ----------------------------------------------------------------------------
 // helper functions
 // ----------------------------------------------------------------------------
 /**
@@ -183,7 +71,10 @@ std::tuple<t_vec, t_vec> R_to_uv(const t_mat& R)
  * spin rotation of equation (9) from (Toth 2015)
  * rotate local spin to ferromagnetic [001] direction
  */
-template<class t_mat, class t_vec, class t_cplx, class t_vec_real>
+template<class t_mat, class t_vec,
+	class t_mat_real, class t_vec_real,
+	class t_cplx = typename t_mat::value_type,
+	class t_real = typename t_mat_real::value_type>
 requires tl2::is_mat<t_mat> && tl2::is_vec<t_vec>
 std::tuple<t_vec, t_vec> spin_to_uv_real(const t_vec_real& spin_re,
 	t_real eps = std::numeric_limits<t_real>::epsilon(),
@@ -197,9 +88,9 @@ std::tuple<t_vec, t_vec> spin_to_uv_real(const t_vec_real& spin_re,
 
 #ifdef TL2_MAG_USE_COMPLEX_SPIN
 	// TODO: correctly unite matrix
-	t_mat rot = unite_cplx_real<t_mat, t_mat_real>(_rot);
+	t_mat rot = tl2::unite_cplx_real<t_mat, t_mat_real>(_rot);
 #else
-	t_mat rot = convert<t_mat, t_mat_real>(_rot);
+	t_mat rot = tl2::convert<t_mat, t_mat_real>(_rot);
 #endif
 
 	return R_to_uv<t_mat, t_vec, t_cplx>(rot);
@@ -210,7 +101,10 @@ std::tuple<t_vec, t_vec> spin_to_uv_real(const t_vec_real& spin_re,
  * spin rotation of equation (9) from (Toth 2015)
  * rotate local spin to ferromagnetic [001] direction
  */
-template<class t_mat, class t_vec, class t_cplx, class t_vec_real>
+template<class t_mat, class t_vec,
+	class t_mat_real, class t_vec_real,
+	class t_cplx = typename t_mat::value_type,
+	class t_real = typename t_mat_real::value_type>
 requires tl2::is_mat<t_mat> && tl2::is_vec<t_vec>
 std::tuple<t_vec, t_vec> spin_to_uv(const t_vec& spin_dir,
 	t_real eps = std::numeric_limits<t_real>::epsilon(),
@@ -225,7 +119,8 @@ std::tuple<t_vec, t_vec> spin_to_uv(const t_vec& spin_dir,
 #endif
 
 	//spin_re /= tl2::norm<t_vec_real>(spin_re);
-	return spin_to_uv_real<t_mat, t_vec, t_cplx, t_vec_real>(spin_re, eps, rotaxis);
+	return spin_to_uv_real<t_mat, t_vec, t_mat_real, t_vec_real, t_cplx, t_real>(
+		spin_re, eps, rotaxis);
 }
 
 
@@ -257,8 +152,110 @@ void rotate_spin_incommensurate(t_vec& spin_vec,
  * calculates magnon dynamics,
  * implementing the formalism given in (Toth 2015)
  */
+template<
+	class t_mat, class t_vec,
+	class t_mat_real, class t_vec_real,
+	class t_cplx = typename t_mat::value_type,
+	class t_real = typename t_mat_real::value_type,
+	class t_size = std::size_t>
 class MagDyn
 {
+public:
+	// ----------------------------------------------------------------------------
+	// input- and output structs
+	// ----------------------------------------------------------------------------
+	/**
+	 * magnetic atom sites
+	 */
+	struct AtomSite
+	{
+		std::string name{};      // identifier
+		t_size index{};          // index
+
+		t_vec_real pos{};        // atom position
+
+		std::string spin_dir[3]; // expression for spin direction
+		t_real spin_mag{};       // spin magnitude
+		t_mat g{};               // g factor
+	};
+
+
+	/**
+	 * temporary per-site calculation results
+	 */
+	struct AtomSiteCalc
+	{
+		t_vec spin_dir{};        // spin direction
+
+		t_vec u{}, u_conj{};
+		t_vec v{};
+	};
+
+
+	/**
+	 * couplings between magnetic atoms
+	 */
+	struct ExchangeTerm
+	{
+		std::string name{};      // identifier
+		t_size index{};          // index
+
+		t_size atom1{};          // atom 1 index
+		t_size atom2{};          // atom 2 index
+		t_vec_real dist{};       // distance between unit cells
+
+		std::string J{};         // parsable expression for Heisenberg interaction
+		std::string dmi[3];      // parsable expression for Dzyaloshinskij-Moriya interaction
+	};
+
+
+	/**
+	 * temporary per-term calculation results
+	 */
+	struct ExchangeTermCalc
+	{
+		t_cplx J{};              // Heisenberg interaction
+		t_vec dmi{};             // Dzyaloshinskij-Moriya interaction
+	};
+
+
+	/**
+	 * terms related to an external magnetic field
+	 */
+	struct ExternalField
+	{
+		bool align_spins{};      // align spins along external field
+		t_vec_real dir{};        // field direction
+		t_real mag{};            // field magnitude
+	};
+
+
+	/**
+	 * eigenenergies and spin-spin correlation matrix
+	 */
+	struct EnergyAndWeight
+	{
+		t_real E{};
+		t_mat S{};
+		t_mat S_p{}, S_m;
+		t_mat S_perp{};
+		t_real weight{};
+		t_real weight_spinflip[2] = {0., 0.};
+		t_real weight_nonspinflip{};
+	};
+
+
+	/**
+	 * variables for the expression parser
+	 */
+	struct Variable
+	{
+		std::string name{};
+		t_cplx value{};
+	};
+	// ----------------------------------------------------------------------------
+
+
 public:
 	MagDyn() = default;
 	~MagDyn() = default;
@@ -600,7 +597,7 @@ public:
 				else
 				{
 					std::tie(site_calc.u, site_calc.v) =
-						spin_to_uv<t_mat, t_vec, t_cplx, t_vec_real>(
+						spin_to_uv<t_mat, t_vec, t_mat_real, t_vec_real, t_cplx, t_real>(
 							site_calc.spin_dir, m_eps, &m_rotaxis);
 				}
 
@@ -824,50 +821,6 @@ public:
 			const t_vec* u_conj_j = &m_sites_calc[j].u_conj;
 			const t_vec* v_i = &m_sites_calc[i].v;
 
-/*
-			// calculate the u and v vectors
-			// for the incommensurate case
-			t_vec u_i_incomm, u_j_incomm;
-			t_vec u_conj_j_incomm;
-			t_vec v_i_incomm, v_j_incomm;
-
-			if(m_is_incommensurate && !m_field.align_spins)
-			{
-				t_vec spin_dir_i = m_sites_calc[i].spin_dir;
-				t_vec spin_dir_j = m_sites_calc[j].spin_dir;
-
-				auto [spin_dir_i_re, spin_dir_i_im] =
-					tl2::split_cplx<t_vec, t_vec_real>(spin_dir_i);
-				auto [spin_dir_j_re, spin_dir_j_im] =
-					tl2::split_cplx<t_vec, t_vec_real>(spin_dir_j);
-
-				rotate_spin_incommensurate<t_mat_real, t_vec_real, t_real>(
-					spin_dir_i_re, term.dist,
-					tl2::convert<t_vec_real>(m_ordering),
-					tl2::convert<t_vec_real>(m_rotaxis),
-					m_eps);
-				rotate_spin_incommensurate<t_mat_real, t_vec_real, t_real>(
-					spin_dir_j_re, term.dist,
-					tl2::convert<t_vec_real>(m_ordering),
-					tl2::convert<t_vec_real>(m_rotaxis),
-					m_eps);
-
-				std::tie(u_i_incomm, v_i_incomm) =
-					spin_to_uv_real<t_mat, t_vec, t_cplx, t_vec_real>(
-						spin_dir_i_re, m_eps, &m_rotaxis);
-				std::tie(u_j_incomm, v_j_incomm) =
-					spin_to_uv_real<t_mat, t_vec, t_cplx, t_vec_real>(
-						spin_dir_j_re, m_eps, &m_rotaxis);
-
-				u_conj_j_incomm = tl2::conj(u_j_incomm);
-
-				u_i = &u_i_incomm;
-				u_j = &u_j_incomm;
-				u_conj_j = &u_conj_j_incomm;
-				v_i = &v_i_incomm;
-			}
-*/
-
 			t_real factor = 0.5 * std::sqrt(S_i*S_j);
 			A(i, j) = factor *
 				tl2::inner_noconj<t_vec>(*u_i, J_sub_Q * *u_conj_j);
@@ -886,33 +839,6 @@ public:
 					// get the precalculated u_k and v_k vectors
 					// for the commensurate case
 					const t_vec *v_k = &m_sites_calc[k].v;
-
-/*
-					// calculate the u_k and v_k vectors
-					// for the incommensurate case
-					t_vec u_k_incomm, v_k_incomm;
-
-					if(m_is_incommensurate && !m_field.align_spins)
-					{
-						t_vec spin_dir_k = m_sites_calc[k].spin_dir;
-
-						auto [spin_dir_k_re, spin_dir_k_im] =
-							tl2::split_cplx<t_vec, t_vec_real>(
-								spin_dir_k);
-
-						rotate_spin_incommensurate<t_mat_real, t_vec_real, t_real>(
-							spin_dir_k_re, term.dist,
-							tl2::convert<t_vec_real>(m_ordering),
-							tl2::convert<t_vec_real>(m_rotaxis),
-							m_eps);
-
-						std::tie(u_k_incomm, v_k_incomm) =
-							spin_to_uv_real<t_mat, t_vec, t_cplx, t_vec_real>(
-								spin_dir_k_re, m_eps, &m_rotaxis);
-
-						v_k = &v_k_incomm;
-					}
-*/
 
 					t_mat J_sub_Q0 = tl2::submat<t_mat>(
 						J_Q0, i*3, k*3, 3, 3);
@@ -1177,52 +1103,6 @@ public:
 					const t_vec *u_j = &m_sites_calc[j].u;
 					const t_vec *u_conj_i = &m_sites_calc[i].u_conj;
 					const t_vec *u_conj_j = &m_sites_calc[j].u_conj;
-
-/*
-					// calculate the u vectors
-					// for the incommensurate case
-					t_vec u_i_incomm, u_j_incomm;
-					t_vec u_conj_i_incomm, u_conj_j_incomm;
-					t_vec v_i_incomm, v_j_incomm;
-
-					if(m_is_incommensurate && !m_field.align_spins)
-					{
-						t_vec spin_dir_i = m_sites_calc[i].spin_dir;
-						t_vec spin_dir_j = m_sites_calc[j].spin_dir;
-
-						auto [spin_dir_i_re, spin_dir_i_im] =
-							tl2::split_cplx<t_vec, t_vec_real>(spin_dir_i);
-						auto [spin_dir_j_re, spin_dir_j_im] =
-							tl2::split_cplx<t_vec, t_vec_real>(spin_dir_j);
-
-						rotate_spin_incommensurate<t_mat_real, t_vec_real, t_real>(
-							spin_dir_i_re, term.dist,
-							tl2::convert<t_vec_real>(m_ordering),
-							tl2::convert<t_vec_real>(m_rotaxis),
-							m_eps);
-
-						rotate_spin_incommensurate<t_mat_real, t_vec_real, t_real>(
-							spin_dir_j_re, term.dist,
-							tl2::convert<t_vec_real>(m_ordering),
-							tl2::convert<t_vec_real>(m_rotaxis),
-							m_eps);
-
-						std::tie(u_i_incomm, v_i_incomm) =
-							spin_to_uv_real<t_mat, t_vec, t_cplx, t_vec_real>(
-								spin_dir_i_re, m_eps, &m_rotaxis);
-						std::tie(u_j_incomm, v_j_incomm) =
-							spin_to_uv_real<t_mat, t_vec, t_cplx, t_vec_real>(
-								spin_dir_j_re, m_eps, &m_rotaxis);
-
-						u_conj_i_incomm = tl2::conj(u_i_incomm);
-						u_conj_j_incomm = tl2::conj(u_j_incomm);
-
-						u_i = &u_i_incomm;
-						u_j = &u_j_incomm;
-						u_conj_i = &u_conj_i_incomm;
-						u_conj_j = &u_conj_j_incomm;
-					}
-*/
 
 					// TODO: check units of S
 					t_real factor = 4. * std::sqrt(S_i*S_j);
