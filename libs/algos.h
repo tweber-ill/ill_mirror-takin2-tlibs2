@@ -170,6 +170,37 @@ std::string epoch_to_str(T tSeconds, const char *pcFmt="%a %Y-%b-%d %H:%M:%S %Z"
 
 
 /**
+ * get the permutation of indices to sort a container
+ */
+template<class Comp, class t_cont = std::vector<std::size_t>>
+t_cont get_perm(std::size_t num_elems, Comp comp)
+{
+	t_cont perm(num_elems);
+	std::iota(perm.begin(), perm.end(), 0);
+
+	std::stable_sort(perm.begin(), perm.end(), comp);
+	return perm;
+}
+
+
+/**
+ * get the permutation of indices to sort a container
+ */
+template<class t_cont, class t_cont_perm = std::vector<std::size_t>>
+t_cont_perm get_perm(const t_cont& cont)
+{
+	t_cont_perm perm = get_perm(
+		cont.size(),
+		[&cont](std::size_t idx1, std::size_t idx2) -> bool
+		{
+			return cont[idx1] < cont[idx2];
+		});
+
+	return perm;
+}
+
+
+/**
  * reorder a vector according to a permutation
  */
 template<class t_vec, class t_perm = std::vector<std::size_t>>

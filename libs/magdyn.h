@@ -999,10 +999,8 @@ public:
 		if(!only_energies)
 		{
 			// get the sorting of the energies
-			std::vector<t_size> sorting(energies_and_correlations.size());
-			std::iota(sorting.begin(), sorting.end(), 0);
-
-			std::stable_sort(sorting.begin(), sorting.end(),
+			std::vector<t_size> sorting = tl2::get_perm(
+				energies_and_correlations.size(),
 				[&energies_and_correlations](t_size idx1, t_size idx2) -> bool
 				{
 					return energies_and_correlations[idx1].E >=
