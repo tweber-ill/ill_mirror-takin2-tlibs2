@@ -34,6 +34,7 @@
 #define __TLIBS2_ALGOS_H__
 
 #include <algorithm>
+#include <numeric>
 #include <string>
 #include <chrono>
 #include <vector>
