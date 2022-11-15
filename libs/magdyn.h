@@ -927,7 +927,8 @@ public:
 
 		// equation (31) from (Toth 2015)
 		t_mat C;
-		for(t_size retry=0; retry<m_retries_chol; ++retry)
+		t_size chol_try = 0;
+		for(; chol_try<m_tries_chol; ++chol_try)
 		{
 			auto [chol_ok, _C] = tl2_la::chol<t_mat>(_H);
 
@@ -938,18 +939,27 @@ public:
 			}
 			else
 			{
+				if(chol_try == m_tries_chol-1)
+				{
+					std::cerr << "Warning: Cholesky decomposition failed"
+						<< " for Q = (" << h << ", " << k << ", " << l << ")"
+						<< "." << std::endl;
+					C = _C;
+					break;
+				}
+
 				// try forcing the hamilton to be positive definite
 				for(t_size i=0; i<2*num_sites; ++i)
-					_H(i, i) += m_eps_chol;
+					_H(i, i) += m_delta_chol;
 			}
+		}
 
-			if(!chol_ok && retry == m_retries_chol-1)
-			{
-				std::cerr << "Warning: Cholesky decomposition failed"
+		if(chol_try > 1)
+		{
+			std::cerr << "Warning: Needed " << chol_try
+				<< " corrections for cholesky decomposition"
 					<< " for Q = (" << h << ", " << k << ", " << l << ")"
 					<< "." << std::endl;
-				C = _C;
-			}
 		}
 
 		t_mat C_herm = tl2::herm<t_mat>(C);
@@ -1482,9 +1492,7 @@ public:
 		// write xml file
 		std::ofstream ofstr{filename};
 		if(!ofstr)
-		{
 			return false;
-		}
 
 		ofstr.precision(m_prec);
 		boost::property_tree::write_xml(ofstr, node,
@@ -1746,8 +1754,8 @@ private:
 	// bose cutoff energy to avoid infinities
 	t_real m_bose_cutoff = 0.025;
 
-	t_size m_retries_chol = 10;
-	t_real m_eps_chol = 0.05;
+	t_size m_tries_chol = 50;
+	t_real m_delta_chol = 0.01;
 
 	t_real m_eps = 1e-6;
 	int m_prec = 6;
