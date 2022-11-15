@@ -403,6 +403,7 @@ public:
 	void SetExternalField(const ExternalField& field)
 	{
 		m_field = field;
+		//tl2::niceprint(std::cout, -m_field.dir, 1e-4, 4);
 	}
 
 
@@ -730,8 +731,8 @@ public:
 			num_terms != m_exchange_terms_calc.size())
 			return {};
 
-		// momentum
-		const t_vec_real Q = tl2::create<t_vec_real>({h, k, l});
+		// momentum transfer
+		const t_vec_real Qvec = tl2::create<t_vec_real>({ h, k, l });
 
 		// constants: imaginary unit and 2pi
 		constexpr const t_cplx imag{0., 1.};
@@ -784,12 +785,12 @@ public:
 
 			// equation (14) from (Toth 2015)
 			t_cplx phase_Q = std::exp(-imag * twopi *
-				tl2::inner<t_vec_real>(term.dist, Q));
+				tl2::inner<t_vec_real>(term.dist, Qvec));
 			t_cplx phase_mQ = std::exp(-imag * twopi *
-				tl2::inner<t_vec_real>(-term.dist, Q));
+				tl2::inner<t_vec_real>(-term.dist, Qvec));
 
 			t_mat J_T = tl2::trans(J);
-			t_real factor = 1.; //0.5;
+			t_real factor = /*0.5*/ 1.;
 
 			// include these two terms to fulfill
 			// equation (11) from (Toth 2015)
@@ -803,9 +804,9 @@ public:
 			tl2::add_submat<t_mat>(J_mQ, factor * J_T * phase_Q,
 				term.atom2*3, term.atom1*3);
 
-			tl2::add_submat<t_mat>(J_Q0, factor*J,
+			tl2::add_submat<t_mat>(J_Q0, factor * J,
 				term.atom1*3, term.atom2*3);
-			tl2::add_submat<t_mat>(J_Q0, factor*J_T,
+			tl2::add_submat<t_mat>(J_Q0, factor * J_T,
 				term.atom2*3, term.atom1*3);
 		}
 
@@ -826,7 +827,6 @@ public:
 			t_mat J_sub_Q = tl2::submat<t_mat>(J_Q, i*3, j*3, 3, 3);
 			t_mat J_sub_mQ = tl2::submat<t_mat>(J_mQ, i*3, j*3, 3, 3);
 
-			// TODO: check units of S_i and S_j
 			t_real S_i = m_sites[i].spin_mag;
 			t_real S_j = m_sites[j].spin_mag;
 
@@ -849,7 +849,6 @@ public:
 			{
 				for(t_size k=0; k<num_sites; ++k)
 				{
-					// TODO: check unit of S_k
 					t_real S_k = m_sites[k].spin_mag;
 
 					// get the precalculated u_k and v_k vectors
@@ -873,8 +872,8 @@ public:
 				t_vec gv = m_sites[i].g * *v_i;
 				t_cplx Bgv = tl2::inner_noconj<t_vec>(B, gv);
 
-				A(i, j) -= 0.5*muB * Bgv;
-				A_mQ(i, j) -= 0.5*muB * Bgv;
+				A(i, j) -= 0.5 * muB * Bgv;
+				A_mQ(i, j) -= 0.5 * muB * Bgv;
 			}
 		}
 
@@ -901,14 +900,13 @@ public:
 		bool only_energies = false) const
 	{
 		// momentum transfer
-		const t_vec_real Q = tl2::create<t_vec_real>({ h, k, l });
+		const t_vec_real Qvec = tl2::create<t_vec_real>({ h, k, l });
 
 		// orthogonal projector for magnetic neutron scattering,
 		// see (Shirane 2002), p. 37, eq. (2.64)
 		//t_vec bragg_rot = use_field ? m_rot_field * m_bragg : m_bragg;
 		//proj_neutron = tl2::ortho_projector<t_mat, t_vec>(bragg_rot, false);
-		t_mat proj_neutron = tl2::ortho_projector<t_mat, t_vec>(Q, false);
-
+		t_mat proj_neutron = tl2::ortho_projector<t_mat, t_vec>(Qvec, false);
 
 		const t_size num_sites = m_sites.size();
 		if(num_sites == 0 || _H.size1() == 0)
@@ -919,11 +917,11 @@ public:
 		constexpr const t_real twopi = t_real(2)*tl2::pi<t_real>;
 
 		// equation (30) from (Toth 2015)
-		t_mat g = tl2::zero<t_mat>(num_sites*2, num_sites*2);
+		t_mat g_sign = tl2::zero<t_mat>(num_sites*2, num_sites*2);
 		for(t_size i=0; i<num_sites; ++i)
-			g(i, i) = 1.;
+			g_sign(i, i) = 1.;
 		for(t_size i=num_sites; i<2*num_sites; ++i)
-			g(i, i) = -1.;
+			g_sign(i, i) = -1.;
 
 		// equation (31) from (Toth 2015)
 		t_mat C;
@@ -965,7 +963,7 @@ public:
 		t_mat C_herm = tl2::herm<t_mat>(C);
 
 		// see p. 5 in (Toth 2015)
-		t_mat H = C * g * C_herm;
+		t_mat H = C * g_sign * C_herm;
 		//tl2::niceprint(std::cout, H, 1e-4, 4);
 		//std::cout << std::endl;
 
@@ -1037,7 +1035,7 @@ public:
 
 			// equation (32) from (Toth 2015)
 			t_mat L = evec_mat_herm * H * evec_mat;
-			t_mat E = g*L;
+			t_mat E = g_sign * L;
 
 			// re-create energies, to be consistent with the weights
 			energies_and_correlations.clear();
@@ -1128,13 +1126,14 @@ public:
 					const t_vec *u_conj_i = &m_sites_calc[i].u_conj;
 					const t_vec *u_conj_j = &m_sites_calc[j].u_conj;
 
-					// TODO: check units of S
+					// TODO: check these
 					t_real factor = 4. * std::sqrt(S_i*S_j);
+					t_real phase_sign = 1.;
 
-					t_cplx phase = std::exp(+imag * twopi *
-						tl2::inner<t_vec_real>(pos_j - pos_i, Q));
+					t_cplx phase = std::exp(phase_sign * imag * twopi *
+						tl2::inner<t_vec_real>(pos_j - pos_i, Qvec));
 
-					// TODO: check phase factors
+					// matrix elements of equ. (44) from (Toth 2015)
 					Y(i, j) = factor * phase *
 						(*u_i)[x_idx] * (*u_conj_j)[y_idx];
 					V(i, j) = factor * phase *
@@ -1147,13 +1146,12 @@ public:
 					// incommensurate case
 					if(m_is_incommensurate)
 					{
-						t_cplx phase_p = std::exp(+imag * twopi *
+						t_cplx phase_p = std::exp(phase_sign * imag * twopi *
 							tl2::inner<t_vec_real>(pos_j - pos_i,
-								Q + m_ordering));
-
-						t_cplx phase_m = std::exp(+imag * twopi *
+								Qvec + m_ordering));
+						t_cplx phase_m = std::exp(phase_sign * imag * twopi *
 							tl2::inner<t_vec_real>(pos_j - pos_i,
-								Q - m_ordering));
+								Qvec - m_ordering));
 
 						Y_p(i, j) = factor * phase_p *
 							(*u_i)[x_idx] * (*u_conj_j)[y_idx];
