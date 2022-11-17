@@ -639,7 +639,7 @@ public:
 	 * @note implements the formalism given by (Toth 2015)
 	 * @note a first version for a simplified ferromagnetic dispersion was based on (Heinsdorf 2021)
 	 */
-	t_mat GetHamiltonian(t_real h, t_real k, t_real l) const
+	t_mat GetHamiltonian(const t_vec_real& Qvec) const
 	{
 		const t_size num_sites = m_sites.size();
 		const t_size num_terms = m_exchange_terms.size();
@@ -650,12 +650,6 @@ public:
 			num_terms != m_exchange_terms_calc.size())
 			return {};
 
-		// momentum transfer
-		const t_vec_real Qvec = tl2::create<t_vec_real>({ h, k, l });
-
-		// constants: imaginary unit and 2pi
-		constexpr const t_cplx imag{0., 1.};
-		constexpr const t_real twopi = t_real(2)*tl2::pi<t_real>;
 		// bohr magneton in [meV/T]
 		constexpr const t_real muB = tl2::muB<t_real>
 			/ tl2::meV<t_real> * tl2::tesla<t_real>;
@@ -690,7 +684,7 @@ public:
 			// equations (21), (6) and (2) from (Toth 2015)
 			if(m_is_incommensurate)
 			{
-				t_real rot_UC_angle = twopi * tl2::inner<t_vec_real>(
+				t_real rot_UC_angle = s_twopi * tl2::inner<t_vec_real>(
 					m_ordering, term.dist);
 				if(!tl2::equals_0<t_real>(rot_UC_angle, m_eps))
 				{
@@ -703,9 +697,10 @@ public:
 			}
 
 			// equation (14) from (Toth 2015)
-			t_cplx phase_Q = std::exp(-imag * twopi *
+			t_real phase_sign = -1.;
+			t_cplx phase_Q = std::exp(phase_sign * s_imag * s_twopi *
 				tl2::inner<t_vec_real>(term.dist, Qvec));
-			t_cplx phase_mQ = std::exp(-imag * twopi *
+			t_cplx phase_mQ = std::exp(phase_sign * s_imag * s_twopi *
 				tl2::inner<t_vec_real>(-term.dist, Qvec));
 
 			t_mat J_T = tl2::trans(J);
@@ -756,13 +751,10 @@ public:
 			const t_vec* u_conj_j = &m_sites_calc[j].u_conj;
 			const t_vec* v_i = &m_sites_calc[i].v;
 
-			t_real factor = 0.5 * std::sqrt(S_i*S_j);
-			A(i, j) = factor *
-				tl2::inner_noconj<t_vec>(*u_i, J_sub_Q * *u_conj_j);
-			A_mQ(i, j) = factor *
-				tl2::inner_noconj<t_vec>(*u_i, J_sub_mQ * *u_conj_j);
-			B(i, j) = factor *
-				tl2::inner_noconj<t_vec>(*u_i, J_sub_Q * *u_j);
+			t_real SiSj = 0.5 * std::sqrt(S_i*S_j);
+			A(i, j) = SiSj * tl2::inner_noconj<t_vec>(*u_i, J_sub_Q * *u_conj_j);
+			A_mQ(i, j) = SiSj * tl2::inner_noconj<t_vec>(*u_i, J_sub_mQ * *u_conj_j);
+			B(i, j) = SiSj * tl2::inner_noconj<t_vec>(*u_i, J_sub_Q * *u_j);
 
 			if(i == j)
 			{
@@ -814,13 +806,9 @@ public:
 	 * get the energies and the spin-correlation at the given momentum
 	 * @note implements the formalism given by (Toth 2015)
 	 */
-	std::vector<EnergyAndWeight> GetEnergies(
-		t_mat _H, t_real h, t_real k, t_real l,
+	std::vector<EnergyAndWeight> GetEnergiesFromHamiltonian(t_mat _H, const t_vec_real& Qvec,
 		bool only_energies = false) const
 	{
-		// momentum transfer
-		const t_vec_real Qvec = tl2::create<t_vec_real>({ h, k, l });
-
 		// orthogonal projector for magnetic neutron scattering,
 		// see (Shirane 2002), p. 37, eq. (2.64)
 		//t_vec bragg_rot = use_field ? m_rot_field * m_bragg : m_bragg;
@@ -830,10 +818,6 @@ public:
 		const t_size num_sites = m_sites.size();
 		if(num_sites == 0 || _H.size1() == 0)
 			return {};
-
-		// constants: imaginary unit and 2pi
-		constexpr const t_cplx imag{0., 1.};
-		constexpr const t_real twopi = t_real(2)*tl2::pi<t_real>;
 
 		// equation (30) from (Toth 2015)
 		t_mat g_sign = tl2::zero<t_mat>(num_sites*2, num_sites*2);
@@ -858,9 +842,9 @@ public:
 			{
 				if(chol_try == m_tries_chol-1)
 				{
-					std::cerr << "Warning: Cholesky decomposition failed"
-						<< " for Q = (" << h << ", " << k << ", " << l << ")"
-						<< "." << std::endl;
+					using namespace tl2_ops;
+					std::cerr << "Warning: Cholesky decomposition failed for Q = "
+						<< Qvec << "." << std::endl;
 					C = _C;
 					break;
 				}
@@ -873,10 +857,10 @@ public:
 
 		if(chol_try > 1)
 		{
+			using namespace tl2_ops;
 			std::cerr << "Warning: Needed " << chol_try
-				<< " corrections for cholesky decomposition"
-					<< " for Q = (" << h << ", " << k << ", " << l << ")"
-					<< "." << std::endl;
+				<< " corrections for cholesky decomposition for Q = "
+				<< Qvec << "." << std::endl;
 		}
 
 		t_mat C_herm = tl2::herm<t_mat>(C);
@@ -889,9 +873,9 @@ public:
 		bool is_herm = tl2::is_symm_or_herm<t_mat, t_real>(H, m_eps);
 		if(!is_herm)
 		{
-			std::cerr << "Warning: Hamiltonian is not hermitian"
-				<< " for Q = (" << h << ", " << k << ", " << l << ")"
-				<< "." << std::endl;
+			using namespace tl2_ops;
+			std::cerr << "Warning: Hamiltonian is not hermitian for Q = "
+				<< Qvec << "." << std::endl;
 		}
 
 		// eigenvalues of the hamiltonian correspond to the energies
@@ -901,9 +885,9 @@ public:
 				H, only_energies, is_herm, true);
 		if(!evecs_ok)
 		{
-			std::cerr << "Warning: Eigensystem calculation failed"
-				<< " for Q = (" << h << ", " << k << ", " << l << ")"
-				<< "." << std::endl;
+			using namespace tl2_ops;
+			std::cerr << "Warning: Eigensystem calculation failed for Q = "
+				<< Qvec << "." << std::endl;
 		}
 
 
@@ -983,9 +967,9 @@ public:
 			auto [C_inv, inv_ok] = tl2::inv(C);
 			if(!inv_ok)
 			{
-				std::cerr << "Warning: Inversion failed"
-					<< " for Q = (" << h << ", " << k << ", " << l << ")"
-					<< "." << std::endl;
+				using namespace tl2_ops;
+				std::cerr << "Warning: Inversion failed for Q = "
+					<< Qvec << "." << std::endl;
 			}
 
 			// equation (34) from (Toth 2015)
@@ -1046,49 +1030,40 @@ public:
 					const t_vec *u_conj_j = &m_sites_calc[j].u_conj;
 
 					// TODO: check these
-					t_real factor = 4. * std::sqrt(S_i*S_j);
+					t_real SiSj = 4. * std::sqrt(S_i*S_j);
 					t_real phase_sign = 1.;
 
-					t_cplx phase = std::exp(phase_sign * imag * twopi *
+					t_cplx phase = std::exp(phase_sign * s_imag * s_twopi *
 						tl2::inner<t_vec_real>(pos_j - pos_i, Qvec));
+					phase *= SiSj;
 
 					// matrix elements of equ. (44) from (Toth 2015)
-					Y(i, j) = factor * phase *
-						(*u_i)[x_idx] * (*u_conj_j)[y_idx];
-					V(i, j) = factor * phase *
-						(*u_conj_i)[x_idx] * (*u_conj_j)[y_idx];
-					Z(i, j) = factor * phase *
-						(*u_i)[x_idx] * (*u_j)[y_idx];
-					W(i, j) = factor * phase *
-						(*u_conj_i)[x_idx] * (*u_j)[y_idx];
+					Y(i, j) = phase * (*u_i)[x_idx] * (*u_conj_j)[y_idx];
+					V(i, j) = phase * (*u_conj_i)[x_idx] * (*u_conj_j)[y_idx];
+					Z(i, j) = phase * (*u_i)[x_idx] * (*u_j)[y_idx];
+					W(i, j) = phase * (*u_conj_i)[x_idx] * (*u_j)[y_idx];
 
 					// incommensurate case
 					if(m_is_incommensurate)
 					{
-						t_cplx phase_p = std::exp(phase_sign * imag * twopi *
+						t_cplx phase_p = std::exp(phase_sign * s_imag * s_twopi *
 							tl2::inner<t_vec_real>(pos_j - pos_i,
 								Qvec + m_ordering));
-						t_cplx phase_m = std::exp(phase_sign * imag * twopi *
+						t_cplx phase_m = std::exp(phase_sign * s_imag * s_twopi *
 							tl2::inner<t_vec_real>(pos_j - pos_i,
 								Qvec - m_ordering));
+						phase_p *= SiSj;
+						phase_m *= SiSj;
 
-						Y_p(i, j) = factor * phase_p *
-							(*u_i)[x_idx] * (*u_conj_j)[y_idx];
-						V_p(i, j) = factor * phase_p *
-							(*u_conj_i)[x_idx] * (*u_conj_j)[y_idx];
-						Z_p(i, j) = factor * phase_p *
-							(*u_i)[x_idx] * (*u_j)[y_idx];
-						W_p(i, j) = factor * phase_p *
-							(*u_conj_i)[x_idx] * (*u_j)[y_idx];
+						Y_p(i, j) = phase_p * (*u_i)[x_idx] * (*u_conj_j)[y_idx];
+						V_p(i, j) = phase_p * (*u_conj_i)[x_idx] * (*u_conj_j)[y_idx];
+						Z_p(i, j) = phase_p * (*u_i)[x_idx] * (*u_j)[y_idx];
+						W_p(i, j) = phase_p * (*u_conj_i)[x_idx] * (*u_j)[y_idx];
 
-						Y_m(i, j) = factor * phase_m *
-							(*u_i)[x_idx] * (*u_conj_j)[y_idx];
-						V_m(i, j) = factor * phase_m *
-							(*u_conj_i)[x_idx] * (*u_conj_j)[y_idx];
-						Z_m(i, j) = factor * phase_m *
-							(*u_i)[x_idx] * (*u_j)[y_idx];
-						W_m(i, j) = factor * phase_m *
-							(*u_conj_i)[x_idx] * (*u_j)[y_idx];
+						Y_m(i, j) = phase_m * (*u_i)[x_idx] * (*u_conj_j)[y_idx];
+						V_m(i, j) = phase_m * (*u_conj_i)[x_idx] * (*u_conj_j)[y_idx];
+						Z_m(i, j) = phase_m * (*u_i)[x_idx] * (*u_j)[y_idx];
+						W_m(i, j) = phase_m * (*u_conj_i)[x_idx] * (*u_j)[y_idx];
 					}
 
 					/*std::cout
@@ -1176,13 +1151,12 @@ public:
 			if(m_is_incommensurate)
 			{
 				// equations (39) and (40) from (Toth 2015)
-
 				proj_norm = tl2::convert<t_mat>(
 					tl2::projector<t_mat_real, t_vec_real>(
 						m_rotaxis, true));
 
 				rot_incomm = tl2::unit<t_mat>(3);
-				rot_incomm -= imag * tl2::skewsymmetric<t_mat, t_vec>(m_rotaxis);
+				rot_incomm -= s_imag * tl2::skewsymmetric<t_mat, t_vec>(m_rotaxis);
 				rot_incomm -= proj_norm;
 				rot_incomm *= 0.5;
 
@@ -1284,12 +1258,21 @@ public:
 	 * get the energies and the spin-correlation at the given momentum
 	 * @note implements the formalism given by (Toth 2015)
 	 */
+	std::vector<EnergyAndWeight> GetEnergies(const t_vec_real& Qvec,
+		bool only_energies = false) const
+	{
+		t_mat H = GetHamiltonian(Qvec);
+		return GetEnergiesFromHamiltonian(H, Qvec, only_energies);
+	}
+
+
 	std::vector<EnergyAndWeight> GetEnergies(
 		t_real h, t_real k, t_real l,
 		bool only_energies = false) const
 	{
-		t_mat H = GetHamiltonian(h, k, l);
-		return GetEnergies(H, h, k, l, only_energies);
+		// momentum transfer
+		const t_vec_real Qvec = tl2::create<t_vec_real>({ h, k, l });
+		return GetEnergies(Qvec, only_energies);
 	}
 
 
@@ -1460,12 +1443,9 @@ public:
 					site.second.get<t_real>("position_z", 0.),
 				});
 
-				atom_site.spin_dir[0] = site.second.get<std::string>(
-					"spin_x", "0"),
-				atom_site.spin_dir[1] = site.second.get<std::string>(
-					"spin_y", "0"),
-				atom_site.spin_dir[2] = site.second.get<std::string>(
-					"spin_z", "1"),
+				atom_site.spin_dir[0] = site.second.get<std::string>("spin_x", "0"),
+				atom_site.spin_dir[1] = site.second.get<std::string>("spin_y", "0"),
+				atom_site.spin_dir[2] = site.second.get<std::string>("spin_z", "1"),
 
 				atom_site.spin_mag = site.second.get<t_real>("spin_magnitude", 1.);
 				atom_site.g = -2. * tl2::unit<t_mat>(3);
@@ -1481,13 +1461,10 @@ public:
 			{
 				ExchangeTerm exchange_term;
 
-				exchange_term.name = term.second.get<std::string>(
-					"name", "n/a");
+				exchange_term.name = term.second.get<std::string>("name", "n/a");
 				exchange_term.index = m_exchange_terms.size();
-				exchange_term.atom1 = term.second.get<t_size>(
-					"atom_1_index", 0);
-				exchange_term.atom2 = term.second.get<t_size>(
-					"atom_2_index", 0);
+				exchange_term.atom1 = term.second.get<t_size>("atom_1_index", 0);
+				exchange_term.atom2 = term.second.get<t_size>("atom_2_index", 0);
 
 				exchange_term.dist = tl2::create<t_vec_real>(
 				{
@@ -1496,15 +1473,11 @@ public:
 					term.second.get<t_real>("distance_z", 0.),
 				});
 
-				exchange_term.J = term.second.get<std::string>(
-					"interaction", "0");
+				exchange_term.J = term.second.get<std::string>("interaction", "0");
 
-				exchange_term.dmi[0] = term.second.get<std::string>(
-					"dmi_x", "0");
-				exchange_term.dmi[1] = term.second.get<std::string>(
-					"dmi_y", "0");
-				exchange_term.dmi[2] = term.second.get<std::string>(
-					"dmi_z", "0");
+				exchange_term.dmi[0] = term.second.get<std::string>("dmi_x", "0");
+				exchange_term.dmi[1] = term.second.get<std::string>("dmi_y", "0");
+				exchange_term.dmi[2] = term.second.get<std::string>("dmi_z", "0");
 
 				m_exchange_terms.emplace_back(std::move(exchange_term));
 			}
@@ -1652,11 +1625,8 @@ protected:
 	 */
 	std::tuple<t_vec, t_vec> R_to_uv(const t_mat& R)
 	{
-		// imaginary unit
-		const t_cplx imag{0., 1.};
-
 		t_vec u = tl2::col<t_mat, t_vec>(R, 0)
-			+ imag*tl2::col<t_mat, t_vec>(R, 1);
+			+ s_imag*tl2::col<t_mat, t_vec>(R, 1);
 		t_vec v = tl2::col<t_mat, t_vec>(R, 2);
 
 		return std::make_tuple(u, v);
@@ -1728,13 +1698,17 @@ private:
 	t_real m_temperature{-1};
 
 	// bose cutoff energy to avoid infinities
-	t_real m_bose_cutoff = 0.025;
+	t_real m_bose_cutoff{0.025};
 
-	t_size m_tries_chol = 50;
-	t_real m_delta_chol = 0.01;
+	t_size m_tries_chol{50};
+	t_real m_delta_chol{0.01};
 
-	t_real m_eps = 1e-6;
-	int m_prec = 6;
+	t_real m_eps{1e-6};
+	int m_prec{6};
+
+	// constants
+	static constexpr const t_cplx s_imag {t_real(0), t_real(1)};
+	static constexpr const t_real s_twopi {t_real(2)*tl2::pi<t_real>};
 };
 
 }
