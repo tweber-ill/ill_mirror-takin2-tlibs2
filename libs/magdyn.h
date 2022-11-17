@@ -47,84 +47,6 @@ namespace tl2_mag {
 // ----------------------------------------------------------------------------
 // helper functions
 // ----------------------------------------------------------------------------
-/**
- * converts the rotation matrix rotating the local spins to ferromagnetic
- * [001] directions into the vectors comprised of the matrix columns
- * @see equation (9) from (Toth 2015).
- */
-template<class t_mat, class t_vec, class t_cplx>
-requires tl2::is_mat<t_mat> && tl2::is_vec<t_vec>
-std::tuple<t_vec, t_vec> R_to_uv(const t_mat& R)
-{
-	// imaginary unit
-	const t_cplx imag{0., 1.};
-
-	t_vec u = tl2::col<t_mat, t_vec>(R, 0)
-		+ imag*tl2::col<t_mat, t_vec>(R, 1);
-	t_vec v = tl2::col<t_mat, t_vec>(R, 2);
-
-	return std::make_tuple(u, v);
-}
-
-
-/**
- * spin rotation of equation (9) from (Toth 2015)
- * rotate local spin to ferromagnetic [001] direction
- */
-template<class t_mat, class t_vec,
-	class t_mat_real, class t_vec_real,
-	class t_cplx = typename t_mat::value_type,
-	class t_real = typename t_mat_real::value_type>
-requires tl2::is_mat<t_mat> && tl2::is_vec<t_vec> &&
-	tl2::is_mat<t_mat_real> && tl2::is_vec<t_vec_real>
-std::tuple<t_vec, t_vec> spin_to_uv_real(const t_vec_real& spin_re,
-	t_real eps = std::numeric_limits<t_real>::epsilon(),
-	const t_vec_real *rotaxis = nullptr)
-{
-	t_vec_real zdir = tl2::zero<t_vec_real>(spin_re.size());
-	zdir[2] = 1;
-
-	t_mat_real _rot = tl2::rotation<t_mat_real, t_vec_real>(
-		spin_re, zdir, rotaxis, eps);
-
-#ifdef TL2_MAG_USE_COMPLEX_SPIN
-	// TODO: correctly unite matrix
-	t_mat rot = tl2::unite_cplx_real<t_mat, t_mat_real>(_rot);
-#else
-	t_mat rot = tl2::convert<t_mat, t_mat_real>(_rot);
-#endif
-
-	return R_to_uv<t_mat, t_vec, t_cplx>(rot);
-}
-
-
-/**
- * spin rotation of equation (9) from (Toth 2015)
- * rotate local spin to ferromagnetic [001] direction
- */
-template<class t_mat, class t_vec,
-	class t_mat_real, class t_vec_real,
-	class t_cplx = typename t_mat::value_type,
-	class t_real = typename t_mat_real::value_type>
-requires tl2::is_mat<t_mat> && tl2::is_vec<t_vec> &&
-	tl2::is_mat<t_mat_real> && tl2::is_vec<t_vec_real>
-std::tuple<t_vec, t_vec> spin_to_uv(const t_vec& spin_dir,
-	t_real eps = std::numeric_limits<t_real>::epsilon(),
-	const t_vec_real *rotaxis = nullptr)
-{
-#ifdef TL2_MAG_USE_COMPLEX_SPIN
-	t_vec_real spin_re =
-		tl2::split_cplx_real<t_vec, t_vec_real>(spin_dir);
-#else
-	auto [spin_re, spin_im] =
-		tl2::split_cplx<t_vec, t_vec_real>(spin_dir);
-#endif
-
-	//spin_re /= tl2::norm<t_vec_real>(spin_re);
-	return spin_to_uv_real<t_mat, t_vec, t_mat_real, t_vec_real, t_cplx, t_real>(
-		spin_re, eps, rotaxis);
-}
-
 
 /**
  * rotate spin vector for incommensurate structures,
@@ -551,8 +473,6 @@ public:
 		if(num_sites == 0)
 			return;
 
-		const t_vec_real zdir = tl2::create<t_vec_real>({0., 0., 1.});
-
 		m_sites_calc.clear();
 		m_sites_calc.reserve(num_sites);
 
@@ -565,12 +485,12 @@ public:
 			// rotate field to [001] direction
 			m_rot_field = tl2::convert<t_mat>(
 				tl2::rotation<t_mat_real, t_vec_real>(
-					-m_field.dir, zdir, &m_rotaxis, m_eps));
+					-m_field.dir, m_zdir, &m_rotaxis, m_eps));
 
 			/*std::cout << "Field rotation from:\n";
 			tl2::niceprint(std::cout, -m_field.dir, 1e-4, 4);
 			std::cout << "\nto:\n";
-			tl2::niceprint(std::cout, zdir, 1e-4, 4);
+			tl2::niceprint(std::cout, m_zdir, 1e-4, 4);
 			std::cout << "\nmatrix:\n";
 			tl2::niceprint(std::cout, m_rot_field, 1e-4, 4);
 			std::cout << std::endl;*/
@@ -612,13 +532,12 @@ public:
 				if(m_field.align_spins)
 				{
 					std::tie(site_calc.u, site_calc.v) =
-						R_to_uv<t_mat, t_vec, t_cplx>(m_rot_field);
+						R_to_uv(m_rot_field);
 				}
 				else
 				{
 					std::tie(site_calc.u, site_calc.v) =
-						spin_to_uv<t_mat, t_vec, t_mat_real, t_vec_real, t_cplx, t_real>(
-							site_calc.spin_dir, m_eps, &m_rotaxis);
+						spin_to_uv(site_calc.spin_dir);
 				}
 
 				site_calc.u_conj = tl2::conj(site_calc.u);
@@ -1725,6 +1644,64 @@ public:
 	}
 
 
+protected:
+	/**
+	 * converts the rotation matrix rotating the local spins to ferromagnetic
+	 * [001] directions into the vectors comprised of the matrix columns
+	 * @see equation (9) from (Toth 2015).
+	 */
+	std::tuple<t_vec, t_vec> R_to_uv(const t_mat& R)
+	{
+		// imaginary unit
+		const t_cplx imag{0., 1.};
+
+		t_vec u = tl2::col<t_mat, t_vec>(R, 0)
+			+ imag*tl2::col<t_mat, t_vec>(R, 1);
+		t_vec v = tl2::col<t_mat, t_vec>(R, 2);
+
+		return std::make_tuple(u, v);
+	}
+
+
+	/**
+	 * spin rotation of equation (9) from (Toth 2015)
+	 * rotate local spin to ferromagnetic [001] direction
+	 */
+	std::tuple<t_vec, t_vec> spin_to_uv_real(const t_vec_real& spin_re)
+	{
+		t_mat_real _rot = tl2::rotation<t_mat_real, t_vec_real>(
+			spin_re, m_zdir, &m_rotaxis, m_eps);
+
+	#ifdef TL2_MAG_USE_COMPLEX_SPIN
+		// TODO: correctly unite matrix
+		t_mat rot = tl2::unite_cplx_real<t_mat, t_mat_real>(_rot);
+	#else
+		t_mat rot = tl2::convert<t_mat, t_mat_real>(_rot);
+	#endif
+
+		return R_to_uv(rot);
+	}
+
+
+	/**
+	 * spin rotation of equation (9) from (Toth 2015)
+	 * rotate local spin to ferromagnetic [001] direction
+	 */
+	std::tuple<t_vec, t_vec> spin_to_uv(const t_vec& spin_dir)
+	{
+#ifdef TL2_MAG_USE_COMPLEX_SPIN
+		t_vec_real spin_re =
+			tl2::split_cplx_real<t_vec, t_vec_real>(spin_dir);
+#else
+		auto [spin_re, spin_im] =
+			tl2::split_cplx<t_vec, t_vec_real>(spin_dir);
+#endif
+
+		//spin_re /= tl2::norm<t_vec_real>(spin_re);
+		return spin_to_uv_real(spin_re);
+	}
+
+
 private:
 	std::vector<AtomSite> m_sites{};
 	std::vector<AtomSiteCalc> m_sites_calc{};
@@ -1742,6 +1719,7 @@ private:
 	// ordering wave vector for incommensurate structures
 	t_vec_real m_ordering = tl2::zero<t_vec_real>(3);
 	t_vec_real m_rotaxis = tl2::create<t_vec_real>({1., 0., 0.});
+	t_vec_real m_zdir = tl2::create<t_vec_real>({0., 0., 1.});
 	bool m_is_incommensurate{false};
 
 	bool m_unite_degenerate_energies{true};
