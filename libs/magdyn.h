@@ -484,8 +484,9 @@ public:
 		{
 			// rotate field to [001] direction
 			m_rot_field = tl2::convert<t_mat>(
+				tl2::trans<t_mat_real>(
 				tl2::rotation<t_mat_real, t_vec_real>(
-					-m_field.dir, m_zdir, &m_rotaxis, m_eps));
+				-m_field.dir, m_zdir, &m_rotaxis, m_eps)));
 
 			/*std::cout << "Field rotation from:\n";
 			tl2::niceprint(std::cout, -m_field.dir, 1e-4, 4);
@@ -771,23 +772,22 @@ public:
 					C(i, j) += S_k * tl2::inner_noconj<t_vec>(
 						*v_i, J_sub_Q0 * *v_k);
 				}
-			}
 
-			// include external field, equation (28) from (Toth 2015)
-			if(use_field && i == j)
-			{
-				t_vec B = tl2::convert<t_vec>(
-					m_field.dir / tl2::norm<t_vec_real>(m_field.dir));
-				B = B * m_field.mag;
+				// include external field, equation (28) from (Toth 2015)
+				if(use_field)
+				{
+					t_vec B = tl2::convert<t_vec>(
+						-m_field.dir / tl2::norm<t_vec_real>(m_field.dir));
+					B = B * m_field.mag;
 
-				t_vec gv = m_sites[i].g * *v_i;
-				t_cplx Bgv = tl2::inner_noconj<t_vec>(B, gv);
+					t_vec gv = m_sites[i].g * *v_i;
+					t_cplx Bgv = tl2::inner_noconj<t_vec>(B, gv);
 
-				A(i, j) -= 0.5 * muB * Bgv;
-				A_mQ(i, j) -= 0.5 * muB * Bgv;
+					A(i, j) -= 0.5 * muB * Bgv;
+					A_mQ(i, j) -= 0.5 * muB * Bgv;
+				}
 			}
 		}
-
 
 		// test matrix block
 		//return A_conj - C;
@@ -827,7 +827,7 @@ public:
 			g_sign(i, i) = -1.;
 
 		// equation (31) from (Toth 2015)
-		t_mat C;
+		t_mat C_mat;
 		t_size chol_try = 0;
 		for(; chol_try<m_tries_chol; ++chol_try)
 		{
@@ -835,7 +835,7 @@ public:
 
 			if(chol_ok)
 			{
-				C = _C;
+				C_mat = _C;
 				break;
 			}
 			else
@@ -845,7 +845,7 @@ public:
 					using namespace tl2_ops;
 					std::cerr << "Warning: Cholesky decomposition failed for Q = "
 						<< Qvec << "." << std::endl;
-					C = _C;
+					C_mat = _C;
 					break;
 				}
 
@@ -863,14 +863,14 @@ public:
 				<< Qvec << "." << std::endl;
 		}
 
-		t_mat C_herm = tl2::herm<t_mat>(C);
+		t_mat C_herm = tl2::herm<t_mat>(C_mat);
 
 		// see p. 5 in (Toth 2015)
-		t_mat H = C * g_sign * C_herm;
+		t_mat H_mat = C_mat * g_sign * C_herm;
 		//tl2::niceprint(std::cout, H, 1e-4, 4);
 		//std::cout << std::endl;
 
-		bool is_herm = tl2::is_symm_or_herm<t_mat, t_real>(H, m_eps);
+		bool is_herm = tl2::is_symm_or_herm<t_mat, t_real>(H_mat, m_eps);
 		if(!is_herm)
 		{
 			using namespace tl2_ops;
@@ -882,7 +882,7 @@ public:
 		// eigenvectors correspond to the spectral weights
 		auto [evecs_ok, evals, evecs] =
 			tl2_la::eigenvec<t_mat, t_vec, t_cplx, t_real>(
-				H, only_energies, is_herm, true);
+				H_mat, only_energies, is_herm, true);
 		if(!evecs_ok)
 		{
 			using namespace tl2_ops;
@@ -925,9 +925,10 @@ public:
 			evecs = tl2::reorder(evecs, sorting);
 			evals = tl2::reorder(evals, sorting);
 
-			/*for(t_vec& evec : evecs)
+			/*for(std::size_t idx=0; idx<evecs.size(); ++idx)
 			{
-				tl2::niceprint(std::cout, evec, 1e-4, 4);
+				std::cout << "eval = " << evals[idx] << std::endl;
+				tl2::niceprint(std::cout, evecs[idx], 1e-4, 4);
 				std::cout << std::endl;
 			}*/
 
@@ -937,34 +938,30 @@ public:
 			//std::cout << std::endl;
 
 			// equation (32) from (Toth 2015)
-			t_mat L = evec_mat_herm * H * evec_mat;
-			t_mat E = g_sign * L;
+			t_mat L_mat = evec_mat_herm * H_mat * evec_mat; // energies
+			t_mat E_sqrt = g_sign * L_mat;                  // abs. energies
+			for(t_size i=0; i<E_sqrt.size1(); ++i)
+				E_sqrt(i, i) = std::sqrt(E_sqrt/*L_mat*/(i, i)); // sqrt. of abs. energies
+			//tl2::niceprint(std::cout, L, 1e-4, 4);
+			//std::cout << std::endl;
 
 			// re-create energies, to be consistent with the weights
 			energies_and_correlations.clear();
-			for(t_size i=0; i<L.size1(); ++i)
+			for(t_size i=0; i<L_mat.size1(); ++i)
 			{
 				EnergyAndWeight EandS
 				{
-					.E = L(i,i).real(),
+					.E = L_mat(i, i).real(),
 					.S = tl2::zero<t_mat>(3, 3),
 					.S_p = tl2::zero<t_mat>(3, 3),
 					.S_m = tl2::zero<t_mat>(3, 3),
 					.S_perp = tl2::zero<t_mat>(3, 3),
 				};
 
-				energies_and_correlations.emplace_back(
-					std::move(EandS));
+				energies_and_correlations.emplace_back(std::move(EandS));
 			}
 
-			t_mat E_sqrt = E;
-			for(t_size i=0; i<E.size1(); ++i)
-			{
-				t_real energy = E_sqrt(i, i).real();
-				E_sqrt(i, i) = std::sqrt(std::abs(energy));
-			}
-
-			auto [C_inv, inv_ok] = tl2::inv(C);
+			auto [C_inv, inv_ok] = tl2::inv(C_mat);
 			if(!inv_ok)
 			{
 				using namespace tl2_ops;
@@ -1125,8 +1122,9 @@ public:
 
 					if(m_is_incommensurate)
 					{
-						t_mat& S_p = energies_and_correlations[i].S_m;
-						t_mat& S_m = energies_and_correlations[i].S_p;
+						// TODO: check order
+						t_mat& S_p = energies_and_correlations[i].S_p;
+						t_mat& S_m = energies_and_correlations[i].S_m;
 
 						S_p(x_idx, y_idx) += M_trafo_p(i, i) / t_real(2*num_sites);
 						S_m(x_idx, y_idx) += M_trafo_m(i, i) / t_real(2*num_sites);
@@ -1626,7 +1624,7 @@ protected:
 	std::tuple<t_vec, t_vec> R_to_uv(const t_mat& R)
 	{
 		t_vec u = tl2::col<t_mat, t_vec>(R, 0)
-			+ s_imag*tl2::col<t_mat, t_vec>(R, 1);
+			+ s_imag * tl2::col<t_mat, t_vec>(R, 1);
 		t_vec v = tl2::col<t_mat, t_vec>(R, 2);
 
 		return std::make_tuple(u, v);
@@ -1689,9 +1687,11 @@ private:
 	// ordering wave vector for incommensurate structures
 	t_vec_real m_ordering = tl2::zero<t_vec_real>(3);
 	t_vec_real m_rotaxis = tl2::create<t_vec_real>({1., 0., 0.});
-	t_vec_real m_zdir = tl2::create<t_vec_real>({0., 0., 1.});
-	bool m_is_incommensurate{false};
 
+	// direction to rotation spins into, usually [001]
+	t_vec_real m_zdir = tl2::create<t_vec_real>({0., 0., 1.});
+
+	bool m_is_incommensurate{false};
 	bool m_unite_degenerate_energies{true};
 
 	// temperature (-1: disable bose factor)
