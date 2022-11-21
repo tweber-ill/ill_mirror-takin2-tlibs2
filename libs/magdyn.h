@@ -668,7 +668,11 @@ public:
 			const ExchangeTermCalc& term_calc = m_exchange_terms_calc[term_idx];
 
 			if(term.atom1 >= num_sites || term.atom2 >= num_sites)
+			{
+				std::cerr << "Error: Site index out of bounds for coupling term "
+					<< term_idx << "." << std::endl;
 				continue;
+			}
 
 			// exchange interaction matrix with dmi as anti-symmetric part,
 			// see (Toth 2015) p. 2
@@ -1115,7 +1119,7 @@ public:
 					M_trafo_m = trafo_herm * M_m * trafo;
 				}
 
-				for(t_size i=0; i<num_sites*2; ++i)
+				for(t_size i=0; i<energies_and_correlations.size(); ++i)
 				{
 					t_mat& S = energies_and_correlations[i].S;
 					S(x_idx, y_idx) += M_trafo(i, i) / t_real(2*num_sites);
@@ -1162,9 +1166,8 @@ public:
 			}
 
 
-			for(t_size i=0; i<num_sites*2; ++i)
+			for(t_size i=0; i<energies_and_correlations.size(); ++i)
 			{
-				//t_size site_idx = i % num_sites;
 				auto& E_and_S = energies_and_correlations[i];
 				const t_real& E = E_and_S.E;
 				t_mat& S = E_and_S.S;
@@ -1306,7 +1309,8 @@ public:
 		std::ofstream ofstr{filename};
 		ofstr.precision(m_prec);
 
-		ofstr << std::setw(m_prec*2) << std::left << "# h"
+		ofstr
+			<< std::setw(m_prec*2) << std::left << "# h"
 			<< std::setw(m_prec*2) << std::left << "k"
 			<< std::setw(m_prec*2) << std::left << "l"
 			<< std::setw(m_prec*2) << std::left << "E"
@@ -1314,7 +1318,7 @@ public:
 			<< std::setw(m_prec*2) << std::left << "w_sf1"
 			<< std::setw(m_prec*2) << std::left << "w_sf2"
 			<< std::setw(m_prec*2) << std::left << "w_nsf"
-			<< "\n";
+			<< std::endl;
 
 		for(t_size i=0; i<num_qs; ++i)
 		{
