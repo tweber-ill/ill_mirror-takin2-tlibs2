@@ -1432,7 +1432,13 @@ void GlPlot::paintGL()
 
 void GlPlot::mouseMoveEvent(QMouseEvent *pEvt)
 {
-	m_renderer->mouseMoveEvent(pEvt->localPos());
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+	QPointF pos = pEvt->localPos();
+#else
+	QPointF pos = pEvt->position();
+#endif
+
+	m_renderer->mouseMoveEvent(pos);
 	m_mouseMovedBetweenDownAndUp = 1;
 	pEvt->accept();
 }
