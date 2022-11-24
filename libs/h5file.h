@@ -6,6 +6,7 @@
  *
  * References:
  *   @see http://davis.lbl.gov/Manuals/HDF5-1.8.7/cpplus_RM/readdata_8cpp-example.html
+ *   @see http://davis.lbl.gov/Manuals/HDF5-1.8.7/cpplus_RM/writedata_8cpp-example.html
  *   @see http://davis.lbl.gov/Manuals/HDF5-1.8.7/cpplus_RM/classH5_1_1CommonFG.html
  *   @see http://davis.lbl.gov/Manuals/HDF5-1.8.7/cpplus_RM/classH5_1_1DataSet.html
  *   @see http://davis.lbl.gov/Manuals/HDF5-1.8.7/cpplus_RM/classH5_1_1DataSpace.html
@@ -34,7 +35,6 @@
 #ifndef __TLIBS2_H5__
 #define __TLIBS2_H5__
 
-
 #include <H5Cpp.h>
 
 #include <type_traits>
@@ -45,22 +45,85 @@
 
 namespace tl2 {
 
+
+/**
+ * get corresponding h5 primitive data type
+ */
+template<class T>
+constexpr H5::PredType get_h5_type()
+{
+	if constexpr(std::is_integral_v<T> && std::is_signed_v<T>)
+	{
+		if constexpr(sizeof(T) == 1)
+			return H5::PredType::NATIVE_INT8;
+		else if constexpr(sizeof(T) == 2)
+			return H5::PredType::NATIVE_INT16;
+		else if constexpr(sizeof(T) == 4)
+			return H5::PredType::NATIVE_INT32;
+		else if constexpr(sizeof(T) == 8)
+			return H5::PredType::NATIVE_INT64;
+		else
+			return H5::PredType::NATIVE_INT;
+	}
+	else if constexpr(std::is_integral_v<T> && !std::is_signed_v<T>)
+	{
+		if constexpr(sizeof(T) == 1)
+			return H5::PredType::NATIVE_UINT8;
+		else if constexpr(sizeof(T) == 2)
+			return H5::PredType::NATIVE_UINT16;
+		else if constexpr(sizeof(T) == 4)
+			return H5::PredType::NATIVE_UINT32;
+		else if constexpr(sizeof(T) == 8)
+			return H5::PredType::NATIVE_UINT64;
+		else
+			return H5::PredType::NATIVE_UINT;
+	}
+	else if constexpr(std::is_floating_point_v<T>)
+	{
+		if constexpr(sizeof(T) == 4)
+			return H5::PredType::NATIVE_FLOAT;
+		else if constexpr(sizeof(T) == 8)
+			return H5::PredType::NATIVE_DOUBLE;
+		else if constexpr(sizeof(T) == 16)
+			return H5::PredType::NATIVE_LDOUBLE;
+		else
+			return H5::PredType::NATIVE_DOUBLE;
+	}
+
+	// default fallback type
+	return H5::PredType::NATIVE_INT;
+}
+
+
+// --------------------------------------------------------------------------------
+
+
 /**
  * get the entries of a given directory from an hdf5 file
  */
-template<class t_str = std::string>
-bool get_h5_entries(H5::H5File& file, const std::string& path, std::vector<t_str>& entries)
+template<class t_strvec = std::vector<std::string>>
+bool get_h5_entries(H5::H5File& file, const std::string& path, t_strvec& entries)
 {
-	// H5G_iterate_t callback, see: /usr/include/hdf5/serial/H5Dpublic.h
-	H5G_iterate_t collect_elems = [](hid_t group, const char* name, void* _vec) -> herr_t
+	try
 	{
-		((std::vector<t_str>*)(_vec))->push_back(name);
-		return 0;
-	};
+		// H5G_iterate_t callback, see: /usr/include/hdf5/serial/H5Dpublic.h
+		H5G_iterate_t collect_elems = [](hid_t /*group*/, const char* name, void* _vec) -> herr_t
+		{
+			((t_strvec*)(_vec))->push_back(name);
+			return 0;
+		};
 
-	file.iterateElems(path, 0, collect_elems, &entries);
-	return true;
+		file.iterateElems(path, 0, collect_elems, &entries);
+		return true;
+	}
+	catch(const H5::Exception& ex)
+	{
+		return false;
+	}
 }
+
+
+// --------------------------------------------------------------------------------
 
 
 /**
@@ -69,32 +132,64 @@ bool get_h5_entries(H5::H5File& file, const std::string& path, std::vector<t_str
 template<class T>
 bool get_h5_scalar(H5::H5File& file, const std::string& path, T& val)
 {
-	H5::DataSet dset = file.openDataSet(path);
-	H5::DataSpace dspace = dset.getSpace();
+	try
+	{
+		H5::DataSet dset = file.openDataSet(path);
+		H5::DataSpace dspace = dset.getSpace();
 
-	hsize_t rank = dspace.getSimpleExtentNdims();
-	if(rank != 1)
+		hsize_t rank = dspace.getSimpleExtentNdims();
+		if(rank != 1 && rank != 0)
+			return false;
+		if(rank == 1)
+		{
+			hsize_t dim = 0;
+			dspace.getSimpleExtentDims(&dim, 0);
+			if(dim != 1)
+				return false;
+		}
+
+		H5::PredType ty = get_h5_type<T>();
+		dset.read(&val, ty);
+
+		dspace.close();
+		dset.close();
+		return true;
+	}
+	catch(const H5::Exception& ex)
+	{
 		return false;
-
-	hsize_t dim = 0;
-	dspace.getSimpleExtentDims(&dim, 0);
-	if(dim != 1)
-		return false;
-
-	std::unique_ptr<H5::PredType> ty;
-	if(std::is_integral<T>::value)
-		ty.reset(new H5::PredType(H5::PredType::NATIVE_INT));
-	else if(std::is_floating_point<T>::value)
-		ty.reset(new H5::PredType(H5::PredType::NATIVE_DOUBLE));
-	else
-		return false;
-
-	dset.read(&val, *ty);
-
-	dspace.close();
-	dset.close();
-	return true;
+	}
 }
+
+
+/**
+ * write a scalar value to an hdf5 file
+ */
+template<class T>
+bool set_h5_scalar(H5::H5File& file, const std::string& path, T val)
+{
+	try
+	{
+		H5::PredType ty = get_h5_type<T>();
+
+		hsize_t dim = 0;
+		H5::DataSpace dspace(0, &dim);
+		H5::DataSet dset = file.createDataSet(path, ty, dspace);
+
+		dset.write(&val, ty);
+
+		dset.close();
+		dspace.close();
+		return true;
+	}
+	catch(const H5::Exception& ex)
+	{
+		return false;
+	}
+}
+
+
+// --------------------------------------------------------------------------------
 
 
 /**
@@ -103,130 +198,240 @@ bool get_h5_scalar(H5::H5File& file, const std::string& path, T& val)
 template<class t_str = std::string>
 bool get_h5_string(H5::H5File& file, const std::string& path, t_str& val)
 {
-	H5::DataSet dset = file.openDataSet(path);
-	H5::DataSpace dspace = dset.getSpace();
+	try
+	{
+		H5::DataSet dset = file.openDataSet(path);
+		H5::DataSpace dspace = dset.getSpace();
 
-	hsize_t rank = dspace.getSimpleExtentNdims();
-	if(rank != 1)
+		hsize_t rank = dspace.getSimpleExtentNdims();
+		if(rank != 1)
+			return false;
+
+		hsize_t dim = 0;
+		dspace.getSimpleExtentDims(&dim, 0);
+		if(dim != 1)
+			return false;
+
+		dset.read(val, dset.getStrType());
+
+		dspace.close();
+		dset.close();
+		return true;
+	}
+	catch(const H5::Exception& ex)
+	{
 		return false;
-
-	hsize_t dim = 0;
-	dspace.getSimpleExtentDims(&dim, 0);
-	if(dim != 1)
-		return false;
-
-	dset.read(val, dset.getStrType());
-
-	dspace.close();
-	dset.close();
-	return true;
+	}
 }
 
 
 /**
- * get a vector of value from an hdf5 file
+ * write a string value to an hdf5 file
  */
-template<class T>
-bool get_h5_vector(H5::H5File& file, const std::string& path, std::vector<T>& vals)
+template<class t_str = std::string>
+bool set_h5_string(H5::H5File& file, const std::string& path, const t_str& val)
 {
-	H5::DataSet dset = file.openDataSet(path);
-	H5::DataSpace dspace = dset.getSpace();
+	try
+	{
+		hsize_t dim = 0;
+		H5::DataSpace dspace(0, &dim);
 
-	hsize_t rank = dspace.getSimpleExtentNdims();
-	if(rank != 1)
+		H5::DataSet dset = file.createDataSet(
+			path, H5::StrType(H5::PredType::C_S1, H5T_VARIABLE), dspace);
+
+		dset.write(val, dset.getStrType());
+
+		dset.close();
+		dspace.close();
+		return true;
+	}
+	catch(const H5::Exception& ex)
+	{
 		return false;
-
-	hsize_t dim = 0;
-	dspace.getSimpleExtentDims(&dim, 0);
-
-	std::unique_ptr<H5::PredType> ty;
-	if(std::is_integral<T>::value)
-		ty.reset(new H5::PredType(H5::PredType::NATIVE_INT));
-	else if(std::is_floating_point<T>::value)
-		ty.reset(new H5::PredType(H5::PredType::NATIVE_DOUBLE));
-	else
-		return false;
-
-	vals.resize(dim);
-	dset.read(vals.data(), *ty);
-
-	dspace.close();
-	dset.close();
-	return true;
+	}
 }
+
+
+// --------------------------------------------------------------------------------
+
+
+/**
+ * get a vector of values from an hdf5 file
+ */
+template<class T, template<class...> class t_vec = std::vector>
+bool get_h5_vector(H5::H5File& file, const std::string& path, t_vec<T>& vals)
+{
+	try
+	{
+		H5::DataSet dset = file.openDataSet(path);
+		H5::DataSpace dspace = dset.getSpace();
+
+		hsize_t rank = dspace.getSimpleExtentNdims();
+		if(rank != 1)
+			return false;
+
+		hsize_t dim = 0;
+		dspace.getSimpleExtentDims(&dim, 0);
+
+		H5::PredType ty = get_h5_type<T>();
+
+		vals.resize(dim);
+		dset.read(vals.data(), ty);
+
+		dspace.close();
+		dset.close();
+		return true;
+	}
+	catch(const H5::Exception& ex)
+	{
+		return false;
+	}
+}
+
+
+/**
+ * write a vector of values to an hdf5 file
+ */
+template<class T, template<class...> class t_vec = std::vector>
+bool set_h5_vector(H5::H5File& file, const std::string& path, const t_vec<T>& vals)
+{
+	try
+	{
+		H5::PredType ty = get_h5_type<T>();
+
+		hsize_t dim = vals.size();
+		H5::DataSpace dspace(1, &dim);
+		H5::DataSet dset = file.createDataSet(path, ty, dspace);
+
+		dset.write(vals.data(), ty);
+
+		dset.close();
+		dspace.close();
+		return true;
+	}
+	catch(const H5::Exception& ex)
+	{
+		return false;
+	}
+}
+
+
+// --------------------------------------------------------------------------------
 
 
 /**
  * get a vector of string value from an hdf5 file
  */
-template<class t_str = std::string>
-bool get_h5_string_vector(H5::H5File& file, const std::string& path, std::vector<t_str>& vals)
+template<class t_str_vec = std::vector<std::string>>
+bool get_h5_string_vector(H5::H5File& file, const std::string& path, t_str_vec& vals)
 {
-	H5::DataSet dset = file.openDataSet(path);
-	H5::DataSpace dspace = dset.getSpace();
+	try
+	{
+		H5::DataSet dset = file.openDataSet(path);
+		H5::DataSpace dspace = dset.getSpace();
 
-	hsize_t rank = dspace.getSimpleExtentNdims();
-	if(rank != 1)
+		hsize_t rank = dspace.getSimpleExtentNdims();
+		if(rank != 1)
+			return false;
+
+		hsize_t dim = 0;
+		dspace.getSimpleExtentDims(&dim, 0);
+		vals.resize(dim);
+
+		const char **chs = new const char*[dim];
+		dset.read(chs, H5::StrType(H5::PredType::C_S1, H5T_VARIABLE));
+		for(hsize_t i=0; i<dim; ++i)
+			vals[i] = chs[i];
+		for(hsize_t i=0; i<dim; ++i)
+			delete[] chs[i];
+		delete[] chs;
+
+		dspace.close();
+		dset.close();
+		return true;
+	}
+	catch(const H5::Exception& ex)
+	{
 		return false;
-
-	hsize_t dim = 0;
-	dspace.getSimpleExtentDims(&dim, 0);
-	vals.resize(dim);
-
-	const char **chs = new const char*[dim];
-	dset.read(chs, H5::StrType(H5::PredType::C_S1, H5T_VARIABLE));
-	for(hsize_t i=0; i<dim; ++i)
-		vals[i] = chs[i];
-	for(hsize_t i=0; i<dim; ++i)
-		delete[] chs[i];
-	delete[] chs;
-
-	dspace.close();
-	dset.close();
-	return true;
+	}
 }
+
+
+/**
+ * write a vector of  string values to an hdf5 file
+ */
+template<class t_str_vec = std::vector<std::string>>
+bool set_h5_string_vector(H5::H5File& file, const std::string& path, const t_str_vec& val)
+{
+	try
+	{
+		hsize_t dim = val.size();
+		H5::DataSpace dspace(1, &dim);
+
+		H5::DataSet dset = file.createDataSet(
+			path, H5::StrType(H5::PredType::C_S1, H5T_VARIABLE), dspace);
+
+		const char **chs = new const char*[dim];
+		for(std::size_t i=0; i<dim; ++i)
+			chs[i] = val[i].c_str();
+		dset.write(chs, dset.getStrType());
+		delete[] chs;
+
+		dset.close();
+		dspace.close();
+		return true;
+	}
+	catch(const H5::Exception& ex)
+	{
+		return false;
+	}
+}
+
+
+// --------------------------------------------------------------------------------
 
 
 /**
  * get a matrix of value from an hdf5 file
  */
-template<class T>
-bool get_h5_matrix(H5::H5File& file, const std::string& path, std::vector<std::vector<T>>& vals)
+template<class T, template<class...> class t_vec = std::vector>
+bool get_h5_matrix(H5::H5File& file, const std::string& path, t_vec<t_vec<T>>& vals)
 {
-	H5::DataSet dset = file.openDataSet(path);
-	H5::DataSpace dspace = dset.getSpace();
-
-	hsize_t rank = dspace.getSimpleExtentNdims();
-	if(rank != 2)
-		return false;
-
-	hsize_t dims[2] = { 0, 0 };
-	dspace.getSimpleExtentDims(dims, 0);
-
-	std::unique_ptr<H5::PredType> ty;
-	if(std::is_integral<T>::value)
-		ty.reset(new H5::PredType(H5::PredType::NATIVE_INT));
-	else if(std::is_floating_point<T>::value)
-		ty.reset(new H5::PredType(H5::PredType::NATIVE_DOUBLE));
-	else
-		return false;
-
-	T* buf = new T[dims[0]*dims[1]];
-	dset.read(buf, *ty);
-
-	vals.resize(dims[0]);
-	for(hsize_t row=0; row<dims[0]; ++row)
+	try
 	{
-		vals[row].resize(dims[1]);
-		for(hsize_t col=0; col<dims[1]; ++col)
-			vals[row][col] = buf[row*dims[1] + col];
+		H5::DataSet dset = file.openDataSet(path);
+		H5::DataSpace dspace = dset.getSpace();
+
+		hsize_t rank = dspace.getSimpleExtentNdims();
+		if(rank != 2)
+			return false;
+
+		hsize_t dims[2] = { 0, 0 };
+		dspace.getSimpleExtentDims(dims, 0);
+
+		H5::PredType ty = get_h5_type<T>();
+
+		T* buf = new T[dims[0]*dims[1]];
+		dset.read(buf, ty);
+
+		vals.resize(dims[0]);
+		for(hsize_t row=0; row<dims[0]; ++row)
+		{
+			vals[row].resize(dims[1]);
+			for(hsize_t col=0; col<dims[1]; ++col)
+				vals[row][col] = buf[row*dims[1] + col];
+		}
+
+		delete[] buf;
+
+		dspace.close();
+		dset.close();
+		return true;
 	}
-
-	delete[] buf;
-
-	dspace.close();
-	dset.close();
-	return true;
+	catch(const H5::Exception& ex)
+	{
+		return false;
+	}
 }
 
 }
