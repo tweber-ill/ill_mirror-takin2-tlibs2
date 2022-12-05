@@ -27,6 +27,7 @@
 
 %module tl2
 %{
+	//#include "magdyn.h"
 	#include "instr.h"
 %}
 
@@ -35,6 +36,7 @@
 %include "std_map.i"
 %include "std_unordered_map.i"
 %include "std_pair.i"
+//%include "std_tuple.i"
 %include "std_string.i"
 
 %template(VecStr) std::vector<std::string>;
@@ -44,5 +46,7 @@
 %template(ArrB3) std::array<bool,3>;
 %template(MapStrStr) std::unordered_map<std::string, std::string>;
 
+//%include "magdyn.h"
 %include "instr.h"
+
 %template(FileInstrBaseD) tl2::FileInstrBase<double>;
