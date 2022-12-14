@@ -32,6 +32,7 @@
 #include "parser.h"
 #include "llasm.h"
 #include "printast.h"
+#include "str.h"
 
 #include <fstream>
 #include <locale>
@@ -148,11 +149,11 @@ int main(int argc, char** argv)
 			return 0;
 		}
 
+		const std::string& inprog = vecProgs[0];
 		if(outprog == "")
-		{
+			outprog = tl2::get_file_noext(tl2::get_file_nodir(inprog));
+		if(outprog == "")
 			outprog = "out";
-			tl2::log_warn("No program output specified, using \"", outprog, "\".");
-		}
 
 		std::string outprog_ast = outprog + "_ast.xml";
 		std::string outprog_syms = outprog + "_syms.txt";
@@ -169,7 +170,6 @@ int main(int argc, char** argv)
 		// --------------------------------------------------------------------
 		// parse input
 		// --------------------------------------------------------------------
-		const std::string& inprog = vecProgs[0];
 		tl2::log_info("Parsing \"", inprog, "\"...");
 
 		std::ifstream ifstr{inprog};

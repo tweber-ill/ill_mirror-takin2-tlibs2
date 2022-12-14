@@ -84,7 +84,7 @@ static inline const std::string& wstr_to_str(const std::string& str) { return st
 // -----------------------------------------------------------------------------
 
 
-template<class t_str=std::string>
+template<class t_str = std::string>
 t_str str_to_upper(const t_str& str)
 {
 	t_str strOut;
@@ -95,7 +95,7 @@ t_str str_to_upper(const t_str& str)
 }
 
 
-template<class t_str=std::string>
+template<class t_str = std::string>
 t_str str_to_lower(const t_str& str)
 {
 	t_str strLower;
@@ -109,8 +109,8 @@ t_str str_to_lower(const t_str& str)
 // -----------------------------------------------------------------------------
 
 
-template<class t_str=std::string>
-t_str get_file_noext(const t_str& str, bool bToLower=0)
+template<class t_str = std::string>
+t_str get_file_noext(const t_str& str, bool bToLower = false)
 {
 	std::size_t iPos = str.find_last_of('.');
 
@@ -125,8 +125,8 @@ t_str get_file_noext(const t_str& str, bool bToLower=0)
 }
 
 
-template<class t_str=std::string>
-t_str get_fileext(const t_str& str, bool bToLower=0)
+template<class t_str = std::string>
+t_str get_fileext(const t_str& str, bool bToLower = false)
 {
 	std::size_t iPos = str.find_last_of('.');
 
@@ -144,8 +144,8 @@ t_str get_fileext(const t_str& str, bool bToLower=0)
 /**
  *  e.g. returns "tof" for "123.tof.bz2"
  */
-template<class t_str=std::string>
-t_str get_fileext2(const t_str& str, bool bToLower=0)
+template<class t_str = std::string>
+t_str get_fileext2(const t_str& str, bool bToLower = false)
 {
 	std::size_t iPos = str.find_last_of('.');
 	if(iPos == t_str::npos || iPos == 0)
@@ -159,8 +159,8 @@ t_str get_fileext2(const t_str& str, bool bToLower=0)
 /**
  * e.g. returns "tof" for "123.tof.bz2" and for "123.tof"
  */
-template<class t_str=std::string>
-t_str get_fileext_nocomp(const t_str& str, bool bToLower=0)
+template<class t_str = std::string>
+t_str get_fileext_nocomp(const t_str& str, bool bToLower = false)
 {
 	std::size_t iCnt = std::count(str.begin(), str.end(), '.');
 	if(iCnt==0)
@@ -172,16 +172,16 @@ t_str get_fileext_nocomp(const t_str& str, bool bToLower=0)
 }
 
 
-template<class t_str=std::string>
-t_str get_dir(const t_str& str, bool bToLower=0)
+template<class t_str = std::string>
+t_str get_dir(const t_str& str, bool bToLower = false)
 {
 	using t_ch = typename t_str::value_type;
 	std::size_t iPos = std::string::npos;
 
 	if constexpr(std::is_same_v<t_ch, char>)
-		str.find_last_of("\\/");
+		iPos = str.find_last_of("\\/");
 	else if constexpr(std::is_same_v<t_ch, wchar_t>)
-		str.find_last_of(L"\\/");
+		iPos = str.find_last_of(L"\\/");
 
 	if(iPos == t_str::npos)
 		return t_str();
@@ -194,19 +194,19 @@ t_str get_dir(const t_str& str, bool bToLower=0)
 }
 
 
-template<class t_str=std::string>
-t_str get_file_nodir(const t_str& str, bool bToLower=0)
+template<class t_str = std::string>
+t_str get_file_nodir(const t_str& str, bool bToLower = false)
 {
 	using t_ch = typename t_str::value_type;
 	std::size_t iPos = std::string::npos;
 
 	if constexpr(std::is_same_v<t_ch, char>)
-		str.find_last_of("\\/");
+		iPos = str.find_last_of("\\/");
 	else if constexpr(std::is_same_v<t_ch, wchar_t>)
-		str.find_last_of(L"\\/");
+		iPos = str.find_last_of(L"\\/");
 
 	if(iPos == t_str::npos)
-		return t_str();
+		return str;
 
 	t_str strRet = str.substr(iPos+1);
 	if(bToLower)
@@ -220,8 +220,8 @@ t_str get_file_nodir(const t_str& str, bool bToLower=0)
 
 
 
-template<class t_str=std::string>
-bool str_is_equal(const t_str& str0, const t_str& str1, bool bCase=0)
+template<class t_str = std::string>
+bool str_is_equal(const t_str& str0, const t_str& str1, bool bCase = false)
 {
 	if(bCase)
 		return algo::equals(str0, str1, algo::is_equal());
@@ -230,9 +230,9 @@ bool str_is_equal(const t_str& str0, const t_str& str1, bool bCase=0)
 }
 
 
-template<class t_str=std::string>
+template<class t_str = std::string>
 bool str_is_equal_to_either(const t_str& str0,
-	const std::initializer_list<t_str>& lststr1, bool bCase=0)
+	const std::initializer_list<t_str>& lststr1, bool bCase = false)
 {
 	for(const t_str& str1 : lststr1)
 		if(str_is_equal<t_str>(str0, str1, bCase))
@@ -241,8 +241,8 @@ bool str_is_equal_to_either(const t_str& str0,
 }
 
 
-template<class t_str=std::string>
-bool str_contains(const t_str& str, const t_str& strSub, bool bCase=0)
+template<class t_str = std::string>
+bool str_contains(const t_str& str, const t_str& strSub, bool bCase = false)
 {
 	if(bCase)
 		return algo::contains(str, strSub, algo::is_equal());
@@ -254,7 +254,7 @@ bool str_contains(const t_str& str, const t_str& strSub, bool bCase=0)
 // -----------------------------------------------------------------------------
 
 
-template<class t_str=std::string>
+template<class t_str = std::string>
 void trim(t_str& str)
 {
 	using t_char = typename t_str::value_type;
@@ -271,7 +271,7 @@ void trim(t_str& str)
 }
 
 
-template<class t_str=std::string>
+template<class t_str = std::string>
 t_str trimmed(const t_str& str)
 {
 	t_str strret = str;

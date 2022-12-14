@@ -38,7 +38,9 @@
 
 #include "ast.h"
 #include "sym.h"
+
 #include <stack>
+#include <optional>
 
 
 /**

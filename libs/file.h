@@ -317,7 +317,7 @@ get_prop_path(const std::string& _strAddr, const typename t_str::value_type& chS
 /**
  * property tree
  */
-template<class _t_str = std::string, bool bCaseSensitive=0>
+template<class _t_str = std::string, bool bCaseSensitive = false>
 class Prop
 {
 public:
