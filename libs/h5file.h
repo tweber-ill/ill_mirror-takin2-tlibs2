@@ -50,7 +50,7 @@ namespace tl2 {
  * get corresponding h5 primitive data type
  */
 template<class T>
-constexpr H5::PredType get_h5_type()
+/*constexpr*/ H5::PredType get_h5_type()
 {
 	if constexpr(std::is_integral_v<T> && std::is_signed_v<T>)
 	{
@@ -358,7 +358,7 @@ bool get_h5_string_vector(H5::H5File& file, const std::string& path, t_str_vec& 
 
 
 /**
- * write a vector of  string values to an hdf5 file
+ * write a vector of string values to an hdf5 file
  */
 template<class t_str_vec = std::vector<std::string>>
 bool set_h5_string_vector(H5::H5File& file, const std::string& path, const t_str_vec& val)
@@ -433,6 +433,109 @@ bool get_h5_matrix(H5::H5File& file, const std::string& path, t_vec<t_vec<T>>& v
 		return false;
 	}
 }
+
+
+/**
+ * write a matrix of values to an hdf5 file
+ */
+template<class T, template<class...> class t_vec = std::vector>
+bool set_h5_matrix(H5::H5File& file, const std::string& path, const t_vec<t_vec<T>>& vals)
+{
+	try
+	{
+		H5::PredType ty = get_h5_type<T>();
+
+		hsize_t dim1 = vals.size();
+		hsize_t dim2 = dim1 ? vals[0].size() : 0;
+		hsize_t dims[] = { dim1, dim2 };
+
+		auto buf = std::make_unique<T[]>(dims[0] * dims[1]);
+		for(hsize_t row=0; row<dims[0]; ++row)
+			for(hsize_t col=0; col<dims[1]; ++col)
+				buf[row*dims[1] + col] = vals[row][col];
+
+		H5::DataSpace dspace(2, dims);
+		H5::DataSet dset = file.createDataSet(path, ty, dspace);
+
+		dset.write(buf.get(), ty);
+
+		dset.close();
+		dspace.close();
+		return true;
+	}
+	catch(const H5::Exception& ex)
+	{
+		return false;
+	}
+}
+
+
+// --------------------------------------------------------------------------------
+
+
+/**
+ * get a multidimensional array of value from an hdf5 file
+ */
+template<class T, template<class...> class t_vec = std::vector>
+bool get_h5_multidim(H5::H5File& file, const std::string& path,
+	hsize_t& rank, t_vec<hsize_t>& dims, t_vec<T>& vals)
+{
+	try
+	{
+		H5::PredType ty = get_h5_type<T>();
+
+		H5::DataSet dset = file.openDataSet(path);
+		H5::DataSpace dspace = dset.getSpace();
+
+		rank = dspace.getSimpleExtentNdims();
+
+		dims.resize(rank);
+		dspace.getSimpleExtentDims(dims.data(), 0);
+
+		hsize_t linear_dim = rank ? dims[0] : 0;
+		for(hsize_t i=1; i<rank; ++i)
+			linear_dim *= dims[i];
+		vals.resize(linear_dim);
+
+		dset.read(vals.data(), ty);
+
+		dspace.close();
+		dset.close();
+		return true;
+	}
+	catch(const H5::Exception& ex)
+	{
+		return false;
+	}
+}
+
+
+/**
+ * write a multidimensional array of values to an hdf5 file
+ */
+template<class T>
+bool set_h5_multidim(H5::H5File& file, const std::string& path,
+	hsize_t rank, const hsize_t* dims, const T* vals)
+{
+	try
+	{
+		H5::PredType ty = get_h5_type<T>();
+
+		H5::DataSpace dspace(rank, dims);
+		H5::DataSet dset = file.createDataSet(path, ty, dspace);
+
+		dset.write(vals, ty);
+
+		dset.close();
+		dspace.close();
+		return true;
+	}
+	catch(const H5::Exception& ex)
+	{
+		return false;
+	}
+}
+
 
 }
 

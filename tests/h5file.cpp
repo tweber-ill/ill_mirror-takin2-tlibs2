@@ -32,7 +32,7 @@
 #include "libs/h5file.h"
 
 
-void read_tests()
+void read_tests_2()
 {
 	H5::H5File h5file("/users/tw/Downloads/mail_tmp/065006.nxs", H5F_ACC_RDONLY);
 
@@ -90,6 +90,33 @@ void read_tests()
 }
 
 
+void read_tests()
+{
+	H5::H5File h5file("test.hdf", H5F_ACC_RDONLY);
+
+	std::vector<std::vector<double>> data;
+	bool ok = tl2::get_h5_matrix(h5file, "test_group/test_matrix", data);
+	std::cout << std::boolalpha << ok << std::endl;
+	for(const auto& row : data)
+	{
+		for(double val : row)
+			std::cout << val << " ";
+		std::cout << std::endl;
+	}
+
+	std::vector<double> mat2;
+	hsize_t rank_mat2 = 0;
+	std::vector<hsize_t> dims_mat2;
+	ok = tl2::get_h5_multidim(h5file, "test_group/test_matrix_2", rank_mat2, dims_mat2, mat2);
+	std::cout << std::boolalpha << ok << ", rank = " << rank_mat2 << std::endl;
+	for(double val : mat2)
+		std::cout << val << " ";
+	std::cout << std::endl;
+
+	h5file.close();
+}
+
+
 void write_tests()
 {
 	H5::H5File h5file("test.hdf", H5F_ACC_TRUNC);
@@ -105,15 +132,45 @@ void write_tests()
 	std::vector<std::string> strvec {{ "123", "abc", "xyz"  }};
 	tl2::set_h5_string_vector(h5file, "test_group/test_string_vector", strvec);
 
+	std::vector<std::vector<double>> mat
+	{{
+		{1., 2.},
+		{3., 4.}
+	}};
+	tl2::set_h5_matrix(h5file, "test_group/test_matrix", mat);
+
+	std::vector<double> mat2
+	{{
+		5., 6.,
+		7., 8.
+	}};
+	hsize_t dims_mat2[] = {2, 2};
+	tl2::set_h5_multidim(h5file, "test_group/test_matrix_2", 2, dims_mat2, mat2.data());
+
 	h5file.close();
 }
 
 
 int main()
 {
-	read_tests();
-	std::cout << "\n--------------------------------------------------------------------------------\n" << std::endl;
+	H5::Exception::dontPrint();
+
 	write_tests();
+
+	std::cout << "\n--------------------------------------------------------------------------------\n" << std::endl;
+
+	read_tests();
+
+	std::cout << "\n--------------------------------------------------------------------------------\n" << std::endl;
+
+	try
+	{
+		read_tests_2();
+	}
+	catch(const H5::Exception& ex)
+	{
+		std::cerr << ex.getDetailMsg() << std::endl;
+	}
 
 	return 0;
 }
