@@ -497,7 +497,7 @@ void get_tokens(const t_str& str, const t_str& strDelim, t_cont& vecRet)
 
 
 /**
- * Tokenises string on strDelim
+ * tokenises string on strDelim
  */
 template<class T, class t_str=std::string, template<class...> class t_cont=std::vector>
 void get_tokens_seq(const t_str& str, const t_str& strDelim, t_cont<T>& vecRet, bool bCase=1)

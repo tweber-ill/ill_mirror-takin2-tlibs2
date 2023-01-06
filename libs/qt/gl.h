@@ -35,6 +35,9 @@
 #ifndef __MAG_GL_COMMON_H__
 #define __MAG_GL_COMMON_H__
 
+
+#include <QtCore/QtGlobal>
+
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
 	#include <QtOpenGL/QOpenGLShaderProgram>
 	#include <QtOpenGL/QOpenGLVertexArrayObject>
