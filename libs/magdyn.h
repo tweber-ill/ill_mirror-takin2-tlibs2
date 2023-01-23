@@ -1017,54 +1017,44 @@ public:
 				for(t_size i=0; i<num_sites; ++i)
 				for(t_size j=0; j<num_sites; ++j)
 				{
-					const t_vec_real& pos_i = m_sites[i].pos;
-					const t_vec_real& pos_j = m_sites[j].pos;
+					auto calc_mat_elems = [this, i, j, x_idx, y_idx]
+						(const t_vec_real& Qvec,
+						 t_mat& Y, t_mat& V, t_mat& Z, t_mat& W)
+					{
+						const t_vec_real& pos_i = m_sites[i].pos;
+						const t_vec_real& pos_j = m_sites[j].pos;
 
-					t_real S_i = m_sites[i].spin_mag;
-					t_real S_j = m_sites[j].spin_mag;
+						t_real S_i = m_sites[i].spin_mag;
+						t_real S_j = m_sites[j].spin_mag;
 
-					// get the precalculated u vectors
-					// for the commensurate case
-					const t_vec *u_i = &m_sites_calc[i].u;
-					const t_vec *u_j = &m_sites_calc[j].u;
-					const t_vec *u_conj_i = &m_sites_calc[i].u_conj;
-					const t_vec *u_conj_j = &m_sites_calc[j].u_conj;
+						// get the precalculated u vectors
+						// for the commensurate case
+						const t_vec *u_i = &m_sites_calc[i].u;
+						const t_vec *u_j = &m_sites_calc[j].u;
+						const t_vec *u_conj_i = &m_sites_calc[i].u_conj;
+						const t_vec *u_conj_j = &m_sites_calc[j].u_conj;
 
-					// TODO: check these
-					t_real SiSj = 4. * std::sqrt(S_i*S_j);
-					t_real phase_sign = 1.;
+						// TODO: check these
+						t_real SiSj = 4. * std::sqrt(S_i*S_j);
+						t_real phase_sign = 1.;
 
-					t_cplx phase = std::exp(phase_sign * s_imag * s_twopi *
-						tl2::inner<t_vec_real>(pos_j - pos_i, Qvec));
-					phase *= SiSj;
+						t_cplx phase = std::exp(phase_sign * s_imag * s_twopi *
+							tl2::inner<t_vec_real>(pos_j - pos_i, Qvec));
+						phase *= SiSj;
 
-					// matrix elements of equ. (44) from (Toth 2015)
-					Y(i, j) = phase * (*u_i)[x_idx] * (*u_conj_j)[y_idx];
-					V(i, j) = phase * (*u_conj_i)[x_idx] * (*u_conj_j)[y_idx];
-					Z(i, j) = phase * (*u_i)[x_idx] * (*u_j)[y_idx];
-					W(i, j) = phase * (*u_conj_i)[x_idx] * (*u_j)[y_idx];
+						// matrix elements of equ. (44) from (Toth 2015)
+						Y(i, j) = phase * (*u_i)[x_idx] * (*u_conj_j)[y_idx];
+						V(i, j) = phase * (*u_conj_i)[x_idx] * (*u_conj_j)[y_idx];
+						Z(i, j) = phase * (*u_i)[x_idx] * (*u_j)[y_idx];
+						W(i, j) = phase * (*u_conj_i)[x_idx] * (*u_j)[y_idx];
+					};
 
-					// incommensurate case
+					calc_mat_elems(Qvec, Y, V, Z, W);
+
 					if(m_is_incommensurate)
 					{
-						t_cplx phase_p = std::exp(phase_sign * s_imag * s_twopi *
-							tl2::inner<t_vec_real>(pos_j - pos_i,
-								Qvec + m_ordering));
-						t_cplx phase_m = std::exp(phase_sign * s_imag * s_twopi *
-							tl2::inner<t_vec_real>(pos_j - pos_i,
-								Qvec - m_ordering));
-						phase_p *= SiSj;
-						phase_m *= SiSj;
-
-						Y_p(i, j) = phase_p * (*u_i)[x_idx] * (*u_conj_j)[y_idx];
-						V_p(i, j) = phase_p * (*u_conj_i)[x_idx] * (*u_conj_j)[y_idx];
-						Z_p(i, j) = phase_p * (*u_i)[x_idx] * (*u_j)[y_idx];
-						W_p(i, j) = phase_p * (*u_conj_i)[x_idx] * (*u_j)[y_idx];
-
-						Y_m(i, j) = phase_m * (*u_i)[x_idx] * (*u_conj_j)[y_idx];
-						V_m(i, j) = phase_m * (*u_conj_i)[x_idx] * (*u_conj_j)[y_idx];
-						Z_m(i, j) = phase_m * (*u_i)[x_idx] * (*u_j)[y_idx];
-						W_m(i, j) = phase_m * (*u_conj_i)[x_idx] * (*u_j)[y_idx];
+						calc_mat_elems(Qvec + m_ordering, Y_p, V_p, Z_p, W_p);
+						calc_mat_elems(Qvec - m_ordering, Y_m, V_m, Z_m, W_m);
 					}
 
 					/*std::cout
@@ -1089,50 +1079,38 @@ public:
 						<< std::endl;*/
 				} // end of iteration over sites
 
-				// equation (47) from (Toth 2015)
-				t_mat M = tl2::create<t_mat>(num_sites*2, num_sites*2);
-				tl2::set_submat(M, Y, 0, 0);
-				tl2::set_submat(M, V, num_sites, 0);
-				tl2::set_submat(M, Z, 0, num_sites);
-				tl2::set_submat(M, W, num_sites, num_sites);
+				auto calc_S = [this, num_sites, x_idx, y_idx, &trafo, &trafo_herm, &energies_and_correlations]
+					(int which_S, const t_mat& Y, const t_mat& V, const t_mat& Z, const t_mat& W)
+				{
+					// equation (47) from (Toth 2015)
+					t_mat M = tl2::create<t_mat>(num_sites*2, num_sites*2);
+					tl2::set_submat(M, Y, 0, 0);
+					tl2::set_submat(M, V, num_sites, 0);
+					tl2::set_submat(M, Z, 0, num_sites);
+					tl2::set_submat(M, W, num_sites, num_sites);
 
-				t_mat M_trafo = trafo_herm * M * trafo;
+					t_mat M_trafo = trafo_herm * M * trafo;
 
-				// incommensurate case
-				t_mat M_p, M_m;
-				t_mat M_trafo_p, M_trafo_m;
+					for(t_size i=0; i<energies_and_correlations.size(); ++i)
+					{
+						t_mat* S = nullptr;
+						switch(which_S)
+						{
+							case 0: S = &energies_and_correlations[i].S; break;
+							case 1: S = &energies_and_correlations[i].S_p; break;
+							case 2: S = &energies_and_correlations[i].S_m; break;
+						}
+
+						(*S)(x_idx, y_idx) += M_trafo(i, i) / t_real(2*num_sites);
+					}
+				};
+
+				calc_S(0, Y, V, Z, W);
+
 				if(m_is_incommensurate)
 				{
-					M_p = tl2::create<t_mat>(num_sites*2, num_sites*2);
-					tl2::set_submat(M_p, Y_p, 0, 0);
-					tl2::set_submat(M_p, V_p, num_sites, 0);
-					tl2::set_submat(M_p, Z_p, 0, num_sites);
-					tl2::set_submat(M_p, W_p, num_sites, num_sites);
-
-					M_m = tl2::create<t_mat>(num_sites*2, num_sites*2);
-					tl2::set_submat(M_m, Y_m, 0, 0);
-					tl2::set_submat(M_m, V_m, num_sites, 0);
-					tl2::set_submat(M_m, Z_m, 0, num_sites);
-					tl2::set_submat(M_m, W_m, num_sites, num_sites);
-
-					M_trafo_p = trafo_herm * M_p * trafo;
-					M_trafo_m = trafo_herm * M_m * trafo;
-				}
-
-				for(t_size i=0; i<energies_and_correlations.size(); ++i)
-				{
-					t_mat& S = energies_and_correlations[i].S;
-					S(x_idx, y_idx) += M_trafo(i, i) / t_real(2*num_sites);
-
-					if(m_is_incommensurate)
-					{
-						// TODO: check order
-						t_mat& S_p = energies_and_correlations[i].S_p;
-						t_mat& S_m = energies_and_correlations[i].S_m;
-
-						S_p(x_idx, y_idx) += M_trafo_p(i, i) / t_real(2*num_sites);
-						S_m(x_idx, y_idx) += M_trafo_m(i, i) / t_real(2*num_sites);
-					}
+					calc_S(1, Y_p, V_p, Z_p, W_p);
+					calc_S(2, Y_m, V_m, Z_m, W_m);
 				}
 
 				/*using namespace tl2_ops;
