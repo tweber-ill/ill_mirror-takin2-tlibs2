@@ -696,7 +696,6 @@ public:
 					t_mat rot_UC = tl2::convert<t_mat>(
 						 tl2::rotation<t_mat_real, t_vec_real>(
 							m_rotaxis, rot_UC_angle));
-
 					J = J * rot_UC;
 				}
 			}
@@ -749,8 +748,7 @@ public:
 			t_real S_i = m_sites[i].spin_mag;
 			t_real S_j = m_sites[j].spin_mag;
 
-			// get the precalculated u and v vectors
-			// for the commensurate case
+			// get the precalculated u and v vectors for the commensurate case
 			const t_vec* u_i = &m_sites_calc[i].u;
 			const t_vec* u_j = &m_sites_calc[j].u;
 			const t_vec* u_conj_j = &m_sites_calc[j].u_conj;
@@ -993,25 +991,24 @@ public:
 			for(int y_idx=0; y_idx<3; ++y_idx)
 			{
 				// equations (44) from (Toth 2015)
-				t_mat V = tl2::create<t_mat>(num_sites, num_sites);
-				t_mat W = tl2::create<t_mat>(num_sites, num_sites);
-				t_mat Y = tl2::create<t_mat>(num_sites, num_sites);
-				t_mat Z = tl2::create<t_mat>(num_sites, num_sites);
+				auto create_matrices = [num_sites](
+					t_mat& V, t_mat& W, t_mat& Y, t_mat& Z)
+				{
+					V = tl2::create<t_mat>(num_sites, num_sites);
+					W = tl2::create<t_mat>(num_sites, num_sites);
+					Y = tl2::create<t_mat>(num_sites, num_sites);
+					Z = tl2::create<t_mat>(num_sites, num_sites);
+				};
 
-				// incommensurate case
+				t_mat V, W, Y, Z;
+				create_matrices(V, W, Y, Z);
+
 				t_mat V_p, W_p, Y_p, Z_p;
 				t_mat V_m, W_m, Y_m, Z_m;
 				if(m_is_incommensurate)
 				{
-					V_p = tl2::create<t_mat>(num_sites, num_sites);
-					W_p = tl2::create<t_mat>(num_sites, num_sites);
-					Y_p = tl2::create<t_mat>(num_sites, num_sites);
-					Z_p = tl2::create<t_mat>(num_sites, num_sites);
-
-					V_m = tl2::create<t_mat>(num_sites, num_sites);
-					W_m = tl2::create<t_mat>(num_sites, num_sites);
-					Y_m = tl2::create<t_mat>(num_sites, num_sites);
-					Z_m = tl2::create<t_mat>(num_sites, num_sites);
+					create_matrices(V_p, W_p, Y_p, Z_p);
+					create_matrices(V_m, W_m, Y_m, Z_m);
 				}
 
 				for(t_size i=0; i<num_sites; ++i)
@@ -1047,6 +1044,27 @@ public:
 						V(i, j) = phase * (*u_conj_i)[x_idx] * (*u_conj_j)[y_idx];
 						Z(i, j) = phase * (*u_i)[x_idx] * (*u_j)[y_idx];
 						W(i, j) = phase * (*u_conj_i)[x_idx] * (*u_j)[y_idx];
+
+						/*std::cout
+							<< "Y[" << i << ", " << j << ", "
+							<< x_idx << ", " << y_idx << "] = "
+							<< Y(i, j).real() << " + " << Y(i, j).imag() << "j"
+							<< std::endl;
+						std::cout
+							<< "V[" << i << ", " << j << ", "
+							<< x_idx << ", " << y_idx << "] = "
+							<< V(i, j).real() << " + " << V(i, j).imag() << "j"
+							<< std::endl;
+						std::cout
+							<< "Z[" << i << ", " << j << ", "
+							<< x_idx << ", " << y_idx << "] = "
+							<< Z(i, j).real() << " + " << Z(i, j).imag() << "j"
+							<< std::endl;
+						std::cout
+							<< "W[" << i << ", " << j << ", "
+							<< x_idx << ", " << y_idx << "] = "
+							<< W(i, j).real() << " + " << W(i, j).imag() << "j"
+							<< std::endl;*/
 					};
 
 					calc_mat_elems(Qvec, Y, V, Z, W);
@@ -1056,31 +1074,11 @@ public:
 						calc_mat_elems(Qvec + m_ordering, Y_p, V_p, Z_p, W_p);
 						calc_mat_elems(Qvec - m_ordering, Y_m, V_m, Z_m, W_m);
 					}
-
-					/*std::cout
-						<< "Y[" << i << ", " << j << ", "
-						<< x_idx << ", " << y_idx << "] = "
-						<< Y(i, j).real() << " + " << Y(i, j).imag() << "j"
-						<< std::endl;
-					std::cout
-						<< "V[" << i << ", " << j << ", "
-						<< x_idx << ", " << y_idx << "] = "
-						<< V(i, j).real() << " + " << V(i, j).imag() << "j"
-						<< std::endl;
-					std::cout
-						<< "Z[" << i << ", " << j << ", "
-						<< x_idx << ", " << y_idx << "] = "
-						<< Z(i, j).real() << " + " << Z(i, j).imag() << "j"
-						<< std::endl;
-					std::cout
-						<< "W[" << i << ", " << j << ", "
-						<< x_idx << ", " << y_idx << "] = "
-						<< W(i, j).real() << " + " << W(i, j).imag() << "j"
-						<< std::endl;*/
 				} // end of iteration over sites
 
+
 				auto calc_S = [this, num_sites, x_idx, y_idx, &trafo, &trafo_herm, &energies_and_correlations]
-					(int which_S, const t_mat& Y, const t_mat& V, const t_mat& Z, const t_mat& W)
+					(t_mat EnergyAndWeight::*S, const t_mat& Y, const t_mat& V, const t_mat& Z, const t_mat& W)
 				{
 					// equation (47) from (Toth 2015)
 					t_mat M = tl2::create<t_mat>(num_sites*2, num_sites*2);
@@ -1089,41 +1087,31 @@ public:
 					tl2::set_submat(M, Z, 0, num_sites);
 					tl2::set_submat(M, W, num_sites, num_sites);
 
+					/*using namespace tl2_ops;
+					tl2::set_eps_0<t_mat, t_real>(V, m_eps);
+					tl2::set_eps_0<t_mat, t_real>(W, m_eps);
+					tl2::set_eps_0<t_mat, t_real>(Y, m_eps);
+					tl2::set_eps_0<t_mat, t_real>(Z, m_eps);
+					std::cout << "x_idx=" << x_idx << ", y_idx=" << y_idx;
+					std::cout << ", Q = (" << h << ", " << k << ", " << l << ")." << std::endl;
+					std::cout << "V=" << V << std::endl;
+					std::cout << "W=" << W << std::endl;
+					std::cout << "Y=" << Y << std::endl;
+					std::cout << "Z=" << Z << std::endl;*/
+
 					t_mat M_trafo = trafo_herm * M * trafo;
 
 					for(t_size i=0; i<energies_and_correlations.size(); ++i)
-					{
-						t_mat* S = nullptr;
-						switch(which_S)
-						{
-							case 0: S = &energies_and_correlations[i].S; break;
-							case 1: S = &energies_and_correlations[i].S_p; break;
-							case 2: S = &energies_and_correlations[i].S_m; break;
-						}
-
-						(*S)(x_idx, y_idx) += M_trafo(i, i) / t_real(2*num_sites);
-					}
+						(energies_and_correlations[i].*S)(x_idx, y_idx) += M_trafo(i, i) / t_real(2*num_sites);
 				};
 
-				calc_S(0, Y, V, Z, W);
+				calc_S(&EnergyAndWeight::S, Y, V, Z, W);
 
 				if(m_is_incommensurate)
 				{
-					calc_S(1, Y_p, V_p, Z_p, W_p);
-					calc_S(2, Y_m, V_m, Z_m, W_m);
+					calc_S(&EnergyAndWeight::S_p, Y_p, V_p, Z_p, W_p);
+					calc_S(&EnergyAndWeight::S_m, Y_m, V_m, Z_m, W_m);
 				}
-
-				/*using namespace tl2_ops;
-				tl2::set_eps_0<t_mat, t_real>(V, m_eps);
-				tl2::set_eps_0<t_mat, t_real>(W, m_eps);
-				tl2::set_eps_0<t_mat, t_real>(Y, m_eps);
-				tl2::set_eps_0<t_mat, t_real>(Z, m_eps);
-				std::cout << "x_idx=" << x_idx << ", y_idx=" << y_idx;
-				std::cout << ", Q = (" << h << ", " << k << ", " << l << ")." << std::endl;
-				std::cout << "V=" << V << std::endl;
-				std::cout << "W=" << W << std::endl;
-				std::cout << "Y=" << Y << std::endl;
-				std::cout << "Z=" << Z << std::endl;*/
 			} // end of coordinate iteration
 
 
@@ -1140,7 +1128,8 @@ public:
 				rot_incomm -= proj_norm;
 				rot_incomm *= 0.5;
 
-				rot_incomm_conj = tl2::conj(rot_incomm);
+				// TODO: check sign
+				rot_incomm_conj = -tl2::conj(rot_incomm);
 			}
 
 
