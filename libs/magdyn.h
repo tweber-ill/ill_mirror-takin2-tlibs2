@@ -331,7 +331,7 @@ public:
 
 	bool IsIncommensurate() const
 	{
-		return m_is_incommensurate;
+		return m_is_incommensurate || m_force_incommensurate;
 	}
 
 
@@ -421,6 +421,12 @@ public:
 	void SetUniteDegenerateEnergies(bool b)
 	{
 		m_unite_degenerate_energies = b;
+	}
+
+
+	void SetForceIncommensurate(bool b)
+	{
+		m_force_incommensurate = b;
 	}
 	// --------------------------------------------------------------------
 
@@ -687,10 +693,9 @@ public:
 
 			// incommensurate case: rotation wrt magnetic unit cell
 			// equations (21), (6) and (2) from (Toth 2015)
-			if(m_is_incommensurate)
+			if(IsIncommensurate())
 			{
-				t_real rot_UC_angle = s_twopi * tl2::inner<t_vec_real>(
-					m_ordering, term.dist);
+				t_real rot_UC_angle = s_twopi * tl2::inner<t_vec_real>(m_ordering, term.dist);
 				if(!tl2::equals_0<t_real>(rot_UC_angle, m_eps))
 				{
 					t_mat rot_UC = tl2::convert<t_mat>(
@@ -1005,7 +1010,7 @@ public:
 
 				t_mat V_p, W_p, Y_p, Z_p;
 				t_mat V_m, W_m, Y_m, Z_m;
-				if(m_is_incommensurate)
+				if(IsIncommensurate())
 				{
 					create_matrices(V_p, W_p, Y_p, Z_p);
 					create_matrices(V_m, W_m, Y_m, Z_m);
@@ -1069,7 +1074,7 @@ public:
 
 					calc_mat_elems(Qvec, Y, V, Z, W);
 
-					if(m_is_incommensurate)
+					if(IsIncommensurate())
 					{
 						calc_mat_elems(Qvec + m_ordering, Y_p, V_p, Z_p, W_p);
 						calc_mat_elems(Qvec - m_ordering, Y_m, V_m, Z_m, W_m);
@@ -1107,7 +1112,7 @@ public:
 
 				calc_S(&EnergyAndWeight::S, Y, V, Z, W);
 
-				if(m_is_incommensurate)
+				if(IsIncommensurate())
 				{
 					calc_S(&EnergyAndWeight::S_p, Y_p, V_p, Z_p, W_p);
 					calc_S(&EnergyAndWeight::S_m, Y_m, V_m, Z_m, W_m);
@@ -1116,7 +1121,7 @@ public:
 
 
 			t_mat proj_norm, rot_incomm, rot_incomm_conj;
-			if(m_is_incommensurate)
+			if(IsIncommensurate())
 			{
 				// equations (39) and (40) from (Toth 2015)
 				proj_norm = tl2::convert<t_mat>(
@@ -1128,8 +1133,7 @@ public:
 				rot_incomm -= proj_norm;
 				rot_incomm *= 0.5;
 
-				// TODO: check sign
-				rot_incomm_conj = -tl2::conj(rot_incomm);
+				rot_incomm_conj = tl2::conj(rot_incomm);
 			}
 
 
@@ -1146,7 +1150,7 @@ public:
 				t_real& w_SF2 = E_and_S.weight_spinflip[1];
 				t_real& w_NSF = E_and_S.weight_nonspinflip;
 
-				if(m_is_incommensurate)
+				if(IsIncommensurate())
 				{
 					// formula 40 from (Toth 2015)
 					S = S * proj_norm +
@@ -1663,6 +1667,7 @@ private:
 	t_vec_real m_zdir = tl2::create<t_vec_real>({0., 0., 1.});
 
 	bool m_is_incommensurate{false};
+	bool m_force_incommensurate{false};
 	bool m_unite_degenerate_energies{true};
 
 	// temperature (-1: disable bose factor)
