@@ -692,7 +692,7 @@ public:
 			}
 
 			// incommensurate case: rotation wrt magnetic unit cell
-			// equations (21), (6) and (2) from (Toth 2015)
+			// equations (21), (6), (2) as well as section 10 from (Toth 2015)
 			if(IsIncommensurate())
 			{
 				t_real rot_UC_angle = s_twopi * tl2::inner<t_vec_real>(m_ordering, term.dist);
@@ -717,20 +717,14 @@ public:
 
 			// include these two terms to fulfill
 			// equation (11) from (Toth 2015)
-			tl2::add_submat<t_mat>(J_Q, factor * J * phase_Q,
-				term.atom1*3, term.atom2*3);
-			tl2::add_submat<t_mat>(J_Q, factor * J_T * phase_mQ,
-				term.atom2*3, term.atom1*3);
+			tl2::add_submat<t_mat>(J_Q, factor * J * phase_Q, term.atom1*3, term.atom2*3);
+			tl2::add_submat<t_mat>(J_Q, factor * J_T * phase_mQ, term.atom2*3, term.atom1*3);
 
-			tl2::add_submat<t_mat>(J_mQ, factor * J * phase_mQ,
-				term.atom1*3, term.atom2*3);
-			tl2::add_submat<t_mat>(J_mQ, factor * J_T * phase_Q,
-				term.atom2*3, term.atom1*3);
+			tl2::add_submat<t_mat>(J_mQ, factor * J * phase_mQ, term.atom1*3, term.atom2*3);
+			tl2::add_submat<t_mat>(J_mQ, factor * J_T * phase_Q, term.atom2*3, term.atom1*3);
 
-			tl2::add_submat<t_mat>(J_Q0, factor * J,
-				term.atom1*3, term.atom2*3);
-			tl2::add_submat<t_mat>(J_Q0, factor * J_T,
-				term.atom2*3, term.atom1*3);
+			tl2::add_submat<t_mat>(J_Q0, factor * J, term.atom1*3, term.atom2*3);
+			tl2::add_submat<t_mat>(J_Q0, factor * J_T, term.atom2*3, term.atom1*3);
 		}
 
 
@@ -759,6 +753,7 @@ public:
 			const t_vec* u_conj_j = &m_sites_calc[j].u_conj;
 			const t_vec* v_i = &m_sites_calc[i].v;
 
+			// equation (26) from (Toth 2015)
 			t_real SiSj = 0.5 * std::sqrt(S_i*S_j);
 			A(i, j) = SiSj * tl2::inner_noconj<t_vec>(*u_i, J_sub_Q * *u_conj_j);
 			A_mQ(i, j) = SiSj * tl2::inner_noconj<t_vec>(*u_i, J_sub_mQ * *u_conj_j);
@@ -774,6 +769,7 @@ public:
 					// for the commensurate case
 					const t_vec *v_k = &m_sites_calc[k].v;
 
+					// equation (26) from (Toth 2015)
 					t_mat J_sub_Q0 = tl2::submat<t_mat>(
 						J_Q0, i*3, k*3, 3, 3);
 					C(i, j) += S_k * tl2::inner_noconj<t_vec>(
@@ -796,9 +792,7 @@ public:
 			}
 		}
 
-		// test matrix block
-		//return A_conj - C;
-
+		// equation (25) from (Toth 2015)
 		t_mat H = tl2::zero<t_mat>(num_sites*2, num_sites*2);
 		tl2::set_submat(H, A - C, 0, 0);
 		tl2::set_submat(H, B, 0, num_sites);
@@ -904,11 +898,7 @@ public:
 		// register energies
 		for(const auto& eval : evals)
 		{
-			EnergyAndWeight EandS
-			{
-				.E = eval.real(),
-			};
-
+			EnergyAndWeight EandS { .E = eval.real(), };
 			energies_and_correlations.emplace_back(std::move(EandS));
 		}
 
@@ -1030,7 +1020,6 @@ public:
 						t_real S_j = m_sites[j].spin_mag;
 
 						// get the precalculated u vectors
-						// for the commensurate case
 						const t_vec *u_i = &m_sites_calc[i].u;
 						const t_vec *u_j = &m_sites_calc[j].u;
 						const t_vec *u_conj_i = &m_sites_calc[i].u_conj;
@@ -1140,41 +1129,29 @@ public:
 			for(t_size i=0; i<energies_and_correlations.size(); ++i)
 			{
 				auto& E_and_S = energies_and_correlations[i];
-				const t_real& E = E_and_S.E;
-				t_mat& S = E_and_S.S;
-				t_mat& S_p = E_and_S.S_p;
-				t_mat& S_m = E_and_S.S_m;
-				t_mat& S_perp = E_and_S.S_perp;
-				t_real& w = E_and_S.weight;
-				t_real& w_SF1 = E_and_S.weight_spinflip[0];
-				t_real& w_SF2 = E_and_S.weight_spinflip[1];
-				t_real& w_NSF = E_and_S.weight_nonspinflip;
 
 				if(IsIncommensurate())
 				{
 					// formula 40 from (Toth 2015)
-					S = S * proj_norm +
-						S_p * rot_incomm +
-						S_m * rot_incomm_conj;
+					E_and_S.S = E_and_S.S * proj_norm +
+						E_and_S.S_p * rot_incomm +
+						E_and_S.S_m * rot_incomm_conj;
 				}
 
+				// apply bose factor
 				if(m_temperature >= 0.)
-				{
-					// apply bose factor
-					S *= tl2::bose_cutoff(E, m_temperature,
-						m_bose_cutoff);
-				}
+					E_and_S.S *= tl2::bose_cutoff(E_and_S.E, m_temperature, m_bose_cutoff);
 
 				// apply the orthogonal projector for magnetic neutron scattering
-				//S_perp = (proj_neutron * tl2::herm(S)) * (S * proj_neutron);
-				S_perp = proj_neutron * S * proj_neutron;
+				E_and_S.S_perp = proj_neutron * E_and_S.S;
 
 				// weights
-				w_SF1 = std::abs(S_perp(0, 0).real());
-				w_SF2 = std::abs(S_perp(1, 1).real());
-				w_NSF = std::abs(S_perp(2, 2).real());
-				//w = tl2::trace<t_mat>(S_perp).real();
-				w = w_SF1 + w_SF2 + w_NSF;
+				E_and_S.weight = std::abs(tl2::trace<t_mat>(E_and_S.S_perp).real());
+				// TODO: polarisation channels
+				E_and_S.weight_spinflip[0] = std::abs(E_and_S.S_perp(0, 0).real());
+				E_and_S.weight_spinflip[1] = std::abs(E_and_S.S_perp(1, 1).real());
+				E_and_S.weight_nonspinflip = std::abs(E_and_S.S_perp(2, 2).real());
+				//E_and_S.weight = E_and_S.weight_spinflip[0] + E_and_S.weight_spinflip[1] + E_and_S.weight_nonspinflip;
 			}
 		}
 
