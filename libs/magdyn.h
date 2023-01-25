@@ -163,7 +163,6 @@ public:
 	{
 		t_real E{};
 		t_mat S{};
-		t_mat S_p{}, S_m;
 		t_mat S_perp{};
 		t_real weight{};
 		t_real weight_spinflip[2] = {0., 0.};
@@ -804,18 +803,12 @@ public:
 
 
 	/**
-	 * get the energies and the spin-correlation at the given momentum
+	 * get the energies and the dynamical structure factor from a hamiltonian
 	 * @note implements the formalism given by (Toth 2015)
 	 */
 	std::vector<EnergyAndWeight> GetEnergiesFromHamiltonian(t_mat _H, const t_vec_real& Qvec,
 		bool only_energies = false) const
 	{
-		// orthogonal projector for magnetic neutron scattering,
-		// see (Shirane 2002), p. 37, eq. (2.64)
-		//t_vec bragg_rot = use_field ? m_rot_field * m_bragg : m_bragg;
-		//proj_neutron = tl2::ortho_projector<t_mat, t_vec>(bragg_rot, false);
-		t_mat proj_neutron = tl2::ortho_projector<t_mat, t_vec>(Qvec, false);
-
 		const t_size num_sites = m_sites.size();
 		if(num_sites == 0 || _H.size1() == 0)
 			return {};
@@ -950,8 +943,6 @@ public:
 				{
 					.E = L_mat(i, i).real(),
 					.S = tl2::zero<t_mat>(3, 3),
-					.S_p = tl2::zero<t_mat>(3, 3),
-					.S_m = tl2::zero<t_mat>(3, 3),
 					.S_perp = tl2::zero<t_mat>(3, 3),
 				};
 
@@ -997,14 +988,6 @@ public:
 
 				t_mat V, W, Y, Z;
 				create_matrices(V, W, Y, Z);
-
-				t_mat V_p, W_p, Y_p, Z_p;
-				t_mat V_m, W_m, Y_m, Z_m;
-				if(IsIncommensurate())
-				{
-					create_matrices(V_p, W_p, Y_p, Z_p);
-					create_matrices(V_m, W_m, Y_m, Z_m);
-				}
 
 				for(t_size i=0; i<num_sites; ++i)
 				for(t_size j=0; j<num_sites; ++j)
@@ -1062,12 +1045,6 @@ public:
 					};
 
 					calc_mat_elems(Qvec, Y, V, Z, W);
-
-					if(IsIncommensurate())
-					{
-						calc_mat_elems(Qvec + m_ordering, Y_p, V_p, Z_p, W_p);
-						calc_mat_elems(Qvec - m_ordering, Y_m, V_m, Z_m, W_m);
-					}
 				} // end of iteration over sites
 
 
@@ -1100,103 +1077,7 @@ public:
 				};
 
 				calc_S(&EnergyAndWeight::S, Y, V, Z, W);
-
-				if(IsIncommensurate())
-				{
-					calc_S(&EnergyAndWeight::S_p, Y_p, V_p, Z_p, W_p);
-					calc_S(&EnergyAndWeight::S_m, Y_m, V_m, Z_m, W_m);
-				}
 			} // end of coordinate iteration
-
-
-			t_mat proj_norm, rot_incomm, rot_incomm_conj;
-			if(IsIncommensurate())
-			{
-				// equations (39) and (40) from (Toth 2015)
-				proj_norm = tl2::convert<t_mat>(
-					tl2::projector<t_mat_real, t_vec_real>(
-						m_rotaxis, true));
-
-				rot_incomm = tl2::unit<t_mat>(3);
-				rot_incomm -= s_imag * tl2::skewsymmetric<t_mat, t_vec>(m_rotaxis);
-				rot_incomm -= proj_norm;
-				rot_incomm *= 0.5;
-
-				rot_incomm_conj = tl2::conj(rot_incomm);
-			}
-
-
-			for(t_size i=0; i<energies_and_correlations.size(); ++i)
-			{
-				auto& E_and_S = energies_and_correlations[i];
-
-				if(IsIncommensurate())
-				{
-					// formula 40 from (Toth 2015)
-					E_and_S.S = E_and_S.S * proj_norm +
-						E_and_S.S_p * rot_incomm +
-						E_and_S.S_m * rot_incomm_conj;
-				}
-
-				// apply bose factor
-				if(m_temperature >= 0.)
-					E_and_S.S *= tl2::bose_cutoff(E_and_S.E, m_temperature, m_bose_cutoff);
-
-				// apply the orthogonal projector for magnetic neutron scattering
-				E_and_S.S_perp = proj_neutron * E_and_S.S;
-
-				// weights
-				E_and_S.weight = std::abs(tl2::trace<t_mat>(E_and_S.S_perp).real());
-				// TODO: polarisation channels
-				E_and_S.weight_spinflip[0] = std::abs(E_and_S.S_perp(0, 0).real());
-				E_and_S.weight_spinflip[1] = std::abs(E_and_S.S_perp(1, 1).real());
-				E_and_S.weight_nonspinflip = std::abs(E_and_S.S_perp(2, 2).real());
-				//E_and_S.weight = E_and_S.weight_spinflip[0] + E_and_S.weight_spinflip[1] + E_and_S.weight_nonspinflip;
-			}
-		}
-
-
-		// unite degenerate energies and their corresponding eigenstates
-		if(m_unite_degenerate_energies)
-		{
-			std::vector<EnergyAndWeight> new_energies_and_correlations{};
-			new_energies_and_correlations.reserve(energies_and_correlations.size());
-
-			for(const auto& curState : energies_and_correlations)
-			{
-				t_real curE = curState.E;
-
-				auto iter = std::find_if(
-					new_energies_and_correlations.begin(),
-					new_energies_and_correlations.end(),
-					[curE, this](const auto& E_and_S) -> bool
-				{
-					t_real E = E_and_S.E;
-					return tl2::equals<t_real>(E, curE, m_eps);
-				});
-
-				// energy not yet seen
-				if(iter == new_energies_and_correlations.end())
-				{
-					new_energies_and_correlations.push_back(curState);
-				}
-
-				// energy already seen
-				else
-				{
-					// add correlation matrices and weights
-					iter->S += curState.S;
-					iter->S_p += curState.S_p;
-					iter->S_m += curState.S_m;;
-					iter->S_perp += curState.S_perp;
-					iter->weight += curState.weight;
-					iter->weight_spinflip[0] += curState.weight_spinflip[0];
-					iter->weight_spinflip[1] += curState.weight_spinflip[1];
-					iter->weight_nonspinflip += curState.weight_nonspinflip;
-				}
-			}
-
-			energies_and_correlations = std::move(new_energies_and_correlations);
 		}
 
 		return energies_and_correlations;
@@ -1204,19 +1085,96 @@ public:
 
 
 	/**
+	 * applies projectors and weight factors to get neutron intensities
+	 * @note implements the formalism given by (Toth 2015)
+	 */
+	void GetIntensities(const t_vec_real& Qvec, std::vector<EnergyAndWeight>& energies_and_correlations) const
+	{
+		for(EnergyAndWeight& E_and_S : energies_and_correlations)
+		{
+			// apply bose factor
+			if(m_temperature >= 0.)
+				E_and_S.S *= tl2::bose_cutoff(E_and_S.E, m_temperature, m_bose_cutoff);
+
+			// apply orthogonal projector for magnetic neutron scattering,
+			// see (Shirane 2002), p. 37, eq. (2.64)
+			//t_vec bragg_rot = use_field ? m_rot_field * m_bragg : m_bragg;
+			//proj_neutron = tl2::ortho_projector<t_mat, t_vec>(bragg_rot, false);
+			t_mat proj_neutron = tl2::ortho_projector<t_mat, t_vec>(Qvec, false);
+			E_and_S.S_perp = proj_neutron * E_and_S.S;
+
+			// weights
+			E_and_S.weight = std::abs(tl2::trace<t_mat>(E_and_S.S_perp).real());
+			// TODO: polarisation channels
+			E_and_S.weight_spinflip[0] = std::abs(E_and_S.S_perp(0, 0).real());
+			E_and_S.weight_spinflip[1] = std::abs(E_and_S.S_perp(1, 1).real());
+			E_and_S.weight_nonspinflip = std::abs(E_and_S.S_perp(2, 2).real());
+			//E_and_S.weight = E_and_S.weight_spinflip[0] + E_and_S.weight_spinflip[1] + E_and_S.weight_nonspinflip;
+		}
+
+		if(m_unite_degenerate_energies)
+			energies_and_correlations = UniteEnergies(energies_and_correlations);
+	}
+
+
+	/**
 	 * get the energies and the spin-correlation at the given momentum
+	 * (also calculates incommensurate contributions)
 	 * @note implements the formalism given by (Toth 2015)
 	 */
 	std::vector<EnergyAndWeight> GetEnergies(const t_vec_real& Qvec,
 		bool only_energies = false) const
 	{
 		t_mat H = GetHamiltonian(Qvec);
-		return GetEnergiesFromHamiltonian(H, Qvec, only_energies);
+		std::vector<EnergyAndWeight> EandWs = GetEnergiesFromHamiltonian(H, Qvec, only_energies);
+
+		if(IsIncommensurate())
+		{
+			// equations 39 and 40 from (Toth 2015)
+			t_mat proj_norm = tl2::convert<t_mat>(
+				tl2::projector<t_mat_real, t_vec_real>(
+					m_rotaxis, true));
+
+			t_mat rot_incomm = tl2::unit<t_mat>(3);
+			rot_incomm -= s_imag * tl2::skewsymmetric<t_mat, t_vec>(m_rotaxis);
+			rot_incomm -= proj_norm;
+			rot_incomm *= 0.5;
+
+			t_mat rot_incomm_conj = tl2::conj(rot_incomm);
+
+			t_mat H_p = GetHamiltonian(Qvec + m_ordering);
+			t_mat H_m = GetHamiltonian(Qvec - m_ordering);
+
+			std::vector<EnergyAndWeight> EandWs_p = GetEnergiesFromHamiltonian(
+				H_p, Qvec + m_ordering, only_energies);
+			std::vector<EnergyAndWeight> EandWs_m = GetEnergiesFromHamiltonian(
+				H_p, Qvec - m_ordering, only_energies);
+
+			if(!only_energies)
+			{
+				// formula 40 from (Toth 2015)
+				for(EnergyAndWeight& EandW : EandWs)
+					EandW.S = EandW.S * proj_norm;
+				for(EnergyAndWeight& EandW : EandWs_p)
+					EandW.S = EandW.S * rot_incomm;
+				for(EnergyAndWeight& EandW : EandWs_m)
+					EandW.S = EandW.S * rot_incomm_conj;
+			}
+
+			// unite energies and weights
+			for(EnergyAndWeight& EandW : EandWs_p)
+				EandWs.emplace_back(std::move(EandW));
+			for(EnergyAndWeight& EandW : EandWs_m)
+				EandWs.emplace_back(std::move(EandW));
+		}
+
+		if(!only_energies)
+			GetIntensities(Qvec, EandWs);
+		return EandWs;
 	}
 
 
-	std::vector<EnergyAndWeight> GetEnergies(
-		t_real h, t_real k, t_real l,
+	std::vector<EnergyAndWeight> GetEnergies(t_real h, t_real k, t_real l,
 		bool only_energies = false) const
 	{
 		// momentum transfer
@@ -1568,6 +1526,50 @@ public:
 
 
 protected:
+	/**
+	 * unite degenerate energies and their corresponding eigenstates
+	 */
+	std::vector<EnergyAndWeight> UniteEnergies(const std::vector<EnergyAndWeight>& energies_and_correlations) const
+	{
+		std::vector<EnergyAndWeight> new_energies_and_correlations{};
+		new_energies_and_correlations.reserve(energies_and_correlations.size());
+
+		for(const auto& curState : energies_and_correlations)
+		{
+			t_real curE = curState.E;
+
+			auto iter = std::find_if(
+				new_energies_and_correlations.begin(),
+					new_energies_and_correlations.end(),
+					[curE, this](const auto& E_and_S) -> bool
+					{
+						t_real E = E_and_S.E;
+						return tl2::equals<t_real>(E, curE, m_eps);
+					});
+
+			// energy not yet seen
+			if(iter == new_energies_and_correlations.end())
+			{
+				new_energies_and_correlations.push_back(curState);
+			}
+
+			// energy already seen
+			else
+			{
+				// add correlation matrices and weights
+				iter->S += curState.S;
+				iter->S_perp += curState.S_perp;
+				iter->weight += curState.weight;
+				iter->weight_spinflip[0] += curState.weight_spinflip[0];
+				iter->weight_spinflip[1] += curState.weight_spinflip[1];
+				iter->weight_nonspinflip += curState.weight_nonspinflip;
+			}
+		}
+
+		return new_energies_and_correlations;
+	}
+
+
 	/**
 	 * converts the rotation matrix rotating the local spins to ferromagnetic
 	 * [001] directions into the vectors comprised of the matrix columns
