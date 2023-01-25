@@ -55,8 +55,7 @@ namespace tl2_mag {
 template<class t_mat, class t_vec, class t_real = typename t_mat::value_type>
 requires tl2::is_mat<t_mat> && tl2::is_vec<t_vec>
 void rotate_spin_incommensurate(t_vec& spin_vec,
-	const t_vec& sc_vec, const t_vec& ordering,
-	const t_vec& rotaxis,
+	const t_vec& sc_vec, const t_vec& ordering, const t_vec& rotaxis,
 	t_real eps = std::numeric_limits<t_real>::epsilon())
 {
 	t_real sc_angle = t_real(2) * tl2::pi<t_real> *
@@ -1111,15 +1110,56 @@ public:
 			E_and_S.weight_nonspinflip = std::abs(E_and_S.S_perp(2, 2).real());
 			//E_and_S.weight = E_and_S.weight_spinflip[0] + E_and_S.weight_spinflip[1] + E_and_S.weight_nonspinflip;
 		}
+	}
 
-		if(m_unite_degenerate_energies)
-			energies_and_correlations = UniteEnergies(energies_and_correlations);
+
+	/**
+	 * unite degenerate energies and their corresponding eigenstates
+	 */
+	std::vector<EnergyAndWeight> UniteEnergies(const std::vector<EnergyAndWeight>& energies_and_correlations) const
+	{
+		std::vector<EnergyAndWeight> new_energies_and_correlations{};
+		new_energies_and_correlations.reserve(energies_and_correlations.size());
+
+		for(const auto& curState : energies_and_correlations)
+		{
+			t_real curE = curState.E;
+
+			auto iter = std::find_if(
+				new_energies_and_correlations.begin(),
+					new_energies_and_correlations.end(),
+					[curE, this](const auto& E_and_S) -> bool
+					{
+						t_real E = E_and_S.E;
+						return tl2::equals<t_real>(E, curE, m_eps);
+					});
+
+			// energy not yet seen
+			if(iter == new_energies_and_correlations.end())
+			{
+				new_energies_and_correlations.push_back(curState);
+			}
+
+			// energy already seen
+			else
+			{
+				// add correlation matrices and weights
+				iter->S += curState.S;
+				iter->S_perp += curState.S_perp;
+				iter->weight += curState.weight;
+				iter->weight_spinflip[0] += curState.weight_spinflip[0];
+				iter->weight_spinflip[1] += curState.weight_spinflip[1];
+				iter->weight_nonspinflip += curState.weight_nonspinflip;
+			}
+		}
+
+		return new_energies_and_correlations;
 	}
 
 
 	/**
 	 * get the energies and the spin-correlation at the given momentum
-	 * (also calculates incommensurate contributions)
+	 * (also calculates incommensurate contributions and applies weight factors)
 	 * @note implements the formalism given by (Toth 2015)
 	 */
 	std::vector<EnergyAndWeight> GetEnergies(const t_vec_real& Qvec,
@@ -1170,6 +1210,10 @@ public:
 
 		if(!only_energies)
 			GetIntensities(Qvec, EandWs);
+
+		if(m_unite_degenerate_energies)
+			EandWs = UniteEnergies(EandWs);
+
 		return EandWs;
 	}
 
@@ -1527,50 +1571,6 @@ public:
 
 protected:
 	/**
-	 * unite degenerate energies and their corresponding eigenstates
-	 */
-	std::vector<EnergyAndWeight> UniteEnergies(const std::vector<EnergyAndWeight>& energies_and_correlations) const
-	{
-		std::vector<EnergyAndWeight> new_energies_and_correlations{};
-		new_energies_and_correlations.reserve(energies_and_correlations.size());
-
-		for(const auto& curState : energies_and_correlations)
-		{
-			t_real curE = curState.E;
-
-			auto iter = std::find_if(
-				new_energies_and_correlations.begin(),
-					new_energies_and_correlations.end(),
-					[curE, this](const auto& E_and_S) -> bool
-					{
-						t_real E = E_and_S.E;
-						return tl2::equals<t_real>(E, curE, m_eps);
-					});
-
-			// energy not yet seen
-			if(iter == new_energies_and_correlations.end())
-			{
-				new_energies_and_correlations.push_back(curState);
-			}
-
-			// energy already seen
-			else
-			{
-				// add correlation matrices and weights
-				iter->S += curState.S;
-				iter->S_perp += curState.S_perp;
-				iter->weight += curState.weight;
-				iter->weight_spinflip[0] += curState.weight_spinflip[0];
-				iter->weight_spinflip[1] += curState.weight_spinflip[1];
-				iter->weight_nonspinflip += curState.weight_nonspinflip;
-			}
-		}
-
-		return new_energies_and_correlations;
-	}
-
-
-	/**
 	 * converts the rotation matrix rotating the local spins to ferromagnetic
 	 * [001] directions into the vectors comprised of the matrix columns
 	 * @see equation (9) from (Toth 2015).
@@ -1625,12 +1625,15 @@ protected:
 
 
 private:
+	// atom sites
 	std::vector<AtomSite> m_sites{};
 	std::vector<AtomSiteCalc> m_sites_calc{};
 
+	// magnetic couplings
 	std::vector<ExchangeTerm> m_exchange_terms{};
 	std::vector<ExchangeTermCalc> m_exchange_terms_calc{};
 
+	// open variables
 	std::vector<Variable> m_variables{};
 
 	// external field
@@ -1645,19 +1648,22 @@ private:
 	// direction to rotation spins into, usually [001]
 	t_vec_real m_zdir = tl2::create<t_vec_real>({0., 0., 1.});
 
-	bool m_is_incommensurate{false};
-	bool m_force_incommensurate{false};
-	bool m_unite_degenerate_energies{true};
-
 	// temperature (-1: disable bose factor)
 	t_real m_temperature{-1};
 
 	// bose cutoff energy to avoid infinities
 	t_real m_bose_cutoff{0.025};
 
+	// settings
+	bool m_is_incommensurate{false};
+	bool m_force_incommensurate{false};
+	bool m_unite_degenerate_energies{true};
+
+	// settings for cholesky decomposition
 	t_size m_tries_chol{50};
 	t_real m_delta_chol{0.01};
 
+	// precisions
 	t_real m_eps{1e-6};
 	int m_prec{6};
 
