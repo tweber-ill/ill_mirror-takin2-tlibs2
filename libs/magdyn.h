@@ -161,11 +161,16 @@ public:
 	struct EnergyAndWeight
 	{
 		t_real E{};
+
+		// full dynamical structure factor
 		t_mat S{};
+		t_real weight_full{};
+		t_real weight_channel_full[3] = {0., 0., 0.};
+
+		// projected dynamical structure factor for neutron scattering
 		t_mat S_perp{};
 		t_real weight{};
-		t_real weight_spinflip[2] = {0., 0.};
-		t_real weight_nonspinflip{};
+		t_real weight_channel[3] = {0., 0., 0.};
 	};
 
 
@@ -1104,11 +1109,15 @@ public:
 
 			// weights
 			E_and_S.weight = std::abs(tl2::trace<t_mat>(E_and_S.S_perp).real());
+			E_and_S.weight_full = std::abs(tl2::trace<t_mat>(E_and_S.S).real());
+
 			// TODO: polarisation channels
-			E_and_S.weight_spinflip[0] = std::abs(E_and_S.S_perp(0, 0).real());
-			E_and_S.weight_spinflip[1] = std::abs(E_and_S.S_perp(1, 1).real());
-			E_and_S.weight_nonspinflip = std::abs(E_and_S.S_perp(2, 2).real());
-			//E_and_S.weight = E_and_S.weight_spinflip[0] + E_and_S.weight_spinflip[1] + E_and_S.weight_nonspinflip;
+			E_and_S.weight_channel[0] = std::abs(E_and_S.S_perp(0, 0).real());
+			E_and_S.weight_channel[1] = std::abs(E_and_S.S_perp(1, 1).real());
+			E_and_S.weight_channel[2] = std::abs(E_and_S.S_perp(2, 2).real());
+			E_and_S.weight_channel_full[0] = std::abs(E_and_S.S(0, 0).real());
+			E_and_S.weight_channel_full[1] = std::abs(E_and_S.S(1, 1).real());
+			E_and_S.weight_channel_full[2] = std::abs(E_and_S.S(2, 2).real());
 		}
 	}
 
@@ -1147,9 +1156,13 @@ public:
 				iter->S += curState.S;
 				iter->S_perp += curState.S_perp;
 				iter->weight += curState.weight;
-				iter->weight_spinflip[0] += curState.weight_spinflip[0];
-				iter->weight_spinflip[1] += curState.weight_spinflip[1];
-				iter->weight_nonspinflip += curState.weight_nonspinflip;
+				iter->weight_full += curState.weight_full;
+				iter->weight_channel[0] += curState.weight_channel[0];
+				iter->weight_channel[1] += curState.weight_channel[1];
+				iter->weight_channel[2] += curState.weight_channel[2];
+				iter->weight_channel_full[0] += curState.weight_channel_full[0];
+				iter->weight_channel_full[1] += curState.weight_channel_full[1];
+				iter->weight_channel_full[2] += curState.weight_channel_full[2];
 			}
 		}
 
@@ -1282,9 +1295,9 @@ public:
 			{
 				t_real E = E_and_S.E;
 				t_real w = E_and_S.weight;
-				t_real w_sf1 = E_and_S.weight_spinflip[0];
-				t_real w_sf2 = E_and_S.weight_spinflip[1];
-				t_real w_nsf = E_and_S.weight_nonspinflip;
+				t_real w_sf1 = E_and_S.weight_channel[0];
+				t_real w_sf2 = E_and_S.weight_channel[1];
+				t_real w_nsf = E_and_S.weight_channel[2];
 
 				ofstr
 					<< std::setw(m_prec*2) << std::left << h
