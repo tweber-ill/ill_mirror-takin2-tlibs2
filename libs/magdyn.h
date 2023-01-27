@@ -1105,19 +1105,18 @@ public:
 			//t_vec bragg_rot = use_field ? m_rot_field * m_bragg : m_bragg;
 			//proj_neutron = tl2::ortho_projector<t_mat, t_vec>(bragg_rot, false);
 			t_mat proj_neutron = tl2::ortho_projector<t_mat, t_vec>(Qvec, false);
-			E_and_S.S_perp = proj_neutron * E_and_S.S;
+			E_and_S.S_perp = proj_neutron * E_and_S.S * proj_neutron;
 
 			// weights
 			E_and_S.weight = std::abs(tl2::trace<t_mat>(E_and_S.S_perp).real());
 			E_and_S.weight_full = std::abs(tl2::trace<t_mat>(E_and_S.S).real());
 
 			// TODO: polarisation channels
-			E_and_S.weight_channel[0] = std::abs(E_and_S.S_perp(0, 0).real());
-			E_and_S.weight_channel[1] = std::abs(E_and_S.S_perp(1, 1).real());
-			E_and_S.weight_channel[2] = std::abs(E_and_S.S_perp(2, 2).real());
-			E_and_S.weight_channel_full[0] = std::abs(E_and_S.S(0, 0).real());
-			E_and_S.weight_channel_full[1] = std::abs(E_and_S.S(1, 1).real());
-			E_and_S.weight_channel_full[2] = std::abs(E_and_S.S(2, 2).real());
+			for(int i=0; i<3; ++i)
+			{
+				E_and_S.weight_channel[i] = std::abs(E_and_S.S_perp(i, i).real());
+				E_and_S.weight_channel_full[i] = std::abs(E_and_S.S(i, i).real());
+			}
 		}
 	}
 
@@ -1143,26 +1142,25 @@ public:
 						return tl2::equals<t_real>(E, curE, m_eps);
 					});
 
-			// energy not yet seen
 			if(iter == new_energies_and_correlations.end())
 			{
+				// energy not yet seen
 				new_energies_and_correlations.push_back(curState);
 			}
-
-			// energy already seen
 			else
 			{
-				// add correlation matrices and weights
+				// energy already seen: add correlation matrices and weights
 				iter->S += curState.S;
 				iter->S_perp += curState.S_perp;
+
 				iter->weight += curState.weight;
 				iter->weight_full += curState.weight_full;
-				iter->weight_channel[0] += curState.weight_channel[0];
-				iter->weight_channel[1] += curState.weight_channel[1];
-				iter->weight_channel[2] += curState.weight_channel[2];
-				iter->weight_channel_full[0] += curState.weight_channel_full[0];
-				iter->weight_channel_full[1] += curState.weight_channel_full[1];
-				iter->weight_channel_full[2] += curState.weight_channel_full[2];
+
+				for(int i=0; i<3; ++i)
+				{
+					iter->weight_channel[i] += curState.weight_channel[i];
+					iter->weight_channel_full[i] += curState.weight_channel_full[i];
+				}
 			}
 		}
 
