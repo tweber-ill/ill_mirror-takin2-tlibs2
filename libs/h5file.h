@@ -133,7 +133,7 @@ template<class t_str = std::string>
 t_str get_h5_attr(H5::H5File& file, const t_str& path, const t_str& attr_name, bool only_group = false)
 {
 	if(!file.nameExists(path))
-		return false;
+		return "";
 
 	H5::H5Object *obj = nullptr;
 	H5::DataSet set;
