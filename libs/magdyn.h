@@ -67,6 +67,22 @@ void rotate_spin_incommensurate(t_vec& spin_vec,
 		spin_vec = sc_rot * spin_vec;
 	}
 }
+
+
+/**
+ * polarisation matrix
+ */
+template<class t_mat, class t_real = typename t_mat::value_type>
+requires tl2::is_mat<t_mat>
+t_mat get_polarisation(int channel = 0)
+{
+	t_mat pol = tl2::zero<t_mat>(3);
+
+	if(channel >=0 && channel < 3)
+		pol(channel, channel) = 1;
+
+	return pol;
+}
 // ----------------------------------------------------------------------------
 
 
@@ -1111,11 +1127,15 @@ public:
 			E_and_S.weight = std::abs(tl2::trace<t_mat>(E_and_S.S_perp).real());
 			E_and_S.weight_full = std::abs(tl2::trace<t_mat>(E_and_S.S).real());
 
-			// TODO: polarisation channels
+			// polarisation channels
 			for(int i=0; i<3; ++i)
 			{
-				E_and_S.weight_channel[i] = std::abs(E_and_S.S_perp(i, i).real());
-				E_and_S.weight_channel_full[i] = std::abs(E_and_S.S(i, i).real());
+				t_mat pol = get_polarisation<t_mat>(i);
+				t_mat Sperp = pol * E_and_S.S_perp;
+				t_mat S = pol * E_and_S.S;
+
+				E_and_S.weight_channel[i] = std::abs(tl2::trace<t_mat>(Sperp).real());
+				E_and_S.weight_channel_full[i] = std::abs(tl2::trace<t_mat>(S).real());
 			}
 		}
 	}
