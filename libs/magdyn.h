@@ -49,8 +49,7 @@ namespace tl2_mag {
 // ----------------------------------------------------------------------------
 
 /**
- * rotate spin vector for incommensurate structures,
- * i.e. helices
+ * rotate spin vector for incommensurate structures, i.e. helices
  */
 template<class t_mat, class t_vec, class t_real = typename t_mat::value_type>
 requires tl2::is_mat<t_mat> && tl2::is_vec<t_vec>
@@ -71,17 +70,45 @@ void rotate_spin_incommensurate(t_vec& spin_vec,
 
 /**
  * polarisation matrix
+ * @see https://doi.org/10.1088/1361-6463/aa7573
  */
-template<class t_mat, class t_real = typename t_mat::value_type>
+template<class t_mat, class t_cplx = typename t_mat::value_type>
 requires tl2::is_mat<t_mat>
-t_mat get_polarisation(int channel = 0)
+t_mat get_polarisation(int channel = 0, bool in_chiral_base = true)
 {
-	t_mat pol = tl2::zero<t_mat>(3);
+	if(in_chiral_base)
+	{
+		t_mat pol = tl2::zero<t_mat>(3);
 
-	if(channel >=0 && channel < 3)
-		pol(channel, channel) = 1;
+		// just pick the selected component on the diagonal
+		if(channel >=0 && channel < 3)
+			pol(channel, channel) = t_cplx(1);
 
-	return pol;
+		return pol;
+	}
+	else
+	{
+		constexpr const t_cplx halfi = t_cplx(0, 0.5);
+		constexpr const t_cplx half = t_cplx(0.5, 0);
+
+		switch(channel)
+		{
+			case 0: return tl2::create<t_mat>({
+				{   half, +halfi, 0 },
+				{ -halfi,   half, 0 },
+				{      0,      0, 0 } });
+			case 1: return tl2::create<t_mat>({
+				{   half, -halfi, 0 },
+				{ +halfi,   half, 0 },
+				{      0,      0, 0 } });
+			case 2: return tl2::create<t_mat>({
+				{      0,      0, 0 },
+				{      0,      0, 0 },
+				{      0,      0, 1 } });
+		}
+	}
+
+	return tl2::zero<t_mat>(3);
 }
 // ----------------------------------------------------------------------------
 
@@ -1130,7 +1157,7 @@ public:
 			// polarisation channels
 			for(int i=0; i<3; ++i)
 			{
-				t_mat pol = get_polarisation<t_mat>(i);
+				t_mat pol = get_polarisation<t_mat>(i, false);
 				t_mat Sperp = pol * E_and_S.S_perp;
 				t_mat S = pol * E_and_S.S;
 
