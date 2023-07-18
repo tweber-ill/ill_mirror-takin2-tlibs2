@@ -244,8 +244,10 @@ t_angle<Sys,Y> calc_tas_angle_ki_Q(const t_wavenumber<Sys,Y>& ki,
 		angle = units::acos(c);
 	}
 
-	if(bAngleOutsideTriag) angle = pi<Y>*radians<Y> - angle;
-	if(!bPosSense) angle = -angle;
+	if(bAngleOutsideTriag)
+		angle = pi<Y>*radians<Y> - angle;
+	if(!bPosSense)
+		angle = -angle;
 
 	return angle;
 }
@@ -280,8 +282,10 @@ t_angle<Sys,Y> calc_tas_angle_kf_Q(const t_wavenumber<Sys,Y>& ki,
 		angle = units::acos(c);
 	}
 
-	if(!bAngleOutsideTriag) angle = pi<Y>*radians<Y> - angle;
-	if(!bPosSense) angle = -angle;
+	if(!bAngleOutsideTriag)
+		angle = pi<Y>*radians<Y> - angle;
+	if(!bPosSense)
+		angle = -angle;
 
 	return angle;
 }
@@ -562,7 +566,8 @@ t_wavenumber<Sys,Y> get_other_k(const t_energy<Sys,Y>& E,
 	const t_wavenumber<Sys,Y>& kfix, bool bFixedKi)
 {
 	auto kE_sq = E*Y(2.)*(m_n<Y>/hbar<Y>)/hbar<Y>;
-	if(bFixedKi) kE_sq = -kE_sq;
+	if(bFixedKi)
+		kE_sq = -kE_sq;
 
 	auto k_sq = kE_sq + kfix*kfix;
 	if(k_sq*angstrom<Y>*angstrom<Y> < Y(0.))
