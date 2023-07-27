@@ -344,19 +344,18 @@ public:
 
 
 	/**
-	 * get the atom site with the given name
+	 * get number of atom sites with the given name (to check if the name is unique)
 	 */
-	const AtomSite* FindAtomSite(const std::string& name) const
+	std::vector<const AtomSite*> FindAtomSites(const std::string& name) const
 	{
-		auto iter = std::find_if(m_sites.begin(), m_sites.end(),
-			[&name](const auto& site)
-		{
-			return site.name == name;
-		});
+		std::vector<const AtomSite*> sites;
 
-		if(iter == m_sites.end())
-			return nullptr;
-		return &*iter;
+		for(const auto& site : m_sites)
+		{
+			if(site.name == name)
+				sites.push_back(&site);
+		}
+		return sites;
 	}
 	// --------------------------------------------------------------------
 
@@ -1410,6 +1409,38 @@ public:
 				exchange_term.atom1 = term.second.get<t_size>("atom_1_index", 0);
 				exchange_term.atom2 = term.second.get<t_size>("atom_2_index", 0);
 
+				// alternatively get the atom indices via the names
+				if(auto name1 = term.second.get_optional<std::string>("atom_1_name"); name1)
+				{
+					t_size atom1_old = exchange_term.atom1;
+					if(auto sites1 = FindAtomSites(*name1); sites1.size()==1)
+						exchange_term.atom1 = sites1[0]->index;
+					if(exchange_term.atom1 != atom1_old)
+					{
+						std::cerr
+							<< "Error in exchange term " << exchange_term.index
+							<< ": Index of atom 1 (" << atom1_old
+							<< ") does not correspond to the selected name (" << *name1
+							<< ")." << std::endl;
+						exchange_term.atom1 = atom1_old;
+					}
+				}
+				if(auto name2 = term.second.get_optional<std::string>("atom_2_name"); name2)
+				{
+					t_size atom2_old = exchange_term.atom2;
+					if(auto sites2 = FindAtomSites(*name2); sites2.size()==1)
+						exchange_term.atom2 = sites2[0]->index;
+					if(exchange_term.atom2 != atom2_old)
+					{
+						std::cerr
+							<< "Error in exchange term " << exchange_term.index
+							<< ": Index of atom 2 (" << atom2_old
+							<< ") does not correspond to the selected name (" << *name2
+							<< ")." << std::endl;
+						exchange_term.atom2 = atom2_old;
+					}
+				}
+
 				exchange_term.dist = tl2::create<t_vec_real>(
 				{
 					term.second.get<t_real>("distance_x", 0.),
@@ -1557,6 +1588,13 @@ public:
 			itemNode.put<std::string>("dmi_x", term.dmi[0]);
 			itemNode.put<std::string>("dmi_y", term.dmi[1]);
 			itemNode.put<std::string>("dmi_z", term.dmi[2]);
+
+			// also save the site atom names
+			const auto& sites = GetAtomSites();
+			if(term.atom1 < sites.size())
+				itemNode.put<std::string>("atom_1_name", sites[term.atom1].name);
+			if(term.atom2 < sites.size())
+				itemNode.put<std::string>("atom_2_name", sites[term.atom2].name);
 
 			node.add_child("exchange_terms.term", itemNode);
 		}
