@@ -336,9 +336,27 @@ public:
 	t_real GetTemperature() const { return m_temperature; }
 	t_real GetBoseCutoffEnergy() const { return m_bose_cutoff; }
 
+
 	bool IsIncommensurate() const
 	{
 		return m_is_incommensurate || m_force_incommensurate;
+	}
+
+
+	/**
+	 * get the atom site with the given name
+	 */
+	const AtomSite* FindAtomSite(const std::string& name) const
+	{
+		auto iter = std::find_if(m_sites.begin(), m_sites.end(),
+			[&name](const auto& site)
+		{
+			return site.name == name;
+		});
+
+		if(iter == m_sites.end())
+			return nullptr;
+		return &*iter;
 	}
 	// --------------------------------------------------------------------
 

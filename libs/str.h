@@ -727,6 +727,7 @@ std::pair<bool, t_val> eval_expr(const t_str& str) noexcept
 	try
 	{
 		ExprParser<t_val> parser;
+		parser.SetAutoregisterVariables(false);
 		bool ok = parser.parse(wstr_to_str(str));
 		t_val valRes = parser.eval();
 		return std::make_pair(ok, valRes);
