@@ -785,26 +785,6 @@ std::tuple<T,T,T> cart_to_cyl(T x, T y, T z)
 }
 
 
-
-template<class T = double>
-std::tuple<T,T> crys_to_sph(T twophi_crys, T twotheta_crys)
-{
-	// converts the out-of-plane scattering angle '2theta' to the spherical theta
-	T theta_sph = pi<T>/T(2) - twotheta_crys;
-	// converts in-plane scattering angle '2phi' to the spherical phi
-	T phi_sph = twophi_crys - pi<T>/T(2);
-
-	return std::make_tuple(phi_sph, theta_sph);
-}
-
-
-template<class T = double>
-std::tuple<T,T> sph_to_crys(T phi, T theta)
-{
-	return crys_to_sph<T>(phi, theta);
-}
-
-
 /**
  * gnomonic projection (similar to perspective projection with fov=90°)
  * @return [x,y]
@@ -818,6 +798,7 @@ std::tuple<T,T> gnomonic_proj(T twophi_crys, T twotheta_crys)
 
 	return std::make_tuple(x, y);
 }
+
 
 /**
  * stereographic projection
