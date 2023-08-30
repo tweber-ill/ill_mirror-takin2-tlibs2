@@ -41,6 +41,7 @@
 #include "log.h"
 #include "maths.h"
 
+#include <optional>
 #include <boost/units/pow.hpp>
 
 
