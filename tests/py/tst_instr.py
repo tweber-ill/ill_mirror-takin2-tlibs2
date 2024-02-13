@@ -27,7 +27,7 @@
 
 import os
 import math
-import tl2
+import tl2_instr
 
 
 # get energy transfer from ki and kf
@@ -40,7 +40,7 @@ def get_E(ki, kf):
 
 def load_data(datfile):
 	#print("Loading \"%s\"." % (datfile))
-	dat = tl2.FileInstrBaseD.LoadInstr(datfile)
+	dat = tl2_instr.FileInstrBaseD.LoadInstr(datfile)
 	if dat == None:
 		return
 
@@ -72,7 +72,4 @@ def load_all(dir):
 
 
 print("#          h            k            l            E            S        S_err")
-#load_all("/users/tw/tmp/mvo_phonon")
-#load_all("/Users/tweber/tmp/skx_data")
-#load_all("/Users/tweber/tmp/scans")
-load_all("/home/tw/tmp/scans")
+load_all("/users/tw/tmp/mvo_phonon")

@@ -73,7 +73,6 @@ std::string Log::get_timestamp()
 	std::time_t tm = system_clock::to_time_t(now);
 	std::tm tmNow;
 	c_time::localtime(&tm, &tmNow);
-	// /*std::*/localtime_r(&tm, &tmNow);
 
 	std::string::value_type cTime[64];
 	std::strftime(cTime, sizeof cTime, "%Y-%b-%d %H:%M:%S.", &tmNow);

@@ -36,6 +36,8 @@
 #include <sstream>
 #include <locale>
 #include <limits>
+#include <vector>
+#include <stack>
 #include <map>
 #include <utility>
 #include <algorithm>
@@ -194,12 +196,12 @@ t_str remove_chars(const t_str& str, const t_str& chs)
 
 	for(typename t_str::value_type c : str)
 	{
-		bool bRemove = 0;
+		bool bRemove = false;
 		for(typename t_str::value_type ch : chs)
 		{
 			if(c == ch)
 			{
-				bRemove = 1;
+				bRemove = true;
 				break;
 			}
 		}
@@ -257,7 +259,7 @@ t_str insert_before(const t_str& str, const t_str& strChar, const t_str& strInse
 
 
 template<class t_str=std::string>
-bool begins_with(const t_str& str, const t_str& strBeg, bool bCase=1)
+bool begins_with(const t_str& str, const t_str& strBeg, bool bCase = true)
 {
 	if(bCase)
 		return algo::starts_with(str, strBeg, algo::is_equal());
@@ -267,7 +269,7 @@ bool begins_with(const t_str& str, const t_str& strBeg, bool bCase=1)
 
 
 template<class t_str=std::string>
-bool ends_with(const t_str& str, const t_str& strEnd, bool bCase=1)
+bool ends_with(const t_str& str, const t_str& strEnd, bool bCase = true)
 {
 	if(bCase)
 		return algo::ends_with(str, strEnd, algo::is_equal());
@@ -281,7 +283,7 @@ bool ends_with(const t_str& str, const t_str& strEnd, bool bCase=1)
 
 template<class t_str=std::string>
 std::pair<t_str, t_str>
-split_first(const t_str& str, const t_str& strSep, bool bTrim=0, bool bSeq=0)
+split_first(const t_str& str, const t_str& strSep, bool bTrim = false, bool bSeq = false)
 {
 	t_str str1, str2;
 
@@ -310,7 +312,7 @@ split_first(const t_str& str, const t_str& strSep, bool bTrim=0, bool bSeq=0)
  */
 template<class t_str=std::string>
 t_str str_between(const t_str& str, const t_str& strSep1, const t_str& strSep2,
-	bool bTrim=0, bool bSeq=0)
+	bool bTrim = false, bool bSeq = false)
 {
 	t_str str1, str2;
 	std::tie(str1, str2) = split_first<t_str>(str, strSep1, bTrim, bSeq);
@@ -324,7 +326,7 @@ t_str str_between(const t_str& str, const t_str& strSep1, const t_str& strSep2,
 // ----------------------------------------------------------------------------
 
 
-template<typename T, class t_str=std::string, bool bTIsStr=0>
+template<typename T, class t_str=std::string, bool bTIsStr = false>
 struct _str_to_var_impl;
 
 
@@ -356,7 +358,6 @@ struct _str_to_var_impl<T, t_str, 0>
 };
 
 
-
 /**
  * tokenises string on any of the chars in strDelim
  */
@@ -384,7 +385,7 @@ void get_tokens(const t_str& str, const t_str& strDelim, t_cont& vecRet)
  * tokenises string on strDelim
  */
 template<class T, class t_str=std::string, template<class...> class t_cont=std::vector>
-void get_tokens_seq(const t_str& str, const t_str& strDelim, t_cont<T>& vecRet, bool bCase=1)
+void get_tokens_seq(const t_str& str, const t_str& strDelim, t_cont<T>& vecRet, bool bCase = true)
 {
 	using t_char = typename t_str::value_type;
 
@@ -417,12 +418,13 @@ bool parse_tokens(const t_str& str, const t_str& strDelim, t_cont& vecRet)
 	std::vector<t_str> vecStrs;
 	get_tokens<t_str, t_str, std::vector<t_str>>(str, strDelim, vecStrs);
 
-	bool bOk = 1;
+	bool bOk = true;
 	for(const t_str& str : vecStrs)
 	{
 		std::pair<bool, T> pairResult = eval_expr<t_str, T>(str);
 		vecRet.push_back(pairResult.second);
-		if(!pairResult.first) bOk = 0;
+		if(!pairResult.first)
+			bOk = false;
 	}
 
 	return bOk;
@@ -442,10 +444,71 @@ T str_to_var_parse(const t_str& str)
 template<typename T, class t_str=std::string>
 T str_to_var(const t_str& str)
 {
-	return _str_to_var_impl<T, t_str, 
+	return _str_to_var_impl<T, t_str,
 		std::is_convertible<T, t_str>::value>()(str);
 }
 
+
+/**
+ * unite bracket expressions in a token list to a single token
+ */
+template<class t_str = std::string, class t_cont = std::vector<t_str>>
+t_cont unite_incomplete_tokens(const t_cont& toks, const t_str& opening = "([{", const t_str& closing = ")]}")
+{
+	using t_ch = typename t_str::value_type;
+
+	std::stack<std::size_t> open_brackets;
+	t_cont newtoks;
+
+	// iterate tokens
+	t_str cur_tok;
+	for(auto tok_iter = toks.begin(); tok_iter != toks.end(); ++tok_iter)
+	{
+		// iterate token characters
+		for(t_ch ch : *tok_iter)
+		{
+			bool has_opening_bracket = false;
+
+			// iterate opening brackets
+			for(std::size_t bracket_idx = 0; bracket_idx < opening.length(); ++bracket_idx)
+			{
+				t_ch bracket = opening[bracket_idx];
+
+				if(ch == bracket)
+				{
+					open_brackets.push(bracket_idx);
+					has_opening_bracket = true;
+					break;
+				}
+			}
+
+			if(has_opening_bracket)
+				continue;
+
+			// iterate closing brackets
+			if(!open_brackets.empty())
+			{
+				std::size_t cur_bracket_idx = open_brackets.top();
+				t_ch cur_bracket = closing[cur_bracket_idx];
+
+				if(ch == cur_bracket)
+					open_brackets.pop();
+			}
+		}
+
+		if(cur_tok.length() != 0)
+			cur_tok += " ";
+		cur_tok += *tok_iter;
+
+		if(open_brackets.empty())
+		{
+			newtoks.push_back(cur_tok);
+			cur_tok = "";
+		}
+	}
+
+	return newtoks;
+}
 
 // ----------------------------------------------------------------------------
 
@@ -663,6 +726,7 @@ bool str_is_digits(const t_str& str)
 		{
 			return t_fkt::is_digit(c);
 		});
+
 	return bAllNums;
 }
 

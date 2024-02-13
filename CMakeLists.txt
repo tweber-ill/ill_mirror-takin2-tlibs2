@@ -82,16 +82,19 @@ find_package(SWIG REQUIRED)
 set(UseSWIG_TARGET_NAME_PREFERENCE STANDARD)
 include(${SWIG_USE_FILE})
 
-set_source_files_properties(swig_mod/tl2.i PROPERTIES CPLUSPLUS TRUE)
-set_source_files_properties(swig_mod/tl2.i PROPERTIES SWIG_FLAGS "-I ${PROJECT_SOURCE_DIR}/libs")
+set_source_files_properties(swig_mod/instr.i PROPERTIES CPLUSPLUS TRUE)
+set_source_files_properties(swig_mod/instr.i PROPERTIES SWIG_FLAGS "-I ${PROJECT_SOURCE_DIR}/libs")
+set_source_files_properties(swig_mod/magdyn.i PROPERTIES CPLUSPLUS TRUE)
+set_source_files_properties(swig_mod/magdyn.i PROPERTIES SWIG_FLAGS "-I ${PROJECT_SOURCE_DIR}/libs")
 
-swig_add_library(tl2_py LANGUAGE python SOURCES swig_mod/tl2.i libs/log.cpp)
+swig_add_library(tl2_instr_py LANGUAGE python SOURCES swig_mod/instr.i libs/log.cpp)
+swig_add_library(tl2_magdyn_py LANGUAGE python SOURCES swig_mod/magdyn.i libs/log.cpp)
 
-target_link_libraries(tl2_py Python3::Python)
-
+target_link_libraries(tl2_instr_py Python3::Python)
+target_link_libraries(tl2_magdyn_py Python3::Python -llapacke)
 
 # installation
-install(TARGETS tl2_py LIBRARY DESTINATION "${Python3_SITEARCH}")
+install(TARGETS tl2_instr_py LIBRARY DESTINATION "${Python3_SITEARCH}")
 install(FILES FILES "${CMAKE_BINARY_DIR}/tl2.py" DESTINATION "${Python3_SITEARCH}")
 # -----------------------------------------------------------------------------
 

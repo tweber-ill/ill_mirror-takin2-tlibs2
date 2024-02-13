@@ -39,6 +39,8 @@
 #include <chrono>
 #include <vector>
 
+#include <boost/date_time/c_time.hpp>
+
 
 namespace tl2 {
 
@@ -157,12 +159,14 @@ template<typename T=double>
 std::string epoch_to_str(T tSeconds, const char *pcFmt="%a %Y-%b-%d %H:%M:%S %Z")
 {
 	namespace ch = std::chrono;
+	using boost::date_time::c_time;
 
 	t_dur_secs<T> secs(tSeconds);
 	ch::system_clock::time_point tp(ch::duration_cast<ch::seconds>(secs));
 
 	std::time_t t = ch::system_clock::to_time_t(tp);
-	std::tm tm = *std::localtime(&t);
+	std::tm tm;
+	c_time::localtime(&t, &tm);
 
 	char cTime[256];
 	std::strftime(cTime, sizeof cTime, pcFmt, &tm);

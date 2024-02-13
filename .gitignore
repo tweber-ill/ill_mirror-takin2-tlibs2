@@ -12,8 +12,10 @@
 tests/jl/*.dat
 !tests/jl/tl2_jl.so
 !tests/jl/tl2_jl.dylib
-!tests/py/_tl2_py.so
-!tests/py/_tl2_py.dylib
+!tests/py/_tl2_instr_py.so
+!tests/py/_tl2_instr_py.dylib
+!tests/py/_tl2_magdyn_py.so
+!tests/py/_tl2_magdyn_py.dylib
 
 # Compiled Static libraries
 *.lai

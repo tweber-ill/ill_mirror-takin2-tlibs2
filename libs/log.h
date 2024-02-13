@@ -41,7 +41,9 @@
 #include <mutex>
 #include <utility>
 #include <exception>
+
 #include <boost/type_index.hpp>
+#include <boost/date_time/c_time.hpp>
 
 #include "algos.h"
 
@@ -200,8 +202,11 @@ class Stopwatch
 
 		static std::string to_str(const t_tp_sys& t)
 		{
+			using boost::date_time::c_time;
+
 			std::time_t tStart = std::chrono::system_clock::to_time_t(t);
-			std::tm tmStart = *std::localtime(&tStart);
+			std::tm tmStart;
+			c_time::localtime(&tStart, &tmStart);
 
 			char cTime[256];
 			std::strftime(cTime, sizeof cTime, "%a %Y-%b-%d %H:%M:%S %Z", &tmStart);

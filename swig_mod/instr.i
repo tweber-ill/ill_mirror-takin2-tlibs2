@@ -1,12 +1,12 @@
 /**
- * tlibs2
- * @author Tobias Weber <tobias.weber@tum.de>
- * @date 2012-2022
- * @license GPLv3, see 'LICENSE' file
+ * tlibs2 -- swig interface for instrument file loader
+ * @author Tobias Weber <tweber@ill.fr>
+ * @date 4-jun-2020
+ * @license see 'LICENSE' file
  *
  * ----------------------------------------------------------------------------
  * tlibs
- * Copyright (C) 2017-2022  Tobias WEBER (Institut Laue-Langevin (ILL),
+ * Copyright (C) 2017-2023  Tobias WEBER (Institut Laue-Langevin (ILL),
  *                          Grenoble, France).
  * Copyright (C) 2015-2017  Tobias WEBER (Technische Universitaet Muenchen
  *                          (TUM), Garching, Germany).
@@ -25,9 +25,29 @@
  * ----------------------------------------------------------------------------
  */
 
-#ifndef __TLIBS2_VER_H__
-#define __TLIBS2_VER_H__
+%module tl2_instr
+%{
+	#include "instr.h"
+%}
 
-#define TLIBS2_VER "2.6.0"
+%include "std_vector.i"
+%include "std_array.i"
+%include "std_map.i"
+%include "std_unordered_map.i"
+%include "std_pair.i"
+//%include "std_tuple.i"
+%include "std_string.i"
+%include "std_shared_ptr.i"
 
-#endif
+%shared_ptr(tl2::FileInstrBase<double>);
+
+%template(VecStr) std::vector<std::string>;
+%template(VecD) std::vector<double>;
+%template(ArrD3) std::array<double,3>;
+%template(ArrD5) std::array<double,5>;
+%template(ArrB3) std::array<bool,3>;
+%template(MapStrStr) std::unordered_map<std::string, std::string>;
+
+%include "instr.h"
+
+%template(FileInstrBaseD) tl2::FileInstrBase<double>;
