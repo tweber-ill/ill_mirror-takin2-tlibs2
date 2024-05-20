@@ -1,8 +1,7 @@
 /**
- * tlibs2
- * (container-agnostic) math library
+ * tlibs2 -- (container-agnostic) math library
  * @author Tobias Weber <tobias.weber@tum.de>, <tweber@ill.fr>
- * @date 2015 - 2023
+ * @date 2015 - 2024
  * @license GPLv3, see 'LICENSE' file
  *
  * @note The present version was forked on 8-Nov-2018 from my privately developed "magtools" project (https://github.com/t-weber/magtools).
@@ -14,7 +13,7 @@
  *
  * ----------------------------------------------------------------------------
  * tlibs
- * Copyright (C) 2017-2023  Tobias WEBER (Institut Laue-Langevin (ILL),
+ * Copyright (C) 2017-2024  Tobias WEBER (Institut Laue-Langevin (ILL),
  *                          Grenoble, France).
  * Copyright (C) 2015-2017  Tobias WEBER (Technische Universitaet Muenchen
  *                          (TUM), Garching, Germany).
@@ -73,9 +72,8 @@
 #include <boost/math/special_functions/spherical_harmonic.hpp>
 #include <boost/algorithm/minmax_element.hpp>
 
-#include "log.h"
 #include "str.h"
-#include "bits.h"
+#include "algos.h"
 #include "traits.h"
 
 #if __has_include(<lapacke.h>) && USE_LAPACK
@@ -408,39 +406,6 @@ bool is_in_angular_range(T dStart, T dRange, T dAngle)
 	{
 		return is_in_linear_range<T>(dStart, T(2)*pi<T>, dAngle) ||
 			is_in_linear_range<T>(T(0), dRange-(T(2)*pi<T>-dStart), dAngle);
-	}
-}
-
-
-/**
- * converts a string to a scalar value
- */
-template<class t_scalar=double, class t_str=std::string>
-t_scalar stoval(const t_str& str)
-{
-	if constexpr(std::is_same_v<t_scalar, float>)
-		return std::stof(str);
-	else if constexpr(std::is_same_v<t_scalar, double>)
-		return std::stod(str);
-	else if constexpr(std::is_same_v<t_scalar, long double>)
-		return std::stold(str);
-	else if constexpr(std::is_same_v<t_scalar, int>)
-		return std::stoi(str);
-//	else if constexpr(std::is_same_v<t_scalar, unsigned int>)
-//		return std::stoui(str);
-	else if constexpr(std::is_same_v<t_scalar, long>)
-		return std::stol(str);
-	else if constexpr(std::is_same_v<t_scalar, unsigned long>)
-		return std::stoul(str);
-	else if constexpr(std::is_same_v<t_scalar, long long>)
-		return std::stoll(str);
-	else if constexpr(std::is_same_v<t_scalar, unsigned long long>)
-		return std::stoull(str);
-	else
-	{
-		t_scalar val{};
-		std::istringstream{str} >> val;
-		return val;
 	}
 }
 
@@ -1122,13 +1087,14 @@ requires tl2::is_basic_vec<t_vec> && tl2::is_dyn_vec<t_vec>
 
 	std::vector<std::string> vecstr;
 	boost::split(vecstr, str,
-		[](auto c) -> bool { return c==TL2_COLSEP; },
+		[](auto c) -> bool { return c == TL2_COLSEP; },
 		boost::token_compress_on);
 
 	for(auto& tok : vecstr)
 	{
 		boost::trim(tok);
-		typename t_vec::value_type c = tl2::stoval<typename t_vec::value_type>(tok);
+		typename t_vec::value_type c =
+			tl2::stoval<typename t_vec::value_type>(tok);
 		vec.emplace_back(std::move(c));
 	}
 
@@ -7168,49 +7134,58 @@ requires is_vec<t_vec>
 
 
 /**
- * create positions using the given symmetry operations
+ * transform vectors, e.g. atomic positions, using the given symmetry operations
  */
 template<class t_vec, class t_mat, class t_real = typename t_vec::value_type,
 	template<class...> class t_cont = std::vector>
-t_cont<t_vec> apply_ops_hom(const t_vec& _atom, const t_cont<t_mat>& ops,
-	t_real eps=std::numeric_limits<t_real>::epsilon(),
-	bool keepInUnitCell = true, bool ignore_occupied = false, bool ret_hom = false)
+t_cont<t_vec> apply_ops_hom(const t_vec& _vec, const t_cont<t_mat>& ops,
+	t_real eps = std::numeric_limits<t_real>::epsilon(),
+	bool keepInUnitCell = true, bool ignore_occupied = false,
+	bool ret_hom = false, bool is_pseudovector = false)
 requires is_vec<t_vec> && is_mat<t_mat>
 {
 	// convert vector to homogeneous coordinates
-	t_vec atom = _atom;
-	if(atom.size() == 3)
-		atom = create<t_vec>({atom[0], atom[1], atom[2], 1});
+	t_vec vec = _vec;
+	if(vec.size() == 3)
+		vec = create<t_vec>({ vec[0], vec[1], vec[2], 1. });
 
-	t_cont<t_vec> newatoms;
-	newatoms.reserve(ops.size());
+	t_cont<t_vec> newvecs;
+	newvecs.reserve(ops.size());
 
 	for(const auto& op : ops)
 	{
 		// apply symmetry operator
-		auto newatom = op * atom;
+		auto newvec = op * vec;
+
+		if(is_pseudovector)
+		{
+			t_real oldw = newvec[3];
+			newvec *= det<t_mat>(submat<t_mat>(op, 3, 3));
+			newvec[3] = oldw;
+		}
 
 		// return a homogeneous 4-vector or a 3-vector
 		if(!ret_hom)
-			newatom = create<t_vec>({newatom[0], newatom[1], newatom[2]});
+			newvec = create<t_vec>({ newvec[0], newvec[1], newvec[2] });
 
 		if(keepInUnitCell)
-			newatom = keep_atom_in_uc<t_vec>(newatom, 3);
+			newvec = keep_atom_in_uc<t_vec>(newvec, 3);
 
 		// position already occupied?
 		if(ignore_occupied ||
-			std::find_if(newatoms.begin(), newatoms.end(),
-				[&newatom, eps](const t_vec& vec) -> bool
+			std::find_if(newvecs.begin(), newvecs.end(),
+				[&newvec, eps](const t_vec& vec) -> bool
 		{
-			return tl2::equals<t_vec>(vec, newatom, eps);
-		}) == newatoms.end())
+			return tl2::equals<t_vec>(vec, newvec, eps);
+		}) == newvecs.end())
 		{
-			newatoms.emplace_back(std::move(newatom));
+			newvecs.emplace_back(std::move(newvec));
 		}
 	}
 
-	return newatoms;
+	return newvecs;
 }
+
 
 
 /**
@@ -7830,6 +7805,8 @@ requires tl2::is_mat<t_mat>
 /**
  * eigenvectors and -values of a complex matrix
  * @returns [ok, evals, evecs]
+ * @see http://www.math.utah.edu/software/lapack/lapack-z/zheev.html
+ * @see http://www.math.utah.edu/software/lapack/lapack-z/zgeev.html
  */
 template<class t_mat_cplx, class t_vec_cplx, class t_cplx = typename t_mat_cplx::value_type,
     class t_real = typename t_cplx::value_type>
@@ -8017,6 +7994,8 @@ eigenvec(const t_mat_cplx& mat,
 /**
  * eigenvectors and -values of a real matrix
  * @returns [ok, evals_re, evals_im, evecs_re, evecs_im]
+ * @see http://www.math.utah.edu/software/lapack/lapack-d/dsyev.html
+ * @see http://www.math.utah.edu/software/lapack/lapack-d/dgeev.html
  */
 template<class t_mat, class t_vec, class t_real = typename t_mat::value_type>
 std::tuple<bool, std::vector<t_real>, std::vector<t_real>, std::vector<t_vec>, std::vector<t_vec>>
@@ -8244,6 +8223,8 @@ eigenvec(const t_mat& mat, bool only_evals=false, bool is_symmetric=false, bool 
 /**
  * singular values of a real or complex matrix mat = U * diag{vals} * V^h
  * @returns [ ok, U, Vh, vals ]
+ * @see http://www.math.utah.edu/software/lapack/lapack-z/zgesvd.html
+ * @see http://www.math.utah.edu/software/lapack/lapack-d/dgesvd.html
  */
 template<class t_mat, class t_scalar = typename t_mat::value_type, class t_real = tl2::underlying_value_type<t_scalar>>
 std::tuple<bool, t_mat, t_mat, std::vector<t_real>>
@@ -8455,9 +8436,11 @@ std::tuple<bool, t_mat, t_mat> qr(const t_mat& mat)
 requires is_mat<t_mat> && is_vec<t_vec>
 {
 #ifdef __TLIBS2_USE_LAPACK__
+
 	return tl2_la::qr<t_mat, t_vec>(mat);
 
 #else
+
 	const std::size_t rows = mat.size1();
 	const std::size_t cols = mat.size2();
 	const std::size_t N = std::min(cols, rows);
@@ -8487,7 +8470,8 @@ requires is_mat<t_mat> && is_vec<t_vec>
 #endif
 
 	return std::make_tuple(true, Q, R);
-#endif
+
+#endif  // __TLIBS2_USE_LAPACK__
 }
 
 
@@ -8507,8 +8491,11 @@ requires is_mat<t_mat>
 		static_assert(t_mat::size1() == t_mat::size2());
 
 #ifdef __TLIBS2_USE_LAPACK__
+
 	return tl2_la::inv<t_mat>(mat);
+
 #else
+
 	using T = typename t_mat::value_type;
 	using t_vec = std::vector<T>;
 	const std::size_t N = mat.size1();
@@ -8536,6 +8523,7 @@ requires is_mat<t_mat>
 
 	matInv = matInv / fullDet;
 	return std::make_tuple(matInv, true);
+
 #endif
 }
 

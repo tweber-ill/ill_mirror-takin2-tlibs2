@@ -1,6 +1,5 @@
 /**
- * tlibs2
- * string library
+ * tlibs2 -- string library
  * @author Tobias Weber <tobias.weber@tum.de>, <tweber@ill.fr>
  * @date 2013-2021
  * @note Forked on 7-Nov-2018 from my privately and TUM-PhD-developed "tlibs" project (https://github.com/t-weber/tlibs).
@@ -8,7 +7,7 @@
  *
  * ----------------------------------------------------------------------------
  * tlibs
- * Copyright (C) 2017-2021  Tobias WEBER (Institut Laue-Langevin (ILL),
+ * Copyright (C) 2017-2024  Tobias WEBER (Institut Laue-Langevin (ILL),
  *                          Grenoble, France).
  * Copyright (C) 2015-2017  Tobias WEBER (Technische Universitaet Muenchen
  *                          (TUM), Garching, Germany).
@@ -39,17 +38,17 @@
 #include <vector>
 #include <stack>
 #include <map>
+#include <unordered_map>
 #include <utility>
 #include <algorithm>
 #include <type_traits>
 #include <cctype>
 #include <cwctype>
-#include <unordered_map>
+#include <chrono>
 
 #include <boost/tokenizer.hpp>
 #include <boost/algorithm/string.hpp>
 
-#include "log.h"
 #include "expr.h"
 
 
@@ -173,7 +172,7 @@ t_str trimmed(const t_str& str)
 /**
  * removes all occurrences of a char in a string
  */
-template<class t_str=std::string>
+template<class t_str = std::string>
 t_str remove_char(const t_str& str, typename t_str::value_type ch)
 {
 	t_str strRet;
@@ -189,7 +188,7 @@ t_str remove_char(const t_str& str, typename t_str::value_type ch)
 /**
  * removes all occurrences of specified chars in a string
  */
-template<class t_str=std::string>
+template<class t_str = std::string>
 t_str remove_chars(const t_str& str, const t_str& chs)
 {
 	t_str strRet;
@@ -244,7 +243,7 @@ std::size_t string_rm(t_str& str, const t_str& strStart, const t_str& strEnd)
 // -----------------------------------------------------------------------------
 
 
-template<class t_str=std::string>
+template<class t_str = std::string>
 t_str insert_before(const t_str& str, const t_str& strChar, const t_str& strInsert)
 {
 	std::size_t pos = str.find(strChar);
@@ -258,7 +257,7 @@ t_str insert_before(const t_str& str, const t_str& strChar, const t_str& strInse
 }
 
 
-template<class t_str=std::string>
+template<class t_str = std::string>
 bool begins_with(const t_str& str, const t_str& strBeg, bool bCase = true)
 {
 	if(bCase)
@@ -268,7 +267,7 @@ bool begins_with(const t_str& str, const t_str& strBeg, bool bCase = true)
 }
 
 
-template<class t_str=std::string>
+template<class t_str = std::string>
 bool ends_with(const t_str& str, const t_str& strEnd, bool bCase = true)
 {
 	if(bCase)
@@ -281,7 +280,7 @@ bool ends_with(const t_str& str, const t_str& strEnd, bool bCase = true)
 // -----------------------------------------------------------------------------
 
 
-template<class t_str=std::string>
+template<class t_str = std::string>
 std::pair<t_str, t_str>
 split_first(const t_str& str, const t_str& strSep, bool bTrim = false, bool bSeq = false)
 {
@@ -310,7 +309,7 @@ split_first(const t_str& str, const t_str& strSep, bool bTrim = false, bool bSeq
 /**
  * get string between strSep1 and strSep2
  */
-template<class t_str=std::string>
+template<class t_str = std::string>
 t_str str_between(const t_str& str, const t_str& strSep1, const t_str& strSep2,
 	bool bTrim = false, bool bSeq = false)
 {
@@ -325,8 +324,7 @@ t_str str_between(const t_str& str, const t_str& strSep1, const t_str& strSep2,
 
 // ----------------------------------------------------------------------------
 
-
-template<typename T, class t_str=std::string, bool bTIsStr = false>
+template<typename T, class t_str = std::string, bool bTIsStr = false>
 struct _str_to_var_impl;
 
 
@@ -348,11 +346,10 @@ struct _str_to_var_impl<T, t_str, 0>
 		if(!trimmed(str).length())
 			return T();
 
+		T t{};
 		typedef typename t_str::value_type t_char;
-		std::basic_istringstream<t_char> istr(str);
+		std::basic_istringstream<t_char>{str} >> t;
 
-		T t;
-		istr >> t;
 		return t;
 	}
 };
@@ -361,7 +358,7 @@ struct _str_to_var_impl<T, t_str, 0>
 /**
  * tokenises string on any of the chars in strDelim
  */
-template<class T, class t_str=std::string, class t_cont=std::vector<T>>
+template<class T, class t_str = std::string, class t_cont=std::vector<T>>
 void get_tokens(const t_str& str, const t_str& strDelim, t_cont& vecRet)
 {
 	using t_char = typename t_str::value_type;
@@ -384,7 +381,7 @@ void get_tokens(const t_str& str, const t_str& strDelim, t_cont& vecRet)
 /**
  * tokenises string on strDelim
  */
-template<class T, class t_str=std::string, template<class...> class t_cont=std::vector>
+template<class T, class t_str = std::string, template<class...> class t_cont = std::vector>
 void get_tokens_seq(const t_str& str, const t_str& strDelim, t_cont<T>& vecRet, bool bCase = true)
 {
 	using t_char = typename t_str::value_type;
@@ -412,7 +409,7 @@ void get_tokens_seq(const t_str& str, const t_str& strDelim, t_cont<T>& vecRet, 
 }
 
 
-template<class T, class t_str=std::string, class t_cont=std::vector<T>>
+template<class T, class t_str = std::string, class t_cont = std::vector<T>>
 bool parse_tokens(const t_str& str, const t_str& strDelim, t_cont& vecRet)
 {
 	std::vector<t_str> vecStrs;
@@ -431,7 +428,7 @@ bool parse_tokens(const t_str& str, const t_str& strDelim, t_cont& vecRet)
 }
 
 
-template<typename T, class t_str=std::string>
+template<typename T, class t_str = std::string>
 T str_to_var_parse(const t_str& str)
 {
 	std::pair<bool, T> pairResult = eval_expr<t_str, T>(str);
@@ -441,11 +438,55 @@ T str_to_var_parse(const t_str& str)
 }
 
 
-template<typename T, class t_str=std::string>
+template<typename T, class t_str = std::string>
 T str_to_var(const t_str& str)
 {
 	return _str_to_var_impl<T, t_str,
 		std::is_convertible<T, t_str>::value>()(str);
+}
+
+
+/**
+ * converts a string to a scalar value
+ */
+template<class t_scalar = double, class t_str = std::string>
+t_scalar stoval(const t_str& str, bool pass_exception = false)
+{
+	try
+	{
+		if constexpr(std::is_same_v<t_scalar, float>)
+			return std::stof(str);
+		else if constexpr(std::is_same_v<t_scalar, double>)
+			return std::stod(str);
+		else if constexpr(std::is_same_v<t_scalar, long double>)
+			return std::stold(str);
+		else if constexpr(std::is_same_v<t_scalar, int>)
+			return std::stoi(str);
+		//else if constexpr(std::is_same_v<t_scalar, unsigned int>)
+		//	return std::stoui(str);
+		else if constexpr(std::is_same_v<t_scalar, long>)
+			return std::stol(str);
+		else if constexpr(std::is_same_v<t_scalar, unsigned long>)
+			return std::stoul(str);
+		else if constexpr(std::is_same_v<t_scalar, long long>)
+			return std::stoll(str);
+		else if constexpr(std::is_same_v<t_scalar, unsigned long long>)
+			return std::stoull(str);
+
+		// use the general conversion function if no specialised one was found
+		return str_to_var<t_scalar, t_str>(str);
+	}
+	catch(const std::exception& ex)
+	{
+#ifdef __TLIBS2_SHOW_ERR__
+		std::cerr << "Conversion error: " << ex.what()
+			<< "." << std::endl;
+#endif
+		if(pass_exception)
+			throw ex;
+
+		return t_scalar{};
+	}
 }
 
 
@@ -530,14 +571,15 @@ template<class T, class t_ch> struct _var_to_str_print_impl<T, t_ch, true>
 	{
 		// prevents printing "-0"
 		T t0 = t;
-		if(t0==T(-0)) t0 = T(0);
+		if(t0 == T(-0))
+			t0 = T(0);
 
 		ostr << t0;
 	}
 };
 
 
-template<typename T, class t_str=std::string>
+template<typename T, class t_str = std::string>
 struct _var_to_str_impl
 {
 	t_str operator()(const T& t,
@@ -659,7 +701,7 @@ bool skip_after_line(std::basic_istream<t_char>& istr,
 }
 
 
-template<typename t_char=char>
+template<typename t_char = char>
 void skip_after_char(std::basic_istream<t_char>& istr, t_char ch,
 	bool bCase = false)
 {
@@ -686,7 +728,7 @@ void skip_after_char(std::basic_istream<t_char>& istr, t_char ch,
 /**
  * functions working on chars
  */
-template<class t_ch, typename=void> struct char_funcs {};
+template<class t_ch, typename = void> struct char_funcs {};
 
 
 /**
@@ -736,7 +778,60 @@ bool str_is_digits(const t_str& str)
 
 
 
-template<class t_str=std::string, class t_cont=std::vector<double>>
+template<class t_real = double>
+std::string get_duration_str_secs(t_real dDur)
+{
+	int iAgeMS = int((dDur - std::trunc(dDur)) * t_real(1000.));
+	int iAge[] = { int(dDur), 0, 0, 0 };    // s, m, h, d
+	const int iConv[] = { 60, 60, 24 };
+	const char* pcUnit[] = { "s ", "m ", "h ", "d " };
+
+	for(std::size_t i=0; i<sizeof(iAge)/sizeof(iAge[0])-1; ++i)
+	{
+		if(iAge[i] > iConv[i])
+		{
+			iAge[i+1] = iAge[i] / iConv[i];
+			iAge[i] = iAge[i] % iConv[i];
+		}
+	}
+
+	bool bHadPrev = false;
+	std::string strAge;
+	for(std::ptrdiff_t i=sizeof(iAge)/sizeof(iAge[0])-1; i>=0; --i)
+	{
+		if(iAge[i] || bHadPrev)
+		{
+			strAge += std::to_string(iAge[i]) + pcUnit[i];
+			bHadPrev = true;
+		}
+	}
+	/*if(iAgeMS)*/
+	{
+		strAge += std::to_string(iAgeMS) + "ms ";
+		bHadPrev = true;
+	}
+
+	return strAge;
+}
+
+
+template<class t_real = double>
+std::string get_duration_str(const std::chrono::duration<t_real>& dur)
+{
+	using t_dur = std::chrono::duration<t_real>;
+
+	t_real dDurSecs = t_real(t_dur::period::num)/t_real(t_dur::period::den)
+		* t_real(dur.count());
+	return get_duration_str_secs(dDurSecs);
+}
+
+
+
+// ----------------------------------------------------------------------------
+
+
+
+template<class t_str = std::string, class t_cont = std::vector<double>>
 t_cont get_py_array(const t_str& str)
 {
 	typedef typename t_cont::value_type t_elems;
@@ -763,7 +858,7 @@ t_cont get_py_array(const t_str& str)
 }
 
 
-template<class t_str=std::string>
+template<class t_str = std::string>
 t_str get_py_string(const t_str& str)
 {
 	std::size_t iStart = str.find_first_of("\'\"");
@@ -782,7 +877,7 @@ t_str get_py_string(const t_str& str)
 
 
 
-template<class t_str/*=std::string*/, class t_val/*=double*/>
+template<class t_str /*=std::string*/, class t_val /*=double*/>
 std::pair<bool, t_val> eval_expr(const t_str& str) noexcept
 {
 	if(trimmed(str).length() == 0)
@@ -799,7 +894,7 @@ std::pair<bool, t_val> eval_expr(const t_str& str) noexcept
 	catch(const std::exception& ex)
 	{
 #ifdef __TLIBS2_SHOW_ERR__
-		log_err("Parsing failed with error: ", ex.what(), ".");
+		std::cerr << "Parsing failed with error: " << ex.what() << "." << std::endl;
 #endif
 		return std::make_pair(false, t_val(0));
 	}

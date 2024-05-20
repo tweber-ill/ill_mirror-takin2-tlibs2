@@ -1,17 +1,20 @@
 /**
  * tlibs2 -- julia module
  * @author Tobias Weber <tobias.weber@tum.de>, <tweber@ill.fr>
- * @date 2017 -- 2018
+ * @date 2017 - 2018
  * @license GPLv3, see 'LICENSE' file
  * @desc Forked on 7-Nov-2018 from my privately and TUM-PhD-developed "tlibs" project (https://github.com/t-weber/tlibs).
  *
- * g++ -std=c++20 -shared -fPIC -O2 -march=native -I. -I.. -I/usr/local/include/julia -I/usr/include/julia -o tl2_jl.so ../libs/log.cpp jl.cpp -lboost_system -lboost_iostreams -lMinuit2 -lgomp -ljulia
+ * g++ -std=c++20 -shared -fPIC -O2 -march=native -I. -I.. -I/usr/local/include/julia -I/usr/include/julia -I/usr/local/include/Minuit2 -o tl2_jl.so jl.cpp -L/usr/local/lib/julia -lboost_system -lboost_iostreams -lMinuit2 -ljulia
  */
 
+#define __TLIBS2_USE_MINUIT__
+
 #include "jl.h"
-#include "libs/log.h"
 #include "libs/instr.h"
 #include "libs/fit.h"
+
+#include <iostream>
 
 
 using t_real = double;
@@ -23,12 +26,20 @@ bool g_bDebug = 0;
 extern "C" void load_tl2(int bDebug)
 {
 	g_bDebug = (bDebug != 0);
-	tl2::log_debug.SetEnabled(g_bDebug);
-	tl2::log_debug("Loaded tl2 module, compiled for jl version ", JULIA_VERSION_STRING, ".");
+	if(g_bDebug)
+	{
+		std::cerr << "Loaded tl2 module, compiled for jl version "
+			<< JULIA_VERSION_STRING
+			<< "." << std::endl;
+	}
 }
 
 
+
 // ----------------------------------------------------------------------------
+// data file loading
+// ----------------------------------------------------------------------------
+
 
 /**
  * loads an instrument data file
@@ -41,7 +52,7 @@ extern "C" jl_array_t* load_instr(const char* pcFile)
 		jl_array_t *pArrNull = jl_alloc_array_1d(
 			jl_apply_array_type(reinterpret_cast<jl_value_t*>(jl_any_type), 1), 0);
 
-		tl2::log_err("In ", __func__, ": Cannot load ", pcFile, ".");
+		std::cerr << "In " << __func__ << ": Cannot load " << pcFile << "." << std::endl;
 		return pArrNull;
 	}
 
@@ -62,10 +73,13 @@ extern "C" jl_array_t* load_instr(const char* pcFile)
 	return pArr;
 }
 
+// ----------------------------------------------------------------------------
+
 
 
 // ----------------------------------------------------------------------------
 // Fitting
+// ----------------------------------------------------------------------------
 
 
 /**
@@ -172,7 +186,7 @@ extern "C" int fit(void *_pFkt, std::size_t iNumParams,
 	else if(iNumParams == 13) bOk = __CALL_FIT(13);
 	else if(iNumParams == 14) bOk = __CALL_FIT(14);
 	else if(iNumParams == 15) bOk = __CALL_FIT(15);
-	else tl2::log_err("In ", __func__, ": Invalid number of function arguments.");
+	else std::cerr << "In " << __func__ << ": Invalid number of function arguments." << std::endl;
 
 
 	// write back fitted values & errors
@@ -192,6 +206,7 @@ extern "C" int fit(void *_pFkt, std::size_t iNumParams,
 
 // ----------------------------------------------------------------------------
 // Minimisation
+// ----------------------------------------------------------------------------
 
 
 /**
@@ -278,7 +293,7 @@ extern "C" int minimise(void *_pFkt, std::size_t iNumParams,
 	else if(iNumParams == 13) bOk = __CALL_MINI(13);
 	else if(iNumParams == 14) bOk = __CALL_MINI(14);
 	else if(iNumParams == 15) bOk = __CALL_MINI(15);
-	else tl2::log_err("In ", __func__, ": Invalid number of function arguments.");
+	else std::cerr << "In " << __func__ << ": Invalid number of function arguments." << std::endl;
 
 
 	// write back fitted values & errors
@@ -291,3 +306,5 @@ extern "C" int minimise(void *_pFkt, std::size_t iNumParams,
 
 	return int(bOk);
 }
+
+// ----------------------------------------------------------------------------

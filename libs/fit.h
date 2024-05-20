@@ -2,13 +2,13 @@
  * tlibs2
  * fitting and interpolation library
  * @author Tobias Weber <tobias.weber@tum.de>, <tweber@ill.fr>
- * @date 2012-2021
+ * @date 2012-2024
  * @note Forked on 7-Nov-2018 from my privately and TUM-PhD-developed "tlibs" project (https://github.com/t-weber/tlibs).
  * @license GPLv3, see 'LICENSE' file
  *
  * ----------------------------------------------------------------------------
  * tlibs
- * Copyright (C) 2017-2021  Tobias WEBER (Institut Laue-Langevin (ILL),
+ * Copyright (C) 2017-2024  Tobias WEBER (Institut Laue-Langevin (ILL),
  *                          Grenoble, France).
  * Copyright (C) 2015-2017  Tobias WEBER (Technische Universitaet Muenchen
  *                          (TUM), Garching, Germany).
@@ -51,7 +51,6 @@
 #include <limits>
 #include <type_traits>
 
-#include "log.h"
 #include "expr.h"
 
 #include "maths.h"
@@ -64,13 +63,12 @@ namespace tl2 {
 // Minuit interface
 // @see http://seal.cern.ch/documents/minuit/mnusersguide.pdf
 // ----------------------------------------------------------------------------
+
 #ifdef __TLIBS2_USE_MINUIT__
 using t_real_min = std::invoke_result_t<
 	decltype(&ROOT::Minuit2::MnFcn::Up), ROOT::Minuit2::MnFcn>;
 
 
-// ----------------------------------------------------------------------------
-// function models
 
 template<class t_real>
 class FitterFuncModel
@@ -82,6 +80,7 @@ public:
 	virtual t_real operator()(t_real x) const = 0;
 	virtual FitterFuncModel<t_real>* copy() const = 0;
 };
+
 
 
 /**
@@ -97,7 +96,7 @@ protected:
 	bool m_bSeparateFreeParam = 1;	// separate "x" from parameters (for fitter)
 
 public:
-	FitterLamFuncModel(t_func func, bool bSeparateX=1)
+	FitterLamFuncModel(t_func func, bool bSeparateX = true)
 		: m_func{func}, m_vecVals{}, m_bSeparateFreeParam{bSeparateX}
 	{
 		m_vecVals.resize(m_bSeparateFreeParam ? iNumArgs-1 : iNumArgs);
@@ -106,7 +105,7 @@ public:
 
 	virtual bool SetParams(const std::vector<t_real>& vecParams) override
 	{
-		for(std::size_t i=0; i<std::min(vecParams.size(), m_vecVals.size()); ++i)
+		for(std::size_t i = 0; i < std::min(vecParams.size(), m_vecVals.size()); ++i)
 			m_vecVals[i] = vecParams[i];
 		return true;
 	}
@@ -138,6 +137,7 @@ public:
 		return pMod;
 	}
 };
+
 
 
 /**
@@ -205,6 +205,7 @@ public:
 
 /**
  * generic chi^2 calculation for fitting
+ * @see http://seal.cern.ch/documents/minuit/mnusersguide.pdf
  */
 template<class t_real = t_real_min>
 class Chi2Function : public ROOT::Minuit2::FCNBase
@@ -218,7 +219,7 @@ protected:
 	const t_real* m_pdy = nullptr;
 
 	t_real_min m_dSigma = 1.;
-	bool m_bDebug = 0;
+	bool m_bDebug = false;
 
 
 public:
@@ -268,7 +269,8 @@ public:
 	virtual t_real_min operator()(const std::vector<t_real_min>& vecParams) const override
 	{
 		t_real_min dChi2 = chi2(vecParams);
-		if(m_bDebug) log_debug("chi2 = ", dChi2);
+		if(m_bDebug)
+			std::cerr << "chi2 = " << dChi2 << std::endl;
 		return dChi2;
 	}
 
@@ -279,8 +281,10 @@ public:
 };
 
 
+
 /**
  * function adaptor for minimisation
+ * @see http://seal.cern.ch/documents/minuit/mnusersguide.pdf
  */
 template<class t_real = t_real_min>
 class MiniFunction : public ROOT::Minuit2::FCNBase
@@ -325,6 +329,7 @@ public:
 // ----------------------------------------------------------------------------
 
 
+
 /**
  * fit function to x,y,dy data points
  */
@@ -340,13 +345,13 @@ bool fit(t_func&& func,
 	std::vector<t_real>& vecErrs,
 	const std::vector<bool>* pVecFixed = nullptr,
 
-	bool bDebug=1) noexcept
+	bool bDebug = true) noexcept
 {
 	try
 	{
 		if(!vecX.size() || !vecY.size() || !vecYErr.size())
 		{
-			log_err("No data given to fitter.");
+			std::cerr << "No data given to fitter." << std::endl;
 			return false;
 		}
 
@@ -354,7 +359,7 @@ bool fit(t_func&& func,
 		if(pVecFixed && std::all_of(pVecFixed->begin(), pVecFixed->end(),
 			[](bool b)->bool { return b; }))
 			{
-				log_err("All parameters are fixed.");
+				std::cerr << "All parameters are fixed." << std::endl;
 				return false;
 			}
 
@@ -380,7 +385,7 @@ bool fit(t_func&& func,
 			chi2 = std::make_unique<Chi2Function<t_real_min>>(&mod, vecXConverted.size(), vecXConverted.data(), vecYConverted.data(), vecYErrConverted.data());
 
 		ROOT::Minuit2::MnUserParameters params;
-		for(std::size_t iParam=0; iParam<vecParamNames.size(); ++iParam)
+		for(std::size_t iParam = 0; iParam < vecParamNames.size(); ++iParam)
 		{
 			params.Add(vecParamNames[iParam], static_cast<t_real_min>(vecVals[iParam]), static_cast<t_real_min>(vecErrs[iParam]));
 			if(pVecFixed && (*pVecFixed)[iParam])
@@ -391,24 +396,25 @@ bool fit(t_func&& func,
 		ROOT::Minuit2::FunctionMinimum mini = migrad();
 		bool bValidFit = mini.IsValid() && mini.HasValidParameters() && mini.UserState().IsValid();
 
-		for(std::size_t iParam=0; iParam<vecParamNames.size(); ++iParam)
+		for(std::size_t iParam = 0; iParam < vecParamNames.size(); ++iParam)
 		{
 			vecVals[iParam] = static_cast<t_real>(mini.UserState().Value(vecParamNames[iParam]));
 			vecErrs[iParam] = static_cast<t_real>(std::fabs(mini.UserState().Error(vecParamNames[iParam])));
 		}
 
 		if(bDebug)
-			log_debug(mini);
+			std::cerr << mini << std::endl;
 
 		return bValidFit;
 	}
 	catch(const std::exception& ex)
 	{
-		log_err(ex.what());
+		std::cerr << ex.what() << std::endl;
 	}
 
 	return false;
 }
+
 
 
 /**
@@ -427,13 +433,13 @@ bool fit_expr(const std::string& func,
 	std::vector<t_real>& vecErrs,
 	const std::vector<bool>* pVecFixed = nullptr,
 
-	bool bDebug=1) noexcept
+	bool bDebug = true) noexcept
 {
 	try
 	{
 		if(!vecX.size() || !vecY.size() || !vecYErr.size())
 		{
-			log_err("No data given to fitter.");
+			std::cerr << "No data given to fitter." << std::endl;
 			return false;
 		}
 
@@ -441,7 +447,7 @@ bool fit_expr(const std::string& func,
 		if(pVecFixed && std::all_of(pVecFixed->begin(), pVecFixed->end(),
 			[](bool b)->bool { return b; }))
 			{
-				log_err("All parameters are fixed.");
+				std::cerr << "All parameters are fixed." << std::endl;
 				return false;
 			}
 
@@ -467,7 +473,7 @@ bool fit_expr(const std::string& func,
 			chi2 = std::make_unique<Chi2Function<t_real_min>>(&mod, vecXConverted.size(), vecXConverted.data(), vecYConverted.data(), vecYErrConverted.data());
 
 		ROOT::Minuit2::MnUserParameters params;
-		for(std::size_t iParam=0; iParam<vecParamNames.size(); ++iParam)
+		for(std::size_t iParam = 0; iParam < vecParamNames.size(); ++iParam)
 		{
 			params.Add(vecParamNames[iParam], static_cast<t_real_min>(vecVals[iParam]), static_cast<t_real_min>(vecErrs[iParam]));
 			if(pVecFixed && (*pVecFixed)[iParam])
@@ -478,33 +484,34 @@ bool fit_expr(const std::string& func,
 		ROOT::Minuit2::FunctionMinimum mini = migrad();
 		bool bValidFit = mini.IsValid() && mini.HasValidParameters() && mini.UserState().IsValid();
 
-		for(std::size_t iParam=0; iParam<vecParamNames.size(); ++iParam)
+		for(std::size_t iParam = 0; iParam < vecParamNames.size(); ++iParam)
 		{
 			vecVals[iParam] = static_cast<t_real>(mini.UserState().Value(vecParamNames[iParam]));
 			vecErrs[iParam] = static_cast<t_real>(std::fabs(mini.UserState().Error(vecParamNames[iParam])));
 		}
 
 		if(bDebug)
-			log_debug(mini);
+			std::cerr << mini << std::endl;
 
 		return bValidFit;
 	}
 	catch(const std::exception& ex)
 	{
-		log_err(ex.what());
+		std::cerr << ex.what() << std::endl;
 	}
 
 	return false;
 }
 
 
+
 /**
  * find function minimum
  */
-template<class t_real=t_real_min, std::size_t iNumArgs, typename t_func>
+template<class t_real = t_real_min, std::size_t iNumArgs, typename t_func>
 bool minimise(t_func&& func, const std::vector<std::string>& vecParamNames,
 	std::vector<t_real>& vecVals, std::vector<t_real>& vecErrs,
-	const std::vector<bool>* pVecFixed = nullptr, bool bDebug=1) noexcept
+	const std::vector<bool>* pVecFixed = nullptr, bool bDebug = true) noexcept
 {
 	try
 	{
@@ -512,7 +519,7 @@ bool minimise(t_func&& func, const std::vector<std::string>& vecParamNames,
 		if(pVecFixed && std::all_of(pVecFixed->begin(), pVecFixed->end(),
 			[](bool b)->bool { return b; }))
 			{
-				log_err("All parameters are fixed.");
+				std::cerr << "All parameters are fixed." << std::endl;
 				return false;
 			}
 
@@ -520,7 +527,7 @@ bool minimise(t_func&& func, const std::vector<std::string>& vecParamNames,
 		MiniFunction<t_real_min> chi2(&mod);
 
 		ROOT::Minuit2::MnUserParameters params;
-		for(std::size_t iParam=0; iParam<vecParamNames.size(); ++iParam)
+		for(std::size_t iParam = 0; iParam < vecParamNames.size(); ++iParam)
 		{
 			params.Add(vecParamNames[iParam], static_cast<t_real_min>(vecVals[iParam]), static_cast<t_real_min>(vecErrs[iParam]));
 			if(pVecFixed && (*pVecFixed)[iParam])
@@ -531,24 +538,25 @@ bool minimise(t_func&& func, const std::vector<std::string>& vecParamNames,
 		ROOT::Minuit2::FunctionMinimum mini = migrad();
 		bool bMinimumValid = mini.IsValid() && mini.HasValidParameters() && mini.UserState().IsValid();
 
-		for(std::size_t iParam=0; iParam<vecParamNames.size(); ++iParam)
+		for(std::size_t iParam = 0; iParam < vecParamNames.size(); ++iParam)
 		{
 			vecVals[iParam] = static_cast<t_real>(mini.UserState().Value(vecParamNames[iParam]));
 			vecErrs[iParam] = static_cast<t_real>(std::fabs(mini.UserState().Error(vecParamNames[iParam])));
 		}
 
 		if(bDebug)
-			log_debug(mini);
+			std::cerr << mini << std::endl;
 
 		return bMinimumValid;
 	}
 	catch(const std::exception& ex)
 	{
-		log_err(ex.what());
+		std::cerr << ex.what() << std::endl;
 	}
 
 	return false;
 }
+
 
 
 /**
@@ -557,7 +565,7 @@ bool minimise(t_func&& func, const std::vector<std::string>& vecParamNames,
 template<class t_real = t_real_min>
 bool minimise_expr(const std::string& func, const std::vector<std::string>& vecParamNames,
 	std::vector<t_real>& vecVals, std::vector<t_real>& vecErrs,
-	const std::vector<bool>* pVecFixed = nullptr, bool bDebug=1) noexcept
+	const std::vector<bool>* pVecFixed = nullptr, bool bDebug = true) noexcept
 {
 	try
 	{
@@ -565,7 +573,7 @@ bool minimise_expr(const std::string& func, const std::vector<std::string>& vecP
 		if(pVecFixed && std::all_of(pVecFixed->begin(), pVecFixed->end(),
 			[](bool b)->bool { return b; }))
 			{
-				log_err("All parameters are fixed.");
+				std::cerr << "All parameters are fixed." << std::endl;
 				return false;
 			}
 
@@ -573,7 +581,7 @@ bool minimise_expr(const std::string& func, const std::vector<std::string>& vecP
 		MiniFunction<t_real_min> chi2(&mod);
 
 		ROOT::Minuit2::MnUserParameters params;
-		for(std::size_t iParam=0; iParam<vecParamNames.size(); ++iParam)
+		for(std::size_t iParam = 0; iParam < vecParamNames.size(); ++iParam)
 		{
 			params.Add(vecParamNames[iParam], static_cast<t_real_min>(vecVals[iParam]), static_cast<t_real_min>(vecErrs[iParam]));
 			if(pVecFixed && (*pVecFixed)[iParam])
@@ -584,20 +592,20 @@ bool minimise_expr(const std::string& func, const std::vector<std::string>& vecP
 		ROOT::Minuit2::FunctionMinimum mini = migrad();
 		bool bMinimumValid = mini.IsValid() && mini.HasValidParameters() && mini.UserState().IsValid();
 
-		for(std::size_t iParam=0; iParam<vecParamNames.size(); ++iParam)
+		for(std::size_t iParam = 0; iParam < vecParamNames.size(); ++iParam)
 		{
 			vecVals[iParam] = static_cast<t_real>(mini.UserState().Value(vecParamNames[iParam]));
 			vecErrs[iParam] = static_cast<t_real>(std::fabs(mini.UserState().Error(vecParamNames[iParam])));
 		}
 
 		if(bDebug)
-			log_debug(mini);
+			std::cerr << mini << std::endl;
 
 		return bMinimumValid;
 	}
 	catch(const std::exception& ex)
 	{
-		log_err(ex.what());
+		std::cerr << ex.what() << std::endl;
 	}
 
 	return false;
@@ -621,6 +629,8 @@ template<typename T> T bernstein(int i, int n, T t)
 	return bino * pow(t, i) * pow(1-t, n-i);
 }
 
+
+
 /**
  * @see http://mathworld.wolfram.com/BezierCurve.html
  */
@@ -638,6 +648,7 @@ t_vec bezier(const t_vec* P, std::size_t N, T t)
 
 	return vec;
 }
+
 
 
 /**
@@ -666,6 +677,7 @@ T bspline_base(int i, int j, T t, const std::vector<T>& knots)
 }
 
 
+
 /**
  * @see http://mathworld.wolfram.com/B-Spline.html
  */
@@ -688,9 +700,10 @@ t_vec bspline(const t_vec* P, std::size_t N, T t, const std::vector<T>& knots)
 }
 
 
+
 // ----------------------------------------------------------------------------
 
-template<class t_vec, typename T=typename t_vec::value_type>
+template<class t_vec, typename T = typename t_vec::value_type>
 class Bezier
 {
 	protected:
@@ -703,7 +716,7 @@ class Bezier
 		{
 			m_pvecs.reset(new t_vec[m_iN]);
 
-			for(std::size_t i=0; i<m_iN; ++i)
+			for(std::size_t i = 0; i < m_iN; ++i)
 			{
 				m_pvecs[i].resize(2);
 				m_pvecs[i][0] = px[i];
@@ -719,7 +732,8 @@ class Bezier
 };
 
 
-template<class t_vec, typename T=typename t_vec::value_type>
+
+template<class t_vec, typename T = typename t_vec::value_type>
 class BSpline
 {
 	protected:
@@ -731,7 +745,7 @@ class BSpline
 
 	public:
 		BSpline(std::size_t N, const T *px, const T *py,
-			unsigned int iDegree=3) : m_iN(N), m_iDegree(iDegree)
+			unsigned int iDegree = 3) : m_iN(N), m_iDegree(iDegree)
 		{
 			m_pvecs.reset(new t_vec[m_iN]);
 
@@ -779,6 +793,7 @@ class BSpline
 };
 
 
+
 template<class t_vec, typename T=typename t_vec::value_type>
 class LinInterp
 {
@@ -791,7 +806,7 @@ public:
 	{
 		m_pvecs.reset(new t_vec[m_iN]);
 
-		for(std::size_t i=0; i<m_iN; ++i)
+		for(std::size_t i = 0; i < m_iN; ++i)
 		{
 			m_pvecs[i].resize(2);
 			m_pvecs[i][0] = px[i];
@@ -841,11 +856,13 @@ template<class T, std::size_t N> struct __sort_obj
 };
 
 
+
 template<class T, std::size_t N>
 bool __comp_fkt(const __sort_obj<T, N>& t0, const __sort_obj<T, N>& t1)
 {
 	return t0.vec[0] < t1.vec[0];
 }
+
 
 
 /**
@@ -859,7 +876,7 @@ void __sort_2(Iter begin1, Iter end1, Iter begin2)
 	const std::size_t N = end1 - begin1;
 	std::unique_ptr<__sort_obj<T, 2>[]>obj{new __sort_obj<T, 2>[N]};
 
-	for(std::size_t i=0; i<N; ++i)
+	for(std::size_t i = 0; i < N; ++i)
 	{
 		obj.get()[i].vec[0] = *(begin1+i);
 		obj.get()[i].vec[1] = *(begin2+i);
@@ -867,12 +884,13 @@ void __sort_2(Iter begin1, Iter end1, Iter begin2)
 
 	std::stable_sort(obj.get(), obj.get()+N, __comp_fkt<T, 2>);
 
-	for(std::size_t i=0; i<N; ++i)
+	for(std::size_t i = 0; i < N; ++i)
 	{
 		*(begin1+i) = obj.get()[i].vec[0];
 		*(begin2+i) = obj.get()[i].vec[1];
 	}
 }
+
 
 
 /**
@@ -884,7 +902,7 @@ std::vector<std::size_t> find_zeroes(const t_cont& cont)
 	const std::size_t num_pts = cont.size();
 	std::vector<std::size_t> indices;
 
-	for(std::size_t i=0; i<num_pts-1; ++i)
+	for(std::size_t i = 0; i < num_pts-1; ++i)
 	{
 		if(std::signbit(cont[i]) != std::signbit(cont[i+1]))
 			indices.push_back(i);
@@ -892,6 +910,7 @@ std::vector<std::size_t> find_zeroes(const t_cont& cont)
 
 	return indices;
 }
+
 
 
 /**
@@ -926,7 +945,7 @@ void find_peaks(std::size_t num_pts, const T* _px, const T* _py, unsigned int sp
 	spline.SetEps(eps);
 	const T* y_min = std::min_element(py, py+num_pts);
 
-	for(std::size_t iSpline=0; iSpline<num_spline; ++iSpline)
+	for(std::size_t iSpline = 0; iSpline < num_spline; ++iSpline)
 	{
 		const T dT = T(iSpline) / T(num_spline-1);
 		t_vec vec = spline(dT);
@@ -946,7 +965,7 @@ void find_peaks(std::size_t num_pts, const T* _px, const T* _py, unsigned int sp
 	std::vector<std::size_t> zeros = find_zeroes(spline_diff);
 
 
-	for(std::size_t zero_idx=0; zero_idx<zeros.size(); ++zero_idx)
+	for(std::size_t zero_idx = 0; zero_idx < zeros.size(); ++zero_idx)
 	{
 		const std::size_t cur_zero_idx = zeros[zero_idx];
 

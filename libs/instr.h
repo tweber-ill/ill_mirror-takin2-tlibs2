@@ -44,7 +44,6 @@
 #include "file.h"
 #include "phys.h"
 #include "str.h"
-#include "log.h"
 
 
 namespace tl2{
@@ -82,7 +81,7 @@ class DatFile
 			trim(strLine);
 			if(strLine.length() == 0)
 				return;
-			//log_debug("Header line: ", strLine);
+			//std::cout << "Header line: " << strLine << std::endl;
 
 			bool bInsert = true;
 			std::pair<t_str, t_str> pair =
@@ -117,11 +116,15 @@ class DatFile
 						m_vecCols.emplace_back(std::move(vecNew));
 					}
 
-					log_warn("Data file loader: Too many elements in line ", m_iCurLine, ".");
+					std::cerr << "Data file loader: Too many elements in line "
+						<< m_iCurLine << "." << std::endl;
 				}
 			}
 			if(m_vecCols.size() < vecToks.size())
-				log_warn("Data file loader: Too few elements in line ", m_iCurLine, ".");
+			{
+				std::cerr << "Data file loader: Too few elements in line "
+					<< m_iCurLine << "." << std::endl;
+			}
 
 			for(std::size_t iCol=0; iCol<vecToks.size(); ++iCol)
 				m_vecCols[iCol].push_back(vecToks[iCol]);
@@ -180,7 +183,7 @@ class DatFile
 				trim<t_str>(strLine);
 				if(strLine.length() == 0)
 					continue;
-				//log_debug("Line: ", strLine);
+				//std::cout << "Line: " << strLine << std::endl;
 
 				if(strLine[0] == m_chComm)
 					ReadHeaderLine(strLine);
@@ -193,7 +196,7 @@ class DatFile
 
 		bool Load(const t_str& strFile)
 		{
-			//log_debug("File: ", strFile);
+			//std::cout << "File: " << strFile << std::endl;
 			std::basic_ifstream<t_char> ifstr(wstr_to_str(strFile));
 			if(!ifstr)
 				return false;
@@ -715,7 +718,8 @@ void FileInstrBase<t_real>::RenameDuplicateCols()
 		}
 		else
 		{
-			log_warn("Column \"", strCol, "\" is duplicate, renaming it.");
+			std::cerr << "Column \"" << strCol << "\" is duplicate, renaming it."
+				<< std::endl;
 
 			++iter->second;
 			strCol += "_" + var_to_str(iter->second);
@@ -757,19 +761,19 @@ std::shared_ptr<FileInstrBase<t_real>> FileInstrBase<t_real>::LoadInstr(const ch
 
 	if(strLine.find(strNicos) != std::string::npos)
 	{ // frm file
-		//log_debug(pcFile, " is an frm file.");
+		//std::cout << pcFile << " is an frm file." << std::endl;
 		pDat = std::make_shared<FileFrm<t_real>>();
 	}
 	else if(strLine.find('#') != std::string::npos &&
 		strLine.find(strMacs) != std::string::npos &&
 		strLine2.find('#') != std::string::npos)
 	{ // macs file
-		//log_debug(pcFile, " is a macs file.");
+		//std::cout << pcFile << " is a macs file." << std::endl;
 		pDat = std::make_shared<FileMacs<t_real>>();
 	}
 	else if(strLine2.find("scan start") != std::string::npos)
 	{ // trisp file
-		//log_debug(pcFile, " is a trisp file.");
+		std::cout << pcFile << " is a trisp file." << std::endl;
 		pDat = std::make_shared<FileTrisp<t_real>>();
 	}
 	else if(strLine.find('#') == std::string::npos &&
@@ -777,12 +781,13 @@ std::shared_ptr<FileInstrBase<t_real>> FileInstrBase<t_real>::LoadInstr(const ch
 		(strLine3.find(strPsi) != std::string::npos ||
 		strLine.find(strPsiOld) != std::string::npos))
 	{ // psi or ill file
-		//log_debug(pcFile, " is an ill or psi file.");
+		std::cout << pcFile << " is an ill or psi file." << std::endl;
 		pDat = std::make_shared<FilePsi<t_real>>();
 	}
 	else
 	{ // raw file
-		log_warn("\"", pcFile, "\" is of unknown type, falling back to raw loader.");
+		std::cerr << "\"" << pcFile << "\" is of unknown type, falling back to raw loader."
+			<< std::endl;
 		pDat = std::make_shared<FileRaw<t_real>>();
 	}
 
@@ -808,7 +813,8 @@ std::array<t_real, 5> FileInstrBase<t_real>::GetScanHKLKiKf(const char* pcH, con
 	/*std::size_t minSize = min4(vecH.size(), vecK.size(), vecL.size(), vecE.size());
 	if(i>=minSize)
 	{
-		log_err("Scan position ", i, " out of bounds. Size: ", minSize, ".");
+		std::cerr << "Scan position " << i << " is out of bounds. Size: " << minSize
+			<< "." << std::endl;
 		return std::array<t_real,5>{{0.,0.,0.,0.}};
 	}*/
 
@@ -878,7 +884,7 @@ bool FileInstrBase<t_real>::MergeWith(const FileInstrBase<t_real>* pDat)
 {
 	if(this->GetColNames().size() != pDat->GetColNames().size())
 	{
-		log_err("Cannot merge: Mismatching number of columns.");
+		std::cerr << "Cannot merge: Mismatching number of columns." << std::endl;
 		return false;
 	}
 
@@ -889,7 +895,8 @@ bool FileInstrBase<t_real>::MergeWith(const FileInstrBase<t_real>* pDat)
 
 		if(col1.size() == 0 || col2.size() == 0)
 		{
-			log_err("Cannot merge: Column \"", strCol, "\" is empty.");
+			std::cerr << "Cannot merge: Column \"" << strCol << "\" is empty."
+				<< std::endl;
 			return false;
 		}
 
@@ -907,7 +914,7 @@ void FileInstrBase<t_real>::SmoothData(const std::string& strCol, t_real dEps, b
 	this->GetCol(strCol, &iIdxCol);		// get column index
 	if(iIdxCol == GetColNames().size())	// no such column?
 	{
-		log_err("No such data column: \"", strCol, "\".");
+		std::cerr << "No such data column: \"" << strCol << "\"." << std::endl;
 		return;
 	}
 
@@ -1016,8 +1023,10 @@ void FilePsi<t_real>::ReadData(std::istream& istr)
 
 		if(vecToks.size() != m_vecColNames.size())
 		{
-			log_warn("Loader: Column size mismatch in data line ", iLine,
-				": Expected ", m_vecColNames.size(), ", got ", vecToks.size(), ".");
+			std::cerr << "Loader: Column size mismatch in data line " << iLine
+				<< ": Expected " << m_vecColNames.size()
+				<< ", got " << vecToks.size()
+				<< "." << std::endl;
 
 			// add zeros
 			while(m_vecColNames.size() > vecToks.size())
@@ -1553,10 +1562,11 @@ std::vector<std::string> FilePsi<t_real>::GetScannedVars() const
 
 	if(!vecVars.size())
 	{
-		log_warn("Could not determine scan variable.");
+		std::cerr << "Could not determine scan variable." << std::endl;
 		if(m_vecColNames.size() >= 1)
 		{
-			log_warn("Using first column: \"", m_vecColNames[0], "\".");
+			std::cerr << "Using first column: \"" << m_vecColNames[0] <<
+				"\"." << std::endl;
 			vecVars.push_back(m_vecColNames[0]);
 		}
 	}
@@ -1716,7 +1726,7 @@ void FileFrm<t_real>::ReadData(std::istream& istr)
 
 		if(vecToks.size() != m_vecQuantities.size())
 		{
-			log_warn("Loader: Line size mismatch.");
+			std::cerr << "Loader: Line size mismatch." << std::endl;
 
 			// add zeros
 			while(m_vecQuantities.size() > vecToks.size())
@@ -1792,7 +1802,7 @@ std::array<t_real, 3> FileFrm<t_real>::GetSampleLattice() const
 	std::vector<t_real> vec = get_py_array<std::string, std::vector<t_real>>(iter->second);
 	if(vec.size() != 3)
 	{
-		log_err("Invalid lattice array size.");
+		std::cerr << "Invalid lattice array size." << std::endl;
 		return std::array<t_real,3>{{0.,0.,0.}};
 	}
 
@@ -1809,7 +1819,7 @@ std::array<t_real, 3> FileFrm<t_real>::GetSampleAngles() const
 	std::vector<t_real> vec = get_py_array<std::string, std::vector<t_real>>(iter->second);
 	if(vec.size() != 3)
 	{
-		log_err("Invalid angle array size.");
+		std::cerr << "Invalid angle array size." << std::endl;
 		return std::array<t_real,3>{{0.,0.,0.}};
 	}
 
@@ -1862,7 +1872,7 @@ std::array<t_real, 3> FileFrm<t_real>::GetScatterPlane0() const
 	std::vector<t_real> vec = get_py_array<std::string, std::vector<t_real>>(iter->second);
 	if(vec.size() != 3)
 	{
-		log_err("Invalid sample peak 1 array size.");
+		std::cerr << "Invalid sample peak 1 array size." << std::endl;
 		return std::array<t_real,3>{{0.,0.,0.}};
 	}
 	return std::array<t_real,3>{{vec[0],vec[1],vec[2]}};
@@ -1878,7 +1888,7 @@ std::array<t_real, 3> FileFrm<t_real>::GetScatterPlane1() const
 	std::vector<t_real> vec = get_py_array<std::string, std::vector<t_real>>(iter->second);
 	if(vec.size() != 3)
 	{
-		log_err("Invalid sample peak 2 array size.");
+		std::cerr << "Invalid sample peak 2 array size." << std::endl;
 		return std::array<t_real,3>{{0.,0.,0.}};
 	}
 	return std::array<t_real,3>{{-vec[0],-vec[1],-vec[2]}};	// LH -> RH
@@ -2072,10 +2082,11 @@ std::vector<std::string> FileFrm<t_real>::GetScannedVars() const
 
 	if(!vecVars.size())
 	{
-		log_warn("Could not determine scan variable.");
+		std::cerr << "Could not determine scan variable." << std::endl;
 		if(m_vecQuantities.size() >= 1)
 		{
-			log_warn("Using first column: \"", m_vecQuantities[0], "\".");
+			std::cerr << "Using first column: \"" << m_vecQuantities[0]
+				<< "\"." << std::endl;
 			vecVars.push_back(m_vecQuantities[0]);
 		}
 	}
@@ -2183,7 +2194,7 @@ void FileMacs<t_real>::ReadData(std::istream& istr)
 
 		if(vecToks.size() != m_vecQuantities.size())
 		{
-			log_warn("Loader: Line size mismatch.");
+			std::cerr << "Loader: Line size mismatch." << std::endl;
 
 			// add zeros
 			while(m_vecQuantities.size() > vecToks.size())
@@ -2252,7 +2263,7 @@ std::array<t_real, 3> FileMacs<t_real>::GetSampleLattice() const
 	get_tokens<t_real, std::string>(iter->second, " \t", vecToks);
 	if(vecToks.size() != 6)
 	{
-		log_err("Invalid sample lattice array size.");
+		std::cerr << "Invalid sample lattice array size." << std::endl;
 		return std::array<t_real,3>{{0.,0.,0.}};
 	}
 
@@ -2270,7 +2281,7 @@ std::array<t_real, 3> FileMacs<t_real>::GetSampleAngles() const
 	get_tokens<t_real, std::string>(iter->second, " \t", vecToks);
 	if(vecToks.size() != 6)
 	{
-		log_err("Invalid sample lattice array size.");
+		std::cerr << "Invalid sample lattice array size." << std::endl;
 		return std::array<t_real,3>{{0.,0.,0.}};
 	}
 
@@ -2306,7 +2317,7 @@ std::array<t_real, 3> FileMacs<t_real>::GetScatterPlane0() const
 	get_tokens<t_real, std::string>(iter->second, " \t", vecToks);
 	if(vecToks.size() != 6)
 	{
-		log_err("Invalid sample orientation array size.");
+		std::cerr << "Invalid sample orientation array size." << std::endl;
 		return std::array<t_real,3>{{0.,0.,0.}};
 	}
 
@@ -2324,7 +2335,7 @@ std::array<t_real, 3> FileMacs<t_real>::GetScatterPlane1() const
 	get_tokens<t_real, std::string>(iter->second, " \t", vecToks);
 	if(vecToks.size() != 6)
 	{
-		log_err("Invalid sample orientation array size.");
+		std::cerr << "Invalid sample orientation array size." << std::endl;
 		return std::array<t_real,3>{{0.,0.,0.}};
 	}
 
@@ -2359,7 +2370,7 @@ t_real FileMacs<t_real>::GetKFix() const
 	typename t_mapParams::const_iterator iter = m_mapParams.find("FixedE");
 	if(iter==m_mapParams.end())
 	{
-		log_err("Cannot determine kfix.");
+		std::cerr << "Cannot determine kfix." << std::endl;
 		return 0.;
 	}
 
@@ -2368,7 +2379,7 @@ t_real FileMacs<t_real>::GetKFix() const
 
 	if(vecToks.size()<2)
 	{
-		log_err("Cannot determine kfix.");
+		std::cerr << "Cannot determine kfix." << std::endl;
 		return 0.;
 	}
 
@@ -2507,10 +2518,11 @@ std::vector<std::string> FileMacs<t_real>::GetScannedVars() const
 
 	if(!vecScan.size())
 	{
-		log_warn("Could not determine scan variable.");
+		std::cerr << "Could not determine scan variable." << std::endl;
 		if(m_vecQuantities.size() >= 1)
 		{
-			log_warn("Using first column: \"", m_vecQuantities[0], "\".");
+			std::cerr << "Using first column: \"" << m_vecQuantities[0]
+				<< "\"." << std::endl;
 			vecScan.push_back(m_vecQuantities[0]);
 		}
 	}
@@ -2666,7 +2678,7 @@ void FileTrisp<t_real>::ReadData(std::istream& istr)
 
 			if(vecToks.size() != m_vecQuantities.size())
 			{
-				log_warn("Loader: Line size mismatch.");
+				std::cerr << "Loader: Line size mismatch." << std::endl;
 
 				// add zeros
 				while(m_vecQuantities.size() > vecToks.size())
@@ -2818,7 +2830,7 @@ t_real FileTrisp<t_real>::GetKFix() const
 	typename t_mapParams::const_iterator iter = m_mapParams.find(strKey);
 	if(iter==m_mapParams.end())
 	{
-		log_err("Cannot determine kfix.");
+		std::cerr << "Cannot determine kfix." << std::endl;
 		return 0.;
 	}
 
@@ -2869,10 +2881,11 @@ std::vector<std::string> FileTrisp<t_real>::GetScannedVars() const
 
 	if(!vecScan.size())
 	{
-		log_warn("Could not determine scan variable.");
+		std::cerr << "Could not determine scan variable." << std::endl;
 		if(m_vecQuantities.size() >= 1)
 		{
-			log_warn("Using first column: \"", m_vecQuantities[0], "\".");
+			std::cerr << "Using first column: \"" << m_vecQuantities[0]
+				<< "\"." << std::endl;
 			vecScan.push_back(m_vecQuantities[0]);
 		}
 	}

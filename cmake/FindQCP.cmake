@@ -26,14 +26,14 @@
 #
 
 find_path(QCP_INCLUDE_DIRS
-	NAMES qcustomplot.h
+	NAMES qcustomplot.h QCustomPlot.h
 	HINTS /usr/local/include/ /usr/include/ /opt/local/include
 	DOC "QCP include directories"
 )
 
 
 find_library(QCP_LIBRARIES
-	NAMES qcustomplot qcustomplot-qt5
+	NAMES qcustomplot qcustomplot-qt5 QCustomPlot
 	HINTS /usr/local/lib64 /usr/local/lib /usr/lib/x86_64-linux-gnu /usr/lib64 /usr/lib /opt/local/lib
 	DOC "QCP library"
 )
