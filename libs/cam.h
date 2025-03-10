@@ -24,7 +24,7 @@
  *                          Grenoble, France).
  * magtools
  * Copyright (C) 2017-2018  Tobias WEBER (privately developed).
- * "misc" project 
+ * "misc" project
  * Copyright (C) 2017-2021  Tobias WEBER (privately developed).
  *
  * This program is free software: you can redistribute it and/or modify
@@ -70,11 +70,12 @@ public:
 	/**
 	 * centre camera on object matrix
 	 */
-	void Centre(const t_mat& objmat)
+	void Centre(const t_mat& objmat, bool set_z = true)
 	{
 		m_matTrans(0,3) = -objmat(0,3);
 		m_matTrans(1,3) = -objmat(1,3);
-		m_matTrans(2,3) = -objmat(2,3);
+		if(set_z)
+			m_matTrans(2,3) = -objmat(2,3);
 
 		m_trafo_needs_update = true;
 	}
@@ -154,6 +155,23 @@ public:
 	{
 		m_farPlane = z;
 		m_persp_needs_update = true;
+	}
+
+
+	/**
+	 * set the range for parallel projection
+	 */
+	void SetParalellRange(t_real range)
+	{
+		m_parallel_range = range;
+		if(!GetPerspectiveProjection())
+			m_persp_needs_update = true;
+	}
+
+
+	t_real GetParalellRange() const
+	{
+		return m_parallel_range;
 	}
 
 
@@ -241,20 +259,14 @@ public:
 		m_theta = dtheta + m_theta_saved;
 
 		// wrap around phi angle
-		m_phi = tl2::mod_pos<t_real>(
-			m_phi, t_real(2)*tl2::pi<t_real>);
+		m_phi = tl2::mod_pos<t_real>(m_phi, t_real(2)*tl2::pi<t_real>);
 
 		// wrap around theta angle
-		//m_theta = tl2::mod_pos<t_real>(
-		//	m_theta, t_real(2)*tl2::pi<t_real>);
-		m_theta = std::fmod(m_theta, t_real(2)*tl2::pi<t_real>);
+		m_theta = tl2::mod_posneg<t_real>(m_theta, t_real(2)*tl2::pi<t_real>);
 
 		// restrict theta angle
 		if(restrict_theta)
-		{
-			m_theta = std::clamp<t_real>(
-				m_theta, -t_real(0.5)*tl2::pi<t_real>, 0.);
-		}
+			m_theta = std::clamp<t_real>(m_theta, -t_real(0.5)*tl2::pi<t_real>, 0.);
 
 		m_trafo_needs_update = true;
 	}
@@ -282,12 +294,22 @@ public:
 
 
 	/**
-	 * zoom
+	 * zoom disginguising between perspective or parallel projection
 	 */
 	void Zoom(t_real zoom)
 	{
-		m_zoom *= std::pow(t_real(2), zoom);
-		m_trafo_needs_update = true;
+		const t_real factor = std::pow(t_real(2), zoom);
+
+		if(GetPerspectiveProjection())
+		{
+			SetZoom(GetZoom() * factor);
+			m_trafo_needs_update = true;
+		}
+		else
+		{
+			SetParalellRange(GetParalellRange() / factor);
+			m_persp_needs_update = true;
+		}
 	}
 
 
@@ -365,7 +387,7 @@ public:
 
 
 	/**
-	 * sets scree aspect ratio, height/width
+	 * sets scree aspect ratio, height / width
 	 */
 	void SetAspectRatio(t_real aspect)
 	{
@@ -384,7 +406,7 @@ public:
 
 		m_viewport_needs_update = true;
 
-		SetAspectRatio(t_real(h)/t_real(w));
+		SetAspectRatio(t_real(h) / t_real(w));
 	}
 
 
@@ -581,7 +603,7 @@ public:
 		auto [org, dir] = tl2::hom_line_from_screen_coords<t_mat, t_vec>(
 			mouseX, mouseY, 0., 1.,
 			GetInverseTransformation(),
-			GetInversePerspective(), 
+			GetInversePerspective(),
 			GetInverseViewport(),
 			&GetViewport(), true);
 
@@ -600,8 +622,8 @@ public:
 	{
 		const t_vec3 vecCamDir[2] =
 		{
-			tl2::create<t_vec3>({1., 0., 0.}),
-			tl2::create<t_vec3>({0. ,0., 1.})
+			tl2::create<t_vec3>({ 1., 0., 0. }),
+			tl2::create<t_vec3>({ 0. ,0., 1. })
 		};
 
 		m_matRot = tl2::hom_rotation<t_mat, t_vec3>(
@@ -609,7 +631,8 @@ public:
 		m_matRot *= tl2::hom_rotation<t_mat, t_vec3>(
 			vecCamDir[1], m_phi, 0);
 
-		t_mat matDist = hom_translation<t_mat, t_real>(0., 0., -m_dist / m_zoom);
+		t_real zoom = GetPerspectiveProjection() ? m_zoom : 0.5;
+		t_mat matDist = hom_translation<t_mat, t_real>(0., 0., -m_dist / zoom);
 		m_mat = matDist * m_matRot * m_matTrans;
 		std::tie(m_mat_inv, std::ignore) = tl2::inv<t_mat>(m_mat);
 
@@ -631,7 +654,8 @@ public:
 		else
 		{
 			m_matPerspective = tl2::hom_ortho_sym<t_mat, t_real>(
-				m_nearPlane, m_farPlane, 20., 20.);
+				m_nearPlane, m_farPlane,
+				m_parallel_range, m_parallel_range * m_aspect);
 		}
 
 		std::tie(m_matPerspective_inv, std::ignore) =
@@ -673,6 +697,9 @@ private:
 	t_real m_nearPlane = 0.1;
 	t_real m_farPlane = 1000.;
 
+	// range for parallel projection
+	t_real m_parallel_range = 20.;
+
 	// camera rotation
 	t_real m_phi = pi<t_real>*t_real(0.25);
 	t_real m_theta = -pi<t_real>*(0.25);
@@ -703,7 +730,7 @@ private:
 	t_real m_z_near{0}, m_z_far{1};
 
 	// screen dimensions
-	std::array<int, 2> m_screenDims = {800, 600};
+	std::array<int, 2> m_screenDims = { 800, 600 };
 
 	// does the transformation matrix need an update?
 	bool m_trafo_needs_update = true;

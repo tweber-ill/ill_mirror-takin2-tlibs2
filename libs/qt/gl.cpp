@@ -2,8 +2,12 @@
  * tlibs2 -- common gl functions
  * @author Tobias Weber <tweber@ill.fr>
  * @date 2017-2021
- * @note The present version was forked on 8-Nov-2018 from my privately developed "magtools" project (https://github.com/t-weber/magtools).
  * @license GPLv3, see 'LICENSE' file
+ *
+ * @note this file is based on code from my following projects:
+ *         - "geo" (https://github.com/t-weber/geo),
+ *         - "mathlibs" (https://github.com/t-weber/mathlibs),
+ *         - "magtools" (https://github.com/t-weber/magtools).
  *
  * References:
  *   - http://doc.qt.io/qt-5/qopenglwidget.html#details
@@ -11,7 +15,7 @@
  *
  * ----------------------------------------------------------------------------
  * tlibs
- * Copyright (C) 2017-2021  Tobias WEBER (Institut Laue-Langevin (ILL),
+ * Copyright (C) 2017-2025  Tobias WEBER (Institut Laue-Langevin (ILL),
  *                          Grenoble, France).
  * Copyright (C) 2015-2017  Tobias WEBER (Technische Universitaet Muenchen
  *                          (TUM), Garching, Germany).
@@ -136,14 +140,15 @@ bool create_triangle_object(QOpenGLWidget* pGLWidget, GlRenderObj& obj,
 	pGLWidget->makeCurrent();
 
 	qgl_funcs* pGl = get_gl_functions(pGLWidget);
-	if(!pGl) return false;
+	if(!pGl)
+		return false;
 
 	obj.m_type = GlRenderObjType::TRIANGLES;
 	obj.m_colour = colour;
 
 	// flatten vertex array into raw float array
 	auto to_float_array = [](const std::vector<t_vec3_gl>& verts,
-		int iRepeat=1, int iElems=3, bool bNorm=false, t_real_gl lastElem=1.)
+		int iRepeat = 1, int iElems = 3, bool bNorm = false, t_real_gl lastElem = 1.)
 		-> std::vector<t_real_gl>
 	{
 		std::vector<t_real_gl> vecRet;
@@ -153,9 +158,9 @@ bool create_triangle_object(QOpenGLWidget* pGLWidget, GlRenderObj& obj,
 		{
 			t_real_gl norm = bNorm ? tl2::norm<t_vec3_gl>(vert) : 1;
 
-			for(int i=0; i<iRepeat; ++i)
+			for(int i = 0; i < iRepeat; ++i)
 			{
-				for(int iElem=0; iElem<iElems; ++iElem)
+				for(int iElem = 0; iElem < iElems; ++iElem)
 				{
 					if(iElem < vert.size())
 						vecRet.push_back(vert[iElem] / norm);
@@ -191,7 +196,7 @@ bool create_triangle_object(QOpenGLWidget* pGLWidget, GlRenderObj& obj,
 
 		auto vecVerts = to_float_array(triagverts, 1, 4, false, 1.);
 		obj.m_vertex_buffer->allocate(
-			vecVerts.data(), 
+			vecVerts.data(),
 			vecVerts.size()*sizeof(typename decltype(vecVerts)::value_type));
 		pGl->glVertexAttribPointer(attrVertex, 4, GL_FLOAT, 0, 0, nullptr);
 	}
@@ -235,9 +240,9 @@ bool create_triangle_object(QOpenGLWidget* pGLWidget, GlRenderObj& obj,
 
 		std::vector<t_real_gl> vecCols;
 		vecCols.reserve(4*triagverts.size());
-		for(std::size_t iVert=0; iVert<triagverts.size(); ++iVert)
+		for(std::size_t iVert = 0; iVert < triagverts.size(); ++iVert)
 		{
-			for(int icol=0; icol<obj.m_colour.size(); ++icol)
+			for(int icol = 0; icol < obj.m_colour.size(); ++icol)
 				vecCols.push_back(obj.m_colour[icol]);
 		}
 
@@ -293,7 +298,8 @@ bool create_line_object(QOpenGLWidget* pGLWidget, GlRenderObj& obj,
 	pGLWidget->makeCurrent();
 
 	qgl_funcs* pGl = get_gl_functions(pGLWidget);
-	if(!pGl) return false;
+	if(!pGl)
+		return false;
 
 	//GLint attrVertex = m_attrVertex;
 	//GLint attrVertexcolour = m_attrVertexCol;
@@ -310,7 +316,7 @@ bool create_line_object(QOpenGLWidget* pGLWidget, GlRenderObj& obj,
 
 		for(const t_vec3_gl& vert : verts)
 		{
-			for(int iElem=0; iElem<iElems; ++iElem)
+			for(int iElem = 0; iElem < iElems; ++iElem)
 				vecRet.push_back(vert[iElem]);
 		}
 
@@ -355,9 +361,9 @@ bool create_line_object(QOpenGLWidget* pGLWidget, GlRenderObj& obj,
 
 		std::vector<t_real_gl> vecCols;
 		vecCols.reserve(4*verts.size());
-		for(std::size_t iVert=0; iVert<verts.size(); ++iVert)
+		for(std::size_t iVert = 0; iVert < verts.size(); ++iVert)
 		{
-			for(int icol=0; icol<obj.m_colour.size(); ++icol)
+			for(int icol = 0; icol < obj.m_colour.size(); ++icol)
 				vecCols.push_back(obj.m_colour[icol]);
 		}
 

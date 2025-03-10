@@ -30,7 +30,7 @@
 cmake_minimum_required(VERSION 3.5)
 project(mcalc)
 
-list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}" "${PROJECT_SOURCE_DIR}/../cmake")
+list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}" "${PROJECT_SOURCE_DIR}/../../cmake")
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_VERBOSE_MAKEFILE ON)
@@ -39,6 +39,7 @@ set(CMAKE_VERBOSE_MAKEFILE ON)
 find_package(FLEX 2 REQUIRED)
 find_package(BISON 3 REQUIRED)
 find_package(Boost REQUIRED COMPONENTS program_options)
+find_package(GFortran)
 find_package(Lapacke REQUIRED)
 
 add_compile_options(-Wall -Wextra)
@@ -101,5 +102,5 @@ add_library(mcalc_rt SHARED
 
 set(TARGET mcalc_rt PROPTERTY CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-target_link_libraries(mcalc_rt ${Lapacke_LIBRARIES})
+target_link_libraries(mcalc_rt ${Lapacke_LIBRARIES} ${Lapack_LIBRARIES} ${BLAS_LIBRARIES} ${GFortran_LIBRARIES})
 
